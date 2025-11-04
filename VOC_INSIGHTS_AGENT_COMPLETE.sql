@@ -8,365 +8,6 @@
 -- Last Updated: November 4, 2025
 -- Author: Tampa Bay Rays Strategy and Analytics Team
 -- =====================================================
-
--- =====================================================
--- ENVIRONMENT SETUP
--- =====================================================
-
-USE ROLE TBRDP_DW_PROD_CORTEX_USER;
-USE WAREHOUSE TBRDP_DW_CORTEX_XS_WH;
-
--- =====================================================
--- SECTION 1: INFRASTRUCTURE SETUP
--- =====================================================
-
--- Create stage for Cortex Analyst semantic model YAML files
-CREATE OR REPLACE STAGE TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS
-  DIRECTORY = (ENABLE = TRUE)
-  COMMENT = 'Stage for Cortex Analyst semantic model YAML files';
-
--- =====================================================
--- SECTION 2: BASE VIEW - V_VOC_ENHANCED_AI
--- =====================================================
--- Purpose: Core view that enriches VOC data with AI-powered insights
--- Features:
---   - AI Classification of feedback topics
---   - Sentiment analysis
---   - NPS segmentation
---   - Revenue indicators
---   - Family attendance flags
---   - Time dimensions
-
-CREATE OR REPLACE VIEW TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI AS
-SELECT 
-    v.*,
-    
-    -- AI-powered topic classification
-    AI_CLASSIFY(
-        v.OVERALL_NUMRAT_OT,
-        ARRAY_CONSTRUCT(
-            'Food & Beverage',
-            'Parking & Transportation',
-            'Ticketing & Seating',
-            'Entertainment',
-            'Staff/Service',
-            'Facilities',
-            'General'
-        )
-    )['labels'][0]::STRING AS primary_topic,
-    
-    -- Sentiment analysis (-1 to 1 scale)
-    AI_SENTIMENT(v.OVERALL_NUMRAT_OT) AS sentiment_score,
-    
-    -- NPS segmentation
-    CASE 
-        WHEN v.OVERALL_NUMRAT >= 9 THEN 'Promoter'
-        WHEN v.OVERALL_NUMRAT >= 7 THEN 'Passive'
-        WHEN v.OVERALL_NUMRAT IS NOT NULL THEN 'Detractor'
-        ELSE 'Unknown'
-    END AS nps_segment,
-    
-    -- Revenue indicators
-    v.AVERAGE_TIX_PRICE AS ticket_price_clean,
-    v.CONCESS_SPEND_DESC AS concession_spend_description,
-    NULL AS merch_spend_clean,
-    
-    -- Family attendance flag
-    CASE 
-        WHEN v.ATTEND_KIDS_AGES_BET_3_5 = 1 
-          OR v.ATTEND_KIDS_AGES_BET_6_12 = 1 
-          OR v.ATTEND_KIDS_AGES_BET_13_17 = 1 
-        THEN TRUE 
-        ELSE FALSE 
-    END AS has_children,
-    
-    -- Time dimensions
-    v.GAME_DATE AS game_date_clean,
-    MONTH(v.GAME_DATE) AS game_month,
-    DAYNAME(v.GAME_DATE) AS game_day_of_week,
-    DAYOFWEEK(v.GAME_DATE) AS game_day_num,
-    QUARTER(v.GAME_DATE) AS game_quarter
-    
-FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI v
-WHERE v.OVERALL_NUMRAT_OT IS NOT NULL
-  AND v.OVERALL_NUMRAT_OT NOT IN ('88', '81')
-  AND YEAR(v.GAME_DATE) >= 2024;
-
--- =====================================================
--- SECTION 3: ANALYTICAL VIEWS
--- =====================================================
-
--- Monthly Insights View
--- Purpose: Aggregate VOC metrics by month with AI-generated summaries
-CREATE OR REPLACE VIEW TBRDP_DW_DEV.IM_RPT.V_VOC_MONTHLY_INSIGHTS AS
-SELECT 
-    DATE_TRUNC('month', game_date_clean) AS month,
-    COUNT(*) AS total_responses,
-    AVG(OVERALL_NUMRAT) AS avg_satisfaction,
-    
-    -- AI aggregation for unlimited row summarization
-    AI_AGG(
-        OVERALL_NUMRAT_OT,
-        'Analyze all feedback and list the top 5 complaint themes with approximate frequency percentages. Include sentiment trends.'
-    ) AS top_complaints_analysis,
-    
-    -- Executive summary
-    AI_SUMMARIZE_AGG(OVERALL_NUMRAT_OT) AS executive_summary,
-    
-    -- NPS metrics
-    SUM(CASE WHEN nps_segment = 'Promoter' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0) AS promoter_pct,
-    SUM(CASE WHEN nps_segment = 'Detractor' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0) AS detractor_pct,
-    
-    -- Revenue metrics
-    AVG(ticket_price_clean) AS avg_ticket_price,
-    SUM(CASE WHEN CONCESS_SCREENER_DESC = 'Yes' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0) AS concession_purchase_rate
-    
-FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
-GROUP BY 1
-ORDER BY 1 DESC;
-
--- Buyer Type Insights View
--- Purpose: Analyze feedback patterns and revenue opportunities by buyer segment
-CREATE OR REPLACE VIEW TBRDP_DW_DEV.IM_RPT.V_VOC_BUYER_TYPE_INSIGHTS AS
-SELECT 
-    BUYER_TYPE,
-    COUNT(*) AS total_responses,
-    ROUND(AVG(OVERALL_NUMRAT), 2) AS avg_satisfaction,
-    ROUND(AVG(ticket_price_clean), 2) AS avg_ticket_price,
-    
-    -- Purchase behavior
-    AVG(CASE WHEN CONCESS_SCREENER_DESC = 'Yes' THEN 1 ELSE 0 END) * 100 AS concession_purchase_pct,
-    AVG(CASE WHEN MERCH_SCREENER_DESC = 'Yes' THEN 1 ELSE 0 END) * 100 AS merch_purchase_pct,
-    
-    -- AI-powered segment insights
-    AI_AGG(
-        OVERALL_NUMRAT_OT,
-        'Summarize the key differences in feedback for this buyer segment compared to general fans. Highlight revenue opportunities.'
-    ) AS segment_insights
-    
-FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
-WHERE OVERALL_NUMRAT_OT IS NOT NULL
-  AND OVERALL_NUMRAT_OT NOT IN ('88', '81')
-GROUP BY BUYER_TYPE
-ORDER BY avg_satisfaction DESC;
-
--- =====================================================
--- SECTION 4: MONITORING VIEWS
--- =====================================================
-
--- Cortex Function Cost Monitoring
-CREATE OR REPLACE VIEW TBRDP_DW_DEV.IM_RPT.V_CORTEX_FUNCTION_COSTS AS
-SELECT 
-    DATE_TRUNC('day', start_time) AS usage_date,
-    function_name,
-    COUNT(*) AS total_calls
-FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_FUNCTIONS_USAGE_HISTORY
-WHERE start_time >= DATEADD(day, -30, CURRENT_DATE())
-GROUP BY DATE_TRUNC('day', start_time), function_name
-ORDER BY usage_date DESC, total_calls DESC;
-
--- Cortex Query Cost Monitoring
-CREATE OR REPLACE VIEW TBRDP_DW_DEV.IM_RPT.V_CORTEX_COST_MONITORING AS
-SELECT 
-    query_id,
-    query_text,
-    user_name,
-    warehouse_name,
-    start_time,
-    end_time,
-    credits_used_cloud_services AS credits_used,
-    total_elapsed_time/1000 AS elapsed_seconds
-FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
-WHERE query_text ILIKE '%AI_COMPLETE%'
-   OR query_text ILIKE '%AI_CLASSIFY%'
-   OR query_text ILIKE '%AI_SENTIMENT%'
-   OR query_text ILIKE '%AI_AGG%'
-   OR query_text ILIKE '%AI_SUMMARIZE%'
-ORDER BY start_time DESC
-LIMIT 1000;
-
--- =====================================================
--- SECTION 5: FUNCTIONS
--- =====================================================
-
--- Quick Stats Function
--- Purpose: Retrieve key VOC metrics for a specific year
-CREATE OR REPLACE FUNCTION TBRDP_DW_DEV.IM_RPT.VOC_QUICK_STATS(target_year NUMBER)
-RETURNS TABLE(
-    metric_name VARCHAR,
-    metric_value FLOAT,
-    metric_context VARCHAR
-)
-AS
-$$
-    SELECT 'Average Overall Satisfaction' AS metric_name, 
-           AVG(OVERALL_NUMRAT) AS metric_value,
-           'Scale: 1-10, Year: ' || target_year AS metric_context
-    FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
-    WHERE YEAR(game_date_clean) = target_year
-    
-    UNION ALL
-    
-    SELECT 'Total Survey Responses', 
-           COUNT(*)::FLOAT,
-           'Complete responses in ' || target_year
-    FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
-    WHERE YEAR(game_date_clean) = target_year
-    
-    UNION ALL
-    
-    SELECT 'Average Ticket Price',
-           AVG(ticket_price_clean),
-           'USD, Year: ' || target_year
-    FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
-    WHERE YEAR(game_date_clean) = target_year
-    
-    UNION ALL
-    
-    SELECT 'Family Attendance Rate',
-           AVG(CASE WHEN has_children THEN 100 ELSE 0 END),
-           'Percentage with children, Year: ' || target_year
-    FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
-    WHERE YEAR(game_date_clean) = target_year
-    
-    UNION ALL
-    
-    SELECT 'NPS Score',
-           (SUM(CASE WHEN nps_segment = 'Promoter' THEN 1 ELSE 0 END) - 
-            SUM(CASE WHEN nps_segment = 'Detractor' THEN 1 ELSE 0 END)) * 100.0 / 
-            NULLIF(COUNT(*), 0),
-           'Net Promoter Score, Year: ' || target_year
-    FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
-    WHERE YEAR(game_date_clean) = target_year
-    
-    UNION ALL
-    
-    SELECT 'Concession Purchase Rate',
-           AVG(CASE WHEN CONCESS_SCREENER_DESC = 'Yes' THEN 100 ELSE 0 END),
-           'Percentage who purchased, Year: ' || target_year
-    FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
-    WHERE YEAR(game_date_clean) = target_year
-$$;
-
--- Classification Function - Single Label
--- Purpose: Classify feedback into primary category
-CREATE OR REPLACE FUNCTION TBRDP_DW_DEV.IM_RPT.classify_feedback_v2(feedback_text STRING)
-RETURNS OBJECT
-LANGUAGE SQL
-AS
-$$
-    SELECT AI_CLASSIFY(
-        feedback_text,
-        ARRAY_CONSTRUCT(
-            'Food & Beverage - Quality',
-            'Food & Beverage - Price', 
-            'Food & Beverage - Variety',
-            'Parking & Transportation - Price',
-            'Parking & Transportation - Location',
-            'Parking & Transportation - Access',
-            'Ticketing & Seating - View',
-            'Ticketing & Seating - Price',
-            'Non-Game Entertainment - Quality',
-            'Staff/Service - Quality',
-            'Facilities - Cleanliness',
-            'General/Other'
-        )
-    ) AS classification_result
-$$;
-
--- Classification Function - Multi-Label
--- Purpose: Classify feedback into multiple categories (up to 3)
-CREATE OR REPLACE FUNCTION TBRDP_DW_DEV.IM_RPT.classify_feedback_multilabel(feedback_text STRING)
-RETURNS OBJECT
-LANGUAGE SQL
-AS
-$$
-    SELECT AI_CLASSIFY(
-        feedback_text,
-        ARRAY_CONSTRUCT(
-            'Food & Beverage - Quality',
-            'Food & Beverage - Price',
-            'Parking & Transportation',
-            'Ticketing & Seating',
-            'Non-Game Entertainment',
-            'Staff/Service',
-            'Facilities'
-        ),
-        {
-            'multi_label': true,
-            'max_labels': 3
-        }
-    ) AS classification_result
-$$;
-
--- =====================================================
--- SECTION 6: CORTEX SEARCH SERVICE
--- =====================================================
--- Purpose: Enable semantic search across fan feedback
-
-CREATE OR REPLACE CORTEX SEARCH SERVICE VOC_FEEDBACK_SEARCH
-ON feedback_text
-WAREHOUSE = TBRDP_DW_CORTEX_XS_WH
-TARGET_LAG = '1 hour'
-AS (
-    SELECT 
-        QUALTRICS_ID as qualtrics_id,
-        GAME_DATE as game_date,
-        SEASON as season,
-        BUYER_TYPE as buyer_type,
-        OVERALL_NUMRAT as satisfaction_score,
-        OVERALL_NUMRAT_OT as feedback_text,
-        CONCAT(
-            'Game Date: ', TO_VARCHAR(GAME_DATE), 
-            ' | Satisfaction: ', TO_VARCHAR(OVERALL_NUMRAT),
-            ' | Buyer Type: ', COALESCE(BUYER_TYPE, 'Unknown'),
-            ' | Feedback: ', OVERALL_NUMRAT_OT
-        ) as search_context
-    FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
-    WHERE OVERALL_NUMRAT_OT IS NOT NULL
-        AND OVERALL_NUMRAT_OT NOT IN ('88', '81')
-        AND LENGTH(OVERALL_NUMRAT_OT) > 10
-);
-
--- =====================================================
--- SECTION 7: USAGE EXAMPLES
--- =====================================================
-
--- Example 1: Get quick stats for 2024
--- SELECT * FROM TABLE(TBRDP_DW_DEV.IM_RPT.VOC_QUICK_STATS(2024));
-
--- Example 2: View monthly insights
--- SELECT * FROM TBRDP_DW_DEV.IM_RPT.V_VOC_MONTHLY_INSIGHTS;
-
--- Example 3: Analyze buyer type insights
--- SELECT * FROM TBRDP_DW_DEV.IM_RPT.V_VOC_BUYER_TYPE_INSIGHTS;
-
--- Example 4: Classify a single piece of feedback
--- SELECT TBRDP_DW_DEV.IM_RPT.classify_feedback_v2('The food was cold and overpriced');
-
--- Example 5: Multi-label classification
--- SELECT TBRDP_DW_DEV.IM_RPT.classify_feedback_multilabel('Great seats but parking was terrible and expensive');
-
--- Example 6: Search for specific feedback
--- SELECT * 
--- FROM TABLE(VOC_FEEDBACK_SEARCH!SEARCH('parking complaints'))
--- LIMIT 10;
-
--- Example 7: Monitor Cortex costs
--- SELECT * FROM TBRDP_DW_DEV.IM_RPT.V_CORTEX_FUNCTION_COSTS
--- WHERE usage_date >= DATEADD(day, -7, CURRENT_DATE());
-
--- =====================================================
--- DEPLOYMENT NOTES
--- =====================================================
--- 1. Ensure the base view V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI exists
--- 2. Upload the semantic model YAML to CORTEX_SEMANTIC_MODELS stage
--- 3. Grant appropriate permissions to TBRDP_DW_PROD_CORTEX_USER role
--- 4. Monitor costs using the provided monitoring views
--- 5. Semantic model file: voc_semantic_model.yaml (stored separately)
--- =====================================================
-
--- =====================================================
 -- KEY FEATURES
 -- =====================================================
 -- ✅ AI-powered topic classification
@@ -379,8 +20,6 @@ AS (
 -- ✅ Cost monitoring and optimization
 -- ✅ Parameterized functions for flexible analysis
 -- =====================================================
-
--- =====================================================
 -- DEPENDENCIES
 -- =====================================================
 -- Base Table: TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
@@ -392,5 +31,175 @@ AS (
 -- Snowflake Cortex Search Service
 -- Semantic Model: voc_semantic_model.yaml
 -- =====================================================
+-- EVNIRONMENT STAGE SETUP WITH DIRECTORY ENABLED
+-- =====================================================
+USE ROLE ACCOUNTADMIN;
+USE WAREHOUSE TBRDP_DW_CORTEX_XS_WH;
 
--- Script Complete ✅
+-- Create stage with directory support
+DROP STAGE IF EXISTS TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS;
+
+CREATE STAGE TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS
+    DIRECTORY = (ENABLE = TRUE)
+    COMMENT = 'Stage for Cortex Analyst semantic model YAML files';
+
+-- Grant permissions (READ only - ACCOUNTADMIN is owner)
+GRANT READ ON STAGE TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+
+-- Verify stage is set up correctly
+DESC STAGE TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS;
+LIST @TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS;
+
+-- =====================================================
+-- DATABASE & SCHEMA FOR AGENTS (if not already created)
+-- =====================================================
+
+USE ROLE ACCOUNTADMIN;
+
+CREATE DATABASE IF NOT EXISTS SNOWFLAKE_INTELLIGENCE
+    COMMENT = 'Database for Snowflake Intelligence agents and configurations';
+
+GRANT USAGE ON DATABASE SNOWFLAKE_INTELLIGENCE TO ROLE PUBLIC;
+
+CREATE SCHEMA IF NOT EXISTS SNOWFLAKE_INTELLIGENCE.AGENTS
+    COMMENT = 'Schema to store agent configurations';
+
+GRANT USAGE ON SCHEMA SNOWFLAKE_INTELLIGENCE.AGENTS TO ROLE PUBLIC;
+
+-- Grant agent creation privileges
+GRANT CREATE AGENT ON SCHEMA SNOWFLAKE_INTELLIGENCE.AGENTS TO ROLE ACCOUNTADMIN;
+GRANT CREATE AGENT ON SCHEMA SNOWFLAKE_INTELLIGENCE.AGENTS TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+
+-- =====================================================
+-- GRANT PERMISSIONS FOR VOC DATA ACCESS
+-- =====================================================
+
+USE ROLE ACCOUNTADMIN;
+
+-- Grant access to the base view
+GRANT SELECT ON VIEW TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI 
+    TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+
+GRANT USAGE ON DATABASE TBRDP_DW_DEV TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+GRANT USAGE ON SCHEMA TBRDP_DW_DEV.IM_RPT TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+
+-- Grant warehouse usage
+GRANT USAGE ON WAREHOUSE TBRDP_DW_CORTEX_XS_WH TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+
+-- Ensure Cortex functions are accessible
+GRANT DATABASE ROLE SNOWFLAKE.CORTEX_USER TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+
+-- =====================================================
+-- YAML GENERATION QUERY (for semantic model)
+-- =====================================================
+
+USE ROLE ACCOUNTADMIN;
+USE WAREHOUSE TBRDP_DW_CORTEX_XS_WH;
+
+WITH yaml_header AS (
+    SELECT '# Snowflake Cortex Analyst Semantic Model
+# Generated from SURVEY_SEMANTIC_MODEL table
+# Table: V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+
+name: voice_of_customer_survey_model
+description: "Semantic model for Voice of Customer post-attendance survey data, enabling natural language queries about fan experience, satisfaction ratings, and attendance patterns."
+
+tables:
+  - name: voc_survey_data
+    description: "Comprehensive survey response data from fans after game attendance"
+    base_table: 
+      database: TBRDP_DW_DEV
+      schema: IM_RPT
+      table: V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+    
+    dimensions:' AS yaml_text
+),
+dimensions_yaml AS (
+    SELECT LISTAGG(
+        CONCAT(
+            '      - name: ', COLUMN_NAME, '\n',
+            '        display_name: "', REPLACE(COALESCE(DISPLAY_NAME, ''), '"', '\"'), '"\n',
+            '        description: "', REPLACE(COALESCE(DESCRIPTION, ''), '"', '\"'), '"\n',
+            '        expr: ', COALESCE(SQL_EXPRESSION, COLUMN_NAME), '\n',
+            '        data_type: ', LOWER(REGEXP_REPLACE(FIELD_TYPE, '\\([0-9,]+\\)', '')), '\n',
+            '        synonyms: ["', REPLACE(COALESCE(SYNONYMS, ''), ', ', '", "'), '"]'
+        ), '\n\n'
+    ) WITHIN GROUP (ORDER BY COLUMN_NAME) AS yaml_text
+    FROM TBRDP_DW_PROD.LOAD.SURVEY_SEMANTIC_MODEL
+    WHERE IS_DIMENSION = TRUE
+),
+measures_header AS (
+    SELECT '
+    
+    measures:' AS yaml_text
+),
+measures_yaml AS (
+    SELECT LISTAGG(
+        CONCAT(
+            '      - name: ', COLUMN_NAME, '\n',
+            '        display_name: "', REPLACE(COALESCE(DISPLAY_NAME, ''), '"', '\"'), '"\n',
+            '        description: "', REPLACE(COALESCE(DESCRIPTION, ''), '"', '\"'), '"\n',
+            '        expr: ', COALESCE(SQL_EXPRESSION, COLUMN_NAME), '\n',
+            '        data_type: ', LOWER(REGEXP_REPLACE(FIELD_TYPE, '\\([0-9,]+\\)', '')), '\n',
+            '        aggregation: ', LOWER(COALESCE(AGGREGATION_FUNCTION, 'none')), '\n',
+            '        synonyms: ["', REPLACE(COALESCE(SYNONYMS, ''), ', ', '", "'), '"]'
+        ), '\n\n'
+    ) WITHIN GROUP (ORDER BY COLUMN_NAME) AS yaml_text
+    FROM TBRDP_DW_PROD.LOAD.SURVEY_SEMANTIC_MODEL
+    WHERE IS_MEASURE = TRUE
+),
+static_yaml AS (
+    SELECT '
+    
+    time_dimensions:
+      - name: GAME_DATE
+        display_name: "Game Date"
+        description: "Date when the game was played"
+        expr: GAME_DATE
+        data_type: date
+        
+      - name: RESPONSE_DATE  
+        display_name: "Survey Response Date"
+        description: "Date when the survey was completed"
+        expr: RESPONSE_DATE
+        data_type: date' AS yaml_text
+)
+SELECT 
+    CONCAT(
+        h.yaml_text, '\n',
+        d.yaml_text, '\n',
+        mh.yaml_text, '\n', 
+        m.yaml_text, '\n',
+        s.yaml_text
+    ) AS complete_yaml
+FROM yaml_header h
+CROSS JOIN dimensions_yaml d
+CROSS JOIN measures_header mh
+CROSS JOIN measures_yaml m
+CROSS JOIN static_yaml s;
+
+-- =====================================================
+-- VERIFICATION QUERIES
+-- =====================================================
+
+-- Verify stage contents
+LIST @TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS;
+
+-- Verify base view access
+USE ROLE TBRDP_DW_PROD_CORTEX_USER;
+USE WAREHOUSE TBRDP_DW_CORTEX_XS_WH;
+
+SELECT COUNT(*) as total_rows
+FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI;
+
+-- Check data structure
+SELECT 
+    OVERALL_NUMRAT as satisfaction_score,
+    GAME_DATE,
+    RESPONSE_DATE,
+    SEASON
+FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+WHERE GAME_DATE >= DATEADD(month, -6, CURRENT_DATE())
+LIMIT 10;
+-- =====================================================
+
