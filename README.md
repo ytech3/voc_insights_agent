@@ -1,428 +1,370 @@
-Tampa Bay Rays - Snowflake Cortex AI VOC Project
-Natural Language Query System - Implementation Guide
+# VOC Insights Agent - Tampa Bay Rays
 
-📋 Project Overview
-This package contains everything needed to implement a natural language query system for Tampa Bay Rays Voice of Customer (VOC) data using Snowflake Cortex AI.
-Goal: Enable employees to ask questions about fan satisfaction, revenue, and operations in plain English—no SQL required!
-What's Included
+## 📊 Overview
 
-updated_10_29_refactored.sql - Optimized SQL with Cortex AISQL best practices
-voc_semantic_model.yaml - Semantic model for Cortex Analyst
-snowflake_intelligence_agent_setup.sql - Step-by-step agent setup guide
+The **VOC (Voice of Customer) Insights Agent** is an AI-powered analytics platform built on Snowflake Cortex AI that transforms fan feedback from post-game surveys into actionable business intelligence. This system enables 24/7 natural language querying of fan sentiment, satisfaction metrics, and revenue insights.
 
+## 🎯 Key Features
 
-🎯 Key Benefits
-For End Users (Employees)
+- **AI-Powered Classification**: Automatically categorizes feedback into topics (Food & Beverage, Parking, Entertainment, etc.)
+- **Sentiment Analysis**: Measures emotional tone of feedback (-1 to 1 scale)
+- **NPS Segmentation**: Automatically segments fans into Promoters, Passives, and Detractors
+- **Revenue Insights**: Analyzes ticket prices, concession purchases, and merchandise sales by segment
+- **Semantic Search**: Natural language search across all fan feedback
+- **Monthly Trend Analysis**: AI-generated summaries of top complaints and sentiment trends
+- **Buyer Type Analysis**: Compares satisfaction and revenue across Single Game, Season Ticket Holders, Groups, etc.
+- **Cost Monitoring**: Tracks Snowflake Cortex AI usage and costs
 
-✅ Ask questions in natural language (no SQL knowledge needed)
-✅ Get instant insights 24/7
-✅ Access via web browser or mobile
-✅ Automatic chart/table generation
+## 🏗️ Architecture
 
-For Your Team
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Data Sources                         │
+│  Qualtrics Post-Game Survey → Snowflake (Fivetran)    │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│              Base View (Raw Survey Data)                │
+│  V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI    │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│          Enhanced View (AI Enrichment Layer)            │
+│              V_VOC_ENHANCED_AI                          │
+│  • AI Classification  • Sentiment Analysis              │
+│  • NPS Segmentation   • Revenue Indicators              │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│              Analytical Views & Functions               │
+│  • V_VOC_MONTHLY_INSIGHTS                               │
+│  • V_VOC_BUYER_TYPE_INSIGHTS                            │
+│  • VOC_QUICK_STATS()                                    │
+│  • classify_feedback_v2()                               │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│            Cortex Search Service                        │
+│         VOC_FEEDBACK_SEARCH                             │
+│  (Semantic search across all feedback)                  │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│          Natural Language Interface                     │
+│  Cortex Analyst + Semantic Model (voc_insights)        │
+└─────────────────────────────────────────────────────────┘
+```
 
-✅ 30%+ faster query performance
-✅ Up to 60% cost savings vs. custom AI implementation
-✅ No separate infrastructure needed
-✅ Enterprise security & governance built-in
+## 📁 Repository Structure
 
-Example Questions Users Can Ask
-"What's the average satisfaction score this month?"
-"Show me concession spending by buyer type"
-"Compare parking satisfaction between weekdays and weekends"
-"What percentage of families attended games in Q2?"
-"What are the top 3 complaints from single-game buyers?"
-No SQL, no training required!
+```
+voc-insights-agent/
+├── VOC_INSIGHTS_AGENT_COMPLETE.sql    # Main deployment script
+├── voc_semantic_model.yaml            # Cortex Analyst semantic model
+├── README.md                           # This file
+├── docs/
+│   ├── DEPLOYMENT.md                  # Deployment instructions
+│   ├── USAGE_EXAMPLES.md              # Query examples
+│   └── ARCHITECTURE.md                # Technical architecture
+└── examples/
+    └── sample_queries.sql             # Common query patterns
+```
 
-🚀 Quick Start (3 Steps)
-Step 1: Run the Optimized SQL
-sql-- Run this file in Snowflake
--- File: updated_10_29_refactored.sql
--- Time: ~5 minutes
-This creates:
+## 🚀 Quick Start
 
-Enhanced VOC views with AI classification
-Aggregated insight views (monthly, day-of-week, buyer type)
-Cost monitoring queries
-Quick stats functions
+### Prerequisites
 
-Step 2: Upload Semantic Model
-sql-- 1. Upload voc_semantic_model.yaml to Snowflake stage
--- 2. Follow instructions in snowflake_intelligence_agent_setup.sql
--- Time: ~10 minutes
-Step 3: Create the Agent
-sql-- Use Snowsight UI to create agent
--- Follow detailed steps in snowflake_intelligence_agent_setup.sql
--- Time: ~15 minutes
-Total Setup Time: ~30 minutes
+- Snowflake account with Cortex AI enabled
+- Role: `TBRDP_DW_PROD_CORTEX_USER`
+- Warehouse: `TBRDP_DW_CORTEX_XS_WH`
+- Base view: `V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI`
 
-📁 File Details
-1. updated_10_29_refactored.sql
-Improvements from Original:
+### Deployment
 
-✅ Replaced AI_COMPLETE with AI_CLASSIFY (30% faster, 60% cheaper)
-✅ Added AI_AGG for unlimited row aggregation
-✅ Added AI_SUMMARIZE_AGG for executive summaries
-✅ Fixed data type handling (DATE vs VARCHAR)
-✅ Added NPS segmentation (Promoters/Passives/Detractors)
-✅ Created pre-built insight views (monthly, DOW, buyer type)
-✅ Added cost monitoring queries
-✅ Removed complex SQL generation stored procedure (no longer needed!)
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/tampabayrays/voc-insights-agent.git
+   cd voc-insights-agent
+   ```
 
-Key Views Created:
+2. **Run the deployment script**
+   ```sql
+   -- In Snowflake worksheet:
+   -- Copy and paste contents of VOC_INSIGHTS_AGENT_COMPLETE.sql
+   -- Run the entire script
+   ```
 
-V_VOC_ENHANCED_AI - Base view with AI classifications
-V_VOC_MONTHLY_INSIGHTS - Monthly trends with AI aggregation
-V_VOC_DAYOFWEEK_INSIGHTS - Day-of-week patterns
-V_VOC_BUYER_TYPE_INSIGHTS - Buyer segment analysis
+3. **Upload semantic model**
+   ```sql
+   PUT file://voc_semantic_model.yaml 
+   @TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS
+   AUTO_COMPRESS=FALSE
+   OVERWRITE=TRUE;
+   ```
 
-Usage:
-sql-- Get 2024 quick stats
-SELECT * FROM TABLE(VOC_QUICK_STATS(2024));
+4. **Verify deployment**
+   ```sql
+   -- Test quick stats
+   SELECT * FROM TABLE(TBRDP_DW_DEV.IM_RPT.VOC_QUICK_STATS(2024));
+   
+   -- Test search service
+   SELECT * FROM TABLE(VOC_FEEDBACK_SEARCH!SEARCH('parking'));
+   ```
 
--- View monthly insights
-SELECT * FROM V_VOC_MONTHLY_INSIGHTS WHERE month >= '2024-01-01';
+## 📊 Core Components
 
--- Check costs
-SELECT * FROM V_CORTEX_FUNCTION_COSTS WHERE usage_date >= CURRENT_DATE() - 7;
+### 1. Enhanced View (V_VOC_ENHANCED_AI)
 
-2. voc_semantic_model.yaml
-What It Contains:
+The foundation view that enriches raw survey data with AI insights:
 
-30 dimensions (fan demographics, behaviors, locations)
-11 measures (ratings, spending, counts)
-5 custom metrics (NPS, satisfaction averages, purchase rates)
-4 pre-defined filters (season, buyer type, family attendance)
-3 verified queries (proven SQL patterns)
+```sql
+SELECT * FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
+WHERE game_date_clean >= '2024-01-01'
+LIMIT 10;
+```
 
-Key Sections:
-yamltables:
-  - name: voc_post_attendance
-    base_table: V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
-    
-    dimensions:
-      - name: buyer_type
-        description: "Type of ticket buyer (Single Game, Season Ticket, etc.)"
-      
-      - name: stadium
-        description: "Stadium/venue where game was attended"
-    
-    measures:
-      - name: overall_numrat
-        description: "Overall satisfaction rating (0-10 scale)"
-        aggregation: avg
-      
-      - name: concess_spend
-        description: "Concession spending per person"
-        aggregation: avg
-    
-    metrics:
-      - name: nps_score
-        description: "Net Promoter Score"
-        expr: "(% Promoters - % Detractors)"
-Generated From: Your VOC_Meta_Updated.xlsx file
+**Added Columns:**
+- `primary_topic` - AI-classified feedback category
+- `sentiment_score` - Sentiment from -1 (negative) to 1 (positive)
+- `nps_segment` - Promoter/Passive/Detractor
+- `has_children` - Boolean flag for family attendance
+- `game_month`, `game_day_of_week`, etc. - Time dimensions
 
-3. snowflake_intelligence_agent_setup.sql
-Complete Setup Guide Including:
+### 2. Monthly Insights View
 
-✅ Stage creation for YAML files
-✅ Database/schema setup
-✅ Cross-region inference configuration (optional)
-✅ UI-based agent creation (step-by-step)
-✅ Privilege grants
-✅ Testing procedures
-✅ User feedback monitoring
-✅ Cost tracking
-✅ Troubleshooting guide
-✅ Maintenance checklist
+Aggregated metrics with AI-generated summaries:
 
-Key Sections:
-
-Upload semantic model to stage
-Create Snowflake Intelligence database
-Configure agent via UI (detailed screenshots/instructions)
-Grant necessary privileges
-Test with sample questions
-Monitor usage and feedback
-Share with employees
-Troubleshooting tips
-
-
-🏗️ Architecture Overview
-┌─────────────────────────────────────────────────────┐
-│  Tampa Bay Rays Employees                            │
-│  (No SQL Knowledge Required!)                        │
-└──────────────────┬──────────────────────────────────┘
-                   │
-                   │ Natural Language Questions
-                   ▼
-┌─────────────────────────────────────────────────────┐
-│  Snowflake Intelligence Agent                        │
-│  - Claude 4 Sonnet (orchestration)                   │
-│  - Voice of Customer Insights                        │
-└──────────────────┬──────────────────────────────────┘
-                   │
-                   │ Reads Semantic Model
-                   ▼
-┌─────────────────────────────────────────────────────┐
-│  Cortex Analyst                                      │
-│  - voc_semantic_model.yaml                           │
-│  - Generates optimized SQL automatically              │
-└──────────────────┬──────────────────────────────────┘
-                   │
-                   │ Queries Data
-                   ▼
-┌─────────────────────────────────────────────────────┐
-│  Enhanced VOC Views (AI-Powered)                     │
-│  - V_VOC_ENHANCED_AI                                 │
-│  - AI_CLASSIFY (categorization)                      │
-│  - AI_SENTIMENT (sentiment scoring)                  │
-│  - AI_AGG (aggregated insights)                      │
-└──────────────────┬──────────────────────────────────┘
-                   │
-                   │ Accesses
-                   ▼
-┌─────────────────────────────────────────────────────┐
-│  Base VOC Table                                      │
-│  V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI  │
-└─────────────────────────────────────────────────────┘
-
-🔧 What Changed vs. Original SQL
-❌ Removed (Anti-patterns)
-
-ASK_VOC() stored procedure with AI_COMPLETE SQL generation
-Complex prompt engineering for query generation
-Manual classification functions with huge prompts
-Dynamic SQL execution with error handling
-
-✅ Added (Best Practices)
-
-AI_CLASSIFY for fast, cheap categorization
-AI_AGG for unlimited row aggregation
-AI_SUMMARIZE_AGG for executive summaries
-Cortex Analyst for natural language queries
-Pre-built insight views (monthly, DOW, buyer type)
-Cost monitoring views
-Proper DATE handling (not VARCHAR)
-NPS segmentation logic
-
-📊 Performance Improvements
-
-30%+ faster query runtime (purpose-built functions)
-60% cost savings (vs. prompt engineering approach)
-No context window limits (AI_AGG processes unlimited rows)
-Better accuracy (semantic model + verified queries)
-
-
-💰 Cost Considerations
-Expected Costs (Estimates)
-
-Semantic model queries: ~$0.01 - $0.05 per question
-AI classification: ~$0.001 per row
-AI aggregation: ~$0.02 - $0.10 per aggregation
-Warehouse compute: Standard Snowflake rates (XS warehouse)
-
-Cost Monitoring
-sql-- View daily Cortex costs
-SELECT * FROM V_CORTEX_FUNCTION_COSTS 
-WHERE usage_date >= CURRENT_DATE() - 7;
-
--- Track query-level costs
+```sql
 SELECT 
-    query_id,
-    credits_used,
-    total_elapsed_time/1000 AS elapsed_seconds
-FROM V_CORTEX_COST_MONITORING
-ORDER BY credits_used DESC
-LIMIT 20;
-Optimization Tips
+    month,
+    total_responses,
+    avg_satisfaction,
+    promoter_pct,
+    top_complaints_analysis,
+    executive_summary
+FROM TBRDP_DW_DEV.IM_RPT.V_VOC_MONTHLY_INSIGHTS
+ORDER BY month DESC;
+```
 
-Use SMALL or MEDIUM warehouse (not LARGE)
-Set appropriate query timeouts (300 seconds default)
-Review high-cost queries weekly
-Add verified queries for common patterns (reduces LLM calls)
+### 3. Buyer Type Analysis
 
+Compare segments to identify revenue opportunities:
 
-🧪 Testing Checklist
-After setup, test these scenarios:
-Basic Queries
+```sql
+SELECT * FROM TBRDP_DW_DEV.IM_RPT.V_VOC_BUYER_TYPE_INSIGHTS;
+```
 
- "What's the average satisfaction score in 2024?"
- "How many survey responses do we have?"
- "What's the NPS score this quarter?"
+### 4. Quick Stats Function
 
-Trend Analysis
+Retrieve key metrics for any year:
 
- "Show me satisfaction trends by month for 2024"
- "What's the satisfaction breakdown by day of week?"
- "Compare Q1 vs Q2 satisfaction scores"
+```sql
+SELECT * FROM TABLE(TBRDP_DW_DEV.IM_RPT.VOC_QUICK_STATS(2024));
+```
 
-Segmentation
+### 5. Classification Functions
 
- "Compare satisfaction between single game buyers and season ticket holders"
- "What's the difference in spending between families and adults-only groups?"
- "Show me parking ratings by buyer type"
+Classify individual feedback:
 
-Revenue Analysis
+```sql
+-- Single label
+SELECT TBRDP_DW_DEV.IM_RPT.classify_feedback_v2(
+    'The food was cold and overpriced'
+);
 
- "What's the average ticket price by buyer type?"
- "Show me concession purchase rate and average spend by satisfaction score"
- "What's the correlation between ticket price and satisfaction?"
+-- Multi-label (up to 3 categories)
+SELECT TBRDP_DW_DEV.IM_RPT.classify_feedback_multilabel(
+    'Great seats but parking was terrible and expensive'
+);
+```
 
-Operational Insights
+### 6. Cortex Search Service
 
- "What percentage of fans rate parking 8 or higher?"
- "What are the most common complaints from detractors (scores 0-6)?"
- "Show me concession satisfaction by stadium"
+Semantic search across all feedback:
 
+```sql
+SELECT * 
+FROM TABLE(VOC_FEEDBACK_SEARCH!SEARCH(
+    'complaints about temperature and heat',
+    LIMIT => 20
+));
+```
 
-📈 Success Metrics
-Track These KPIs
-Adoption:
+## 📈 Usage Examples
 
-Number of active users per week
-Questions asked per user
-Percentage of employees using the agent
-
-Quality:
-
-Average feedback score (thumbs up/down)
-Query success rate
-Response time (target: <5 seconds)
-
-Business Impact:
-
-Time saved vs. manual SQL queries
-Questions answered that weren't possible before
-Insights discovered leading to action
-
-Monitoring Queries
-sql-- User adoption
+### Example 1: Monthly NPS Trends
+```sql
 SELECT 
-    COUNT(DISTINCT user_name) AS active_users,
-    COUNT(*) AS total_queries
-FROM V_CORTEX_COST_MONITORING
-WHERE start_time >= DATEADD(day, -7, CURRENT_DATE());
+    month,
+    total_responses,
+    ROUND(avg_satisfaction, 2) as avg_satisfaction,
+    ROUND(promoter_pct, 1) as promoter_pct,
+    ROUND(detractor_pct, 1) as detractor_pct,
+    ROUND((promoter_pct - detractor_pct), 1) as nps
+FROM TBRDP_DW_DEV.IM_RPT.V_VOC_MONTHLY_INSIGHTS
+WHERE month >= '2024-01-01'
+ORDER BY month;
+```
 
--- Feedback scores
+### Example 2: Revenue by Satisfaction Segment
+```sql
 SELECT 
-    COUNT(*) AS total_responses,
-    SUM(CASE WHEN feedback = 'positive' THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS positive_pct
-FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS(...))
-WHERE RECORD:name = 'CORTEX_AGENT_FEEDBACK';
+    nps_segment,
+    COUNT(*) as responses,
+    ROUND(AVG(ticket_price_clean), 2) as avg_ticket_price,
+    AVG(CASE WHEN CONCESS_SCREENER_DESC = 'Yes' THEN 1 ELSE 0 END) * 100 as concession_rate
+FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
+WHERE YEAR(game_date_clean) = 2024
+GROUP BY nps_segment
+ORDER BY 
+    CASE nps_segment 
+        WHEN 'Promoter' THEN 1 
+        WHEN 'Passive' THEN 2 
+        WHEN 'Detractor' THEN 3 
+    END;
+```
 
-🔐 Security & Governance
-Access Control
+### Example 3: Top Topics by Month
+```sql
+SELECT 
+    DATE_TRUNC('month', game_date_clean) as month,
+    primary_topic,
+    COUNT(*) as mention_count,
+    ROUND(AVG(OVERALL_NUMRAT), 2) as avg_satisfaction,
+    ROUND(AVG(sentiment_score), 3) as avg_sentiment
+FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
+WHERE YEAR(game_date_clean) = 2024
+GROUP BY 1, 2
+ORDER BY 1 DESC, 3 DESC;
+```
 
-Uses existing Snowflake RBAC
-No data leaves Snowflake platform
-Row-level security & masking policies automatically apply
-Queries run with user's credentials (not elevated privileges)
+### Example 4: Family vs Adult-Only Comparison
+```sql
+SELECT 
+    CASE WHEN has_children THEN 'Families' ELSE 'Adults Only' END as group_type,
+    COUNT(*) as responses,
+    ROUND(AVG(OVERALL_NUMRAT), 2) as avg_satisfaction,
+    ROUND(AVG(ticket_price_clean), 2) as avg_ticket_price,
+    AVG(CASE WHEN CONCESS_SCREENER_DESC = 'Yes' THEN 1 ELSE 0 END) * 100 as concession_rate,
+    AVG(CASE WHEN MERCH_SCREENER_DESC = 'Yes' THEN 1 ELSE 0 END) * 100 as merch_rate
+FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
+WHERE YEAR(game_date_clean) = 2024
+GROUP BY 1;
+```
 
-Compliance
+## 💰 Cost Management
 
-SOC 2 Type II certified
-GDPR compliant
-HIPAA eligible
-Data residency controls available
+Monitor Cortex AI usage and costs:
 
-Audit Trail
-All queries logged in:
+```sql
+-- Daily function usage
+SELECT * FROM TBRDP_DW_DEV.IM_RPT.V_CORTEX_FUNCTION_COSTS
+WHERE usage_date >= DATEADD(day, -7, CURRENT_DATE())
+ORDER BY usage_date DESC, total_calls DESC;
 
-SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
-SNOWFLAKE.ACCOUNT_USAGE.CORTEX_FUNCTIONS_USAGE_HISTORY
-Agent observability events
+-- Query-level cost tracking
+SELECT 
+    DATE_TRUNC('day', start_time) as usage_day,
+    COUNT(*) as total_queries,
+    SUM(credits_used) as total_credits,
+    ROUND(AVG(elapsed_seconds), 2) as avg_seconds
+FROM TBRDP_DW_DEV.IM_RPT.V_CORTEX_COST_MONITORING
+WHERE start_time >= DATEADD(day, -30, CURRENT_DATE())
+GROUP BY 1
+ORDER BY 1 DESC;
+```
 
+## 🛠️ Maintenance
 
-🆘 Troubleshooting
-Issue: "Table/view does not exist"
-Solution:
-sql-- Check privileges
-SHOW GRANTS TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+### Refresh Search Service
+```sql
+ALTER CORTEX SEARCH SERVICE VOC_FEEDBACK_SEARCH REFRESH;
+```
 
--- Grant if missing
-GRANT SELECT ON VIEW TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI 
-TO ROLE TBRDP_DW_PROD_CORTEX_USER;
-Issue: "Agent not responding" or "Slow performance"
-Solution:
-sql-- Upgrade warehouse
-ALTER WAREHOUSE TBRDP_DW_CORTEX_XS_WH SET WAREHOUSE_SIZE = 'SMALL';
+### Update Semantic Model
+```sql
+-- After editing voc_semantic_model.yaml:
+PUT file://voc_semantic_model.yaml 
+@TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS
+OVERWRITE=TRUE;
+```
 
--- Increase timeout
--- (Edit in agent configuration: Query timeout = 300 → 600)
-Issue: "Inaccurate results"
-Solution:
+### Monitor Data Quality
+```sql
+SELECT 
+    DATE_TRUNC('week', game_date_clean) as week,
+    COUNT(*) as total_responses,
+    COUNT(OVERALL_NUMRAT) as has_rating,
+    COUNT(OVERALL_NUMRAT_OT) as has_text_feedback,
+    COUNT(CASE WHEN LENGTH(OVERALL_NUMRAT_OT) > 50 THEN 1 END) as substantive_feedback
+FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
+WHERE game_date_clean >= DATEADD(month, -3, CURRENT_DATE())
+GROUP BY 1
+ORDER BY 1 DESC;
+```
 
-Add verified queries for common patterns
-Refine semantic model descriptions
-Update agent instructions to be more specific
-Review low-rated responses weekly
+## 📚 Key Metrics Definitions
 
-Issue: "Cannot find semantic model"
-Solution:
-sql-- Verify file uploaded
-LIST @TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS;
+| Metric | Definition | Range |
+|--------|-----------|-------|
+| **Overall Satisfaction** | Fan rating of overall experience | 1-10 scale |
+| **NPS (Net Promoter Score)** | % Promoters (9-10) - % Detractors (0-6) | -100 to +100 |
+| **Sentiment Score** | AI-generated emotional tone | -1 (negative) to +1 (positive) |
+| **Concession Purchase Rate** | % of fans who purchased F&B | 0-100% |
+| **Family Attendance Rate** | % of groups with children | 0-100% |
 
--- Re-upload if missing via Snowsight UI
+## 🔒 Security & Permissions
 
-📚 Additional Resources
-Snowflake Documentation
+Required grants:
+```sql
+GRANT USAGE ON WAREHOUSE TBRDP_DW_CORTEX_XS_WH TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+GRANT USAGE ON DATABASE TBRDP_DW_DEV TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+GRANT USAGE ON SCHEMA TBRDP_DW_DEV.IM_RPT TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+GRANT SELECT ON ALL VIEWS IN SCHEMA TBRDP_DW_DEV.IM_RPT TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+GRANT READ ON STAGE TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+```
 
-Cortex AISQL Functions
-Cortex Analyst
-Snowflake Intelligence
-Semantic Model Spec
+## 🐛 Troubleshooting
 
-Support
+### Issue: Search service not returning results
+```sql
+-- Check service status
+SHOW CORTEX SEARCH SERVICES;
 
-Snowflake Support Portal
-Community Forums
-Your Snowflake Account Team
+-- Refresh service
+ALTER CORTEX SEARCH SERVICE VOC_FEEDBACK_SEARCH REFRESH;
+```
 
+### Issue: AI functions returning errors
+```sql
+-- Verify Cortex AI is enabled
+SHOW PARAMETERS LIKE 'CORTEX%' IN ACCOUNT;
 
-🔄 Maintenance Schedule
-Weekly
+-- Check for null/invalid input
+SELECT COUNT(*) 
+FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
+WHERE OVERALL_NUMRAT_OT IS NULL 
+   OR LENGTH(OVERALL_NUMRAT_OT) < 10;
+```
 
- Review agent feedback scores
- Check query response times
- Monitor credit usage trends
- Review most-asked questions
+## 📞 Support
 
-Monthly
+For questions or issues:
+- **Data Team**: Contact Tampa Bay Rays Analytics
+- **Snowflake Support**: [Snowflake Cortex AI Documentation](https://docs.snowflake.com/en/user-guide/snowflake-cortex)
 
- Add verified queries for frequent patterns
- Update semantic model with new columns
- Analyze low-rated responses
- Audit user access permissions
+## 📄 License
 
-Quarterly
+© 2025 Tampa Bay Rays Baseball, LLC. All rights reserved.
 
- Evaluate new Cortex features
- Review and optimize warehouse sizing
- Conduct user training refresher
- Update agent instructions based on usage patterns
+## 🙏 Acknowledgments
 
+- Built with [Snowflake Cortex AI](https://www.snowflake.com/en/data-cloud/cortex/)
+- Survey data collected via Qualtrics
+- Data integration powered by Fivetran
 
-🎉 Next Steps
+---
 
-Run updated_10_29_refactored.sql in Snowflake
-Upload voc_semantic_model.yaml to stage
-Follow snowflake_intelligence_agent_setup.sql to create agent
-Test with sample questions
-Share with 5-10 pilot users
-Gather feedback and iterate
-Roll out to full team
-
-
-📞 Support & Questions
-For questions about this implementation:
-
-Check the troubleshooting section
-Review Snowflake documentation links
-Contact your Snowflake account team
-Open a support ticket via Snowflake portal
-
-
-Version: 1.0
-Last Updated: October 30, 2024
-Created For: Tampa Bay Rays - VOC Analytics Team
+**Last Updated**: November 4, 2025  
+**Version**: 1.0  
+**Maintained by**: Tampa Bay Rays Data & Analytics Team
