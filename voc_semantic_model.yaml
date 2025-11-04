@@ -1,0 +1,2368 @@
+description: Comprehensive post-game survey data capturing Tampa Bay Rays fan experience, satisfaction,
+  spending, and operational feedback across ticketing, concessions, merchandise, staff interactions, promotions,
+  brand health, and demographics.
+name: voc_insights
+tables:
+- base_table:
+    database: TBRDP_DW_DEV
+    schema: IM_RPT
+    table: V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+  description: Post-game survey responses from Tampa Bay Rays attendees with demographic, behavioral,
+    and experiential data
+  dimensions:
+  - data_type: date
+    description: Date when the game was played
+    expr: game_date
+    name: game_date
+    synonyms:
+    - event date
+    - match date
+    - game day
+  - data_type: number
+    description: Baseball season year
+    expr: season
+    name: season
+    synonyms:
+    - year
+    - season year
+  - data_type: varchar
+    description: Type of ticket buyer (Single Game, Season Ticket Holder, Group, etc.)
+    expr: buyer_type
+    name: buyer_type
+    synonyms:
+    - ticket type
+    - buyer category
+    - purchase type
+  - data_type: varchar
+    description: Stadium or venue name
+    expr: stadium
+    name: stadium
+    synonyms:
+    - venue
+    - ballpark
+    - facility
+  - data_type: varchar
+    description: Home team nickname
+    expr: team_nickname
+    name: team_nickname
+    synonyms:
+    - team
+    - club
+    - team name
+  - data_type: varchar
+    description: Stadium section code where fan was seated
+    expr: section_code
+    name: section_code
+    synonyms:
+    - seating section
+    - seat section
+    - stadium section
+  - data_type: number
+    description: Year fan was born
+    expr: age
+    name: age
+    synonyms:
+    - birth year
+    - year born
+    - fan age
+  - data_type: varchar
+    description: Fan gender
+    expr: gender_id_desc
+    name: gender_id_desc
+    synonyms:
+    - gender
+    - sex
+  - data_type: varchar
+    description: City where fan resides
+    expr: city
+    name: city
+    synonyms:
+    - patron city
+    - home city
+    - residence city
+  - data_type: varchar
+    description: State where fan resides
+    expr: state
+    name: state
+    synonyms:
+    - home state
+    - residence state
+  - data_type: varchar
+    description: Household income bracket
+    expr: hhi_id_desc
+    name: hhi_id_desc
+    synonyms:
+    - household income
+    - income level
+    - income bracket
+  - data_type: varchar
+    description: Whether fan is a parent
+    expr: parent_id_desc
+    name: parent_id_desc
+    synonyms:
+    - parent status
+    - has children
+  - data_type: varchar
+    description: Size of group attending game
+    expr: group_size_desc
+    name: group_size_desc
+    synonyms:
+    - party size
+    - group size
+    - number attending
+  - data_type: varchar
+    description: Whether fan purchased concessions (Yes/No)
+    expr: concess_screener_desc
+    name: concess_screener_desc
+    synonyms:
+    - purchased concessions
+    - bought food
+  - data_type: varchar
+    description: Satisfaction with concession area cleanliness
+    expr: concess_grid_clean_desc
+    name: concess_grid_clean_desc
+    synonyms:
+    - concession cleanliness
+    - food area cleanliness
+  - data_type: varchar
+    description: Satisfaction with concession customer service
+    expr: concess_grid_custserv_desc
+    name: concess_grid_custserv_desc
+    synonyms:
+    - concession service
+    - food service quality
+  - data_type: varchar
+    description: Satisfaction with food and beverage selection
+    expr: concess_grid_selection_desc
+    name: concess_grid_selection_desc
+    synonyms:
+    - food variety
+    - concession options
+    - menu selection
+  - data_type: varchar
+    description: Perception of concession value for money
+    expr: concess_grid_value_desc
+    name: concess_grid_value_desc
+    synonyms:
+    - food value
+    - concession pricing perception
+    - price value
+  - data_type: varchar
+    description: Wait time at concession stands
+    expr: concess_wait_desc
+    name: concess_wait_desc
+    synonyms:
+    - concession wait time
+    - food line wait
+  - data_type: varchar
+    description: Expected wait time at concessions
+    expr: concess_wait_expect_desc
+    name: concess_wait_expect_desc
+    synonyms:
+    - expected wait time
+    - wait time expectation
+  - data_type: varchar
+    description: Quality rating of alcoholic beverages
+    expr: concess_quality_alcohol_desc
+    name: concess_quality_alcohol_desc
+    synonyms:
+    - alcohol quality
+    - beer quality
+  - data_type: varchar
+    description: Quality rating of non-alcoholic beverages
+    expr: concess_quality_nonalcohol_desc
+    name: concess_quality_nonalcohol_desc
+    synonyms:
+    - non-alcoholic beverage quality
+    - soda quality
+  - data_type: varchar
+    description: Quality rating of hot dogs
+    expr: concess_quality_hotdog_desc
+    name: concess_quality_hotdog_desc
+    synonyms:
+    - hot dog quality
+  - data_type: varchar
+    description: Quality rating of pizza
+    expr: concess_quality_pizza_desc
+    name: concess_quality_pizza_desc
+    synonyms:
+    - pizza quality
+  - data_type: varchar
+    description: Quality rating of nachos
+    expr: concess_quality_nachos_desc
+    name: concess_quality_nachos_desc
+    synonyms:
+    - nachos quality
+  - data_type: varchar
+    description: Quality rating of burgers
+    expr: concess_quality_burgers_desc
+    name: concess_quality_burgers_desc
+    synonyms:
+    - burger quality
+    - hamburger quality
+  - data_type: varchar
+    description: Quality rating of chicken tenders
+    expr: concess_quality_chicken_desc
+    name: concess_quality_chicken_desc
+    synonyms:
+    - chicken tender quality
+    - chicken quality
+  - data_type: varchar
+    description: Quality rating of french fries
+    expr: concess_quality_fries_desc
+    name: concess_quality_fries_desc
+    synonyms:
+    - french fry quality
+    - fries quality
+  - data_type: varchar
+    description: Quality rating of popcorn
+    expr: concess_quality_popcorn_desc
+    name: concess_quality_popcorn_desc
+    synonyms:
+    - popcorn quality
+  - data_type: varchar
+    description: Quality rating of pretzels
+    expr: concess_quality_pretzels_desc
+    name: concess_quality_pretzels_desc
+    synonyms:
+    - pretzel quality
+  - data_type: varchar
+    description: Quality rating of ice cream
+    expr: concess_quality_icecream_desc
+    name: concess_quality_icecream_desc
+    synonyms:
+    - ice cream quality
+    - frozen dessert quality
+  - data_type: varchar
+    description: Quality rating of sandwiches
+    expr: concess_quality_sandwich_desc
+    name: concess_quality_sandwich_desc
+    synonyms:
+    - sandwich quality
+  - data_type: varchar
+    description: Quality rating of salads
+    expr: concess_quality_salad_desc
+    name: concess_quality_salad_desc
+    synonyms:
+    - salad quality
+  - data_type: varchar
+    description: Number of times fan purchased concessions
+    expr: concess_transactions_desc
+    name: concess_transactions_desc
+    synonyms:
+    - number of concession purchases
+    - concession visit count
+  - data_type: varchar
+    description: Whether fan purchased merchandise (Yes/No)
+    expr: merch_screener_desc
+    name: merch_screener_desc
+    synonyms:
+    - purchased merchandise
+    - bought merch
+    - retail purchase
+  - data_type: varchar
+    description: Satisfaction with merchandise customer service
+    expr: merch_grid_custserv_desc
+    name: merch_grid_custserv_desc
+    synonyms:
+    - merchandise service
+    - retail service
+  - data_type: varchar
+    description: Satisfaction with merchandise quality
+    expr: merch_grid_merchquality_desc
+    name: merch_grid_merchquality_desc
+    synonyms:
+    - merchandise quality
+    - product quality
+  - data_type: varchar
+    description: Satisfaction with merchandise pricing
+    expr: merch_grid_price_desc
+    name: merch_grid_price_desc
+    synonyms:
+    - merchandise pricing
+    - retail pricing
+  - data_type: varchar
+    description: Satisfaction with merchandise selection
+    expr: merch_grid_selection_desc
+    name: merch_grid_selection_desc
+    synonyms:
+    - merchandise variety
+    - product selection
+  - data_type: varchar
+    description: Satisfaction with concession staff
+    expr: staff_grid_concessions_desc
+    name: staff_grid_concessions_desc
+    synonyms:
+    - concession staff
+    - food staff rating
+  - data_type: varchar
+    description: Satisfaction with fan services staff
+    expr: staff_grid_fan_services_desc
+    name: staff_grid_fan_services_desc
+    synonyms:
+    - fan services staff
+    - guest services staff
+  - data_type: varchar
+    description: Satisfaction with merchandise staff
+    expr: staff_grid_merch_desc
+    name: staff_grid_merch_desc
+    synonyms:
+    - merchandise staff
+    - retail staff
+  - data_type: varchar
+    description: Satisfaction with parking staff
+    expr: staff_grid_parking_desc
+    name: staff_grid_parking_desc
+    synonyms:
+    - parking attendants
+    - parking staff
+  - data_type: varchar
+    description: Satisfaction with security staff
+    expr: staff_grid_security_desc
+    name: staff_grid_security_desc
+    synonyms:
+    - security staff
+    - security guards
+  - data_type: varchar
+    description: Satisfaction with usher staff
+    expr: staff_grid_usher_desc
+    name: staff_grid_usher_desc
+    synonyms:
+    - usher staff
+    - seat ushers
+  - data_type: varchar
+    description: Satisfaction with accessibility support staff
+    expr: staff_grid_accessibility_desc
+    name: staff_grid_accessibility_desc
+    synonyms:
+    - accessibility staff
+    - ADA assistance
+  - data_type: varchar
+    description: Satisfaction with in-between inning games
+    expr: entertain_grid_games_desc
+    name: entertain_grid_games_desc
+    synonyms:
+    - in-game entertainment
+    - between innings games
+  - data_type: varchar
+    description: Satisfaction with kids activities
+    expr: entertain_grid_kids_activities_desc
+    name: entertain_grid_kids_activities_desc
+    synonyms:
+    - kids activities
+    - children entertainment
+  - data_type: varchar
+    description: Satisfaction with music during game
+    expr: entertain_grid_music_desc
+    name: entertain_grid_music_desc
+    synonyms:
+    - game music
+    - stadium music
+  - data_type: varchar
+    description: Satisfaction with scoreboard information
+    expr: entertain_grid_scoreboard_desc
+    name: entertain_grid_scoreboard_desc
+    synonyms:
+    - scoreboard content
+    - scoreboard display
+  - data_type: varchar
+    description: Satisfaction with player content displayed
+    expr: entertain_grid_player_content_desc
+    name: entertain_grid_player_content_desc
+    synonyms:
+    - player content
+    - player information
+  - data_type: varchar
+    description: Satisfaction with pregame content
+    expr: entertain_grid_pregame_content_desc
+    name: entertain_grid_pregame_content_desc
+    synonyms:
+    - pregame content
+    - pregame entertainment
+  - data_type: varchar
+    description: Satisfaction with theme night entertainment
+    expr: entertain_grid_theme_desc
+    name: entertain_grid_theme_desc
+    synonyms:
+    - theme night entertainment
+    - special event entertainment
+  - data_type: varchar
+    description: Perception of stadium accessibility
+    expr: brandhealth_grid_accessible_desc
+    name: brandhealth_grid_accessible_desc
+    synonyms:
+    - stadium accessibility
+    - accessible venue
+  - data_type: varchar
+    description: Perception of team's commitment to winning
+    expr: brandhealth_grid_champion_desc
+    name: brandhealth_grid_champion_desc
+    synonyms:
+    - winning commitment
+    - championship commitment
+  - data_type: varchar
+    description: Perception of family-friendliness
+    expr: brandhealth_grid_famfriendly_desc
+    name: brandhealth_grid_famfriendly_desc
+    synonyms:
+    - family friendly
+    - kid friendly
+  - data_type: varchar
+    description: Perception of stadium safety
+    expr: brandhealth_grid_safe_desc
+    name: brandhealth_grid_safe_desc
+    synonyms:
+    - stadium safety
+    - venue safety
+  - data_type: varchar
+    description: Perception of welcoming atmosphere
+    expr: brandhealth_grid_welcome_desc
+    name: brandhealth_grid_welcome_desc
+    synonyms:
+    - feeling welcome
+    - welcoming environment
+  - data_type: varchar
+    description: Perception of team's commitment to diversity
+    expr: brandhealth_grid_diversity_desc
+    name: brandhealth_grid_diversity_desc
+    synonyms:
+    - diversity commitment
+    - inclusive environment
+  - data_type: varchar
+    description: Emotional connection to the team
+    expr: brandhealth_grid_emotional_desc
+    name: brandhealth_grid_emotional_desc
+    synonyms:
+    - emotional connection
+    - fan passion
+  - data_type: varchar
+    description: Perception of game excitement level
+    expr: brandhealth_grid_exciting_desc
+    name: brandhealth_grid_exciting_desc
+    synonyms:
+    - exciting games
+    - game excitement
+  - data_type: varchar
+    description: Perception of team's positive influence on community
+    expr: brandhealth_grid_posinfluence_desc
+    name: brandhealth_grid_posinfluence_desc
+    synonyms:
+    - community influence
+    - positive impact
+  - data_type: varchar
+    description: Perception of team heading in right direction
+    expr: brandhealth_grid_rightdirection_desc
+    name: brandhealth_grid_rightdirection_desc
+    synonyms:
+    - team direction
+    - future outlook
+  - data_type: varchar
+    description: Perception of environmental sustainability efforts
+    expr: brandhealth_grid_sustainability_desc
+    name: brandhealth_grid_sustainability_desc
+    synonyms:
+    - environmental commitment
+    - sustainability efforts
+  - data_type: varchar
+    description: Perception of team popularity in community
+    expr: brandhealth_grid_trendy_desc
+    name: brandhealth_grid_trendy_desc
+    synonyms:
+    - team popularity
+    - trending team
+  - data_type: varchar
+    description: Name of giveaway/promotional item
+    expr: giveaway_name
+    name: giveaway_name
+    synonyms:
+    - promo item
+    - giveaway item
+  - data_type: varchar
+    description: Whether fan received the giveaway
+    expr: giveaway_receive_desc
+    name: giveaway_receive_desc
+    synonyms:
+    - received giveaway
+    - got promo item
+  - data_type: varchar
+    description: Satisfaction with giveaway item
+    expr: giveaway_sat_desc
+    name: giveaway_sat_desc
+    synonyms:
+    - giveaway satisfaction
+    - promo satisfaction
+  - data_type: varchar
+    description: Theme or special event name
+    expr: theme_name
+    name: theme_name
+    synonyms:
+    - theme night
+    - special event
+  - data_type: varchar
+    description: Satisfaction with theme night
+    expr: theme_sat_desc
+    name: theme_sat_desc
+    synonyms:
+    - theme satisfaction
+    - event satisfaction
+  - data_type: varchar
+    description: Awareness of giveaway before game
+    expr: giveaway_awareness_desc
+    name: giveaway_awareness_desc
+    synonyms:
+    - knew about giveaway
+    - giveaway promotion awareness
+  - data_type: varchar
+    description: Whether giveaway impacted arrival time
+    expr: giveaway_arrival_desc
+    name: giveaway_arrival_desc
+    synonyms:
+    - giveaway influenced arrival
+    - arrived early for giveaway
+  - data_type: varchar
+    description: Would attend game specifically for giveaway
+    expr: pa_giveaway_intent_desc
+    name: pa_giveaway_intent_desc
+    synonyms:
+    - giveaway attendance intent
+    - would attend for giveaway
+  - data_type: varchar
+    description: Would attend game specifically for theme night
+    expr: pa_theme_intent_desc
+    name: pa_theme_intent_desc
+    synonyms:
+    - theme attendance intent
+    - would attend for theme
+  - data_type: varchar
+    description: Would attend with ticket offer/promotion
+    expr: pa_tix_offer_intent_desc
+    name: pa_tix_offer_intent_desc
+    synonyms:
+    - ticket offer intent
+    - would attend with offer
+  - data_type: varchar
+    description: Satisfaction with ticket offer
+    expr: tix_offer_sat_desc
+    name: tix_offer_sat_desc
+    synonyms:
+    - ticket offer satisfaction
+    - promotion satisfaction
+  - data_type: varchar
+    description: Type or category of giveaway item
+    expr: giveaway_type
+    name: giveaway_type
+    synonyms:
+    - type of giveaway
+    - giveaway category
+  - data_type: varchar
+    description: Type or category of theme night
+    expr: theme_type
+    name: theme_type
+    synonyms:
+    - type of theme
+    - theme category
+  - data_type: varchar
+    description: Ease of mobile ordering
+    expr: mobile_order_grid_easy_desc
+    name: mobile_order_grid_easy_desc
+    synonyms:
+    - mobile order ease
+    - app ease of use
+  - data_type: varchar
+    description: Accuracy of mobile orders
+    expr: mobile_order_grid_accuracy_desc
+    name: mobile_order_grid_accuracy_desc
+    synonyms:
+    - order accuracy
+    - correct order
+  - data_type: varchar
+    description: Time saved using mobile ordering
+    expr: mobile_order_exp_time_desc
+    name: mobile_order_exp_time_desc
+    synonyms:
+    - time saved
+    - mobile order speed
+  - data_type: varchar
+    description: Timeliness of mobile order delivery
+    expr: mobile_order_grid_timeframe_desc
+    name: mobile_order_grid_timeframe_desc
+    synonyms:
+    - mobile order timeliness
+    - order delivery time
+  - data_type: varchar
+    description: Intent to use mobile ordering in future
+    expr: mobile_order_grid_future_desc
+    name: mobile_order_grid_future_desc
+    synonyms:
+    - future mobile order intent
+    - will use mobile again
+  - data_type: varchar
+    description: Would use mobile ordering again
+    expr: mobile_order_exp_future_desc
+    name: mobile_order_exp_future_desc
+    synonyms:
+    - mobile order future experience
+    - mobile order again
+  - data_type: varchar
+    description: Whether fan considered mobile ordering
+    expr: mobile_order_consid_desc
+    name: mobile_order_consid_desc
+    synonyms:
+    - mobile order consideration
+    - considered mobile ordering
+  - data_type: varchar
+    description: Number of games attended in previous season
+    expr: games_prev_season_desc
+    name: games_prev_season_desc
+    synonyms:
+    - previous attendance
+    - games attended last year
+  - data_type: varchar
+    description: Number of games fan plans to attend
+    expr: attend_num_plan_desc
+    name: attend_num_plan_desc
+    synonyms:
+    - planned attendance
+    - future attendance intent
+  - data_type: varchar
+    description: Level of team fandom
+    expr: team_avidity_desc
+    name: team_avidity_desc
+    synonyms:
+    - fan loyalty
+    - fan passion
+    - fandom level
+  - data_type: varchar
+    description: Time to get through security/entry
+    expr: ge_time_desc
+    name: ge_time_desc
+    synonyms:
+    - entry time
+    - gate entry time
+    - security time
+  - data_type: varchar
+    description: What inning fan left the stadium
+    expr: exit_stage_desc
+    name: exit_stage_desc
+    synonyms:
+    - when left
+    - departure time
+    - left early
+  - data_type: varchar
+    description: Method of transportation to stadium
+    expr: travelto_method_desc
+    name: travelto_method_desc
+    synonyms:
+    - transportation method
+    - how arrived
+    - travel mode
+  - data_type: varchar
+    description: Time it took to travel to stadium
+    expr: travelto_time_desc
+    name: travelto_time_desc
+    synonyms:
+    - travel time
+    - commute time
+  - data_type: varchar
+    description: Expected travel time to stadium
+    expr: travelto_time_expect_desc
+    name: travelto_time_expect_desc
+    synonyms:
+    - expected travel time
+  - data_type: varchar
+    description: Time spent finding parking
+    expr: parking_time_desc
+    name: parking_time_desc
+    synonyms:
+    - time to park
+    - parking arrival time
+  - data_type: varchar
+    description: Expected time to find parking
+    expr: parking_time_expect_desc
+    name: parking_time_expect_desc
+    synonyms:
+    - expected parking time
+  - data_type: varchar
+    description: Expected time to exit parking
+    expr: parking_exit_expect_desc
+    name: parking_exit_expect_desc
+    synonyms:
+    - expected exit time
+    - parking exit expectation
+  - data_type: varchar
+    description: Used club/premium parking lot
+    expr: club_parking_lot_desc
+    name: club_parking_lot_desc
+    synonyms:
+    - club parking
+    - premium parking
+  - data_type: varchar
+    description: Expected time to get through entry
+    expr: ge_time_expect_desc
+    name: ge_time_expect_desc
+    synonyms:
+    - expected entry time
+    - gate entry expectation
+  - data_type: varchar
+    description: Intent to purchase tickets next season
+    expr: purchase_intent_next_desc
+    name: purchase_intent_next_desc
+    synonyms:
+    - repurchase intent
+    - buy again
+    - next season intent
+  filters:
+  - description: Filter to 2024 season only
+    expr: season = 2024
+    name: season_2024
+    synonyms:
+    - 2024 season
+    - last season
+  - description: Filter to 2025 season only
+    expr: season = 2025
+    name: season_2025
+    synonyms:
+    - 2025 season
+    - current season
+  - description: Filter to single game ticket buyers
+    expr: buyer_type IN ('Single Game', 'Single Game Ticket')
+    name: single_game_buyers
+    synonyms:
+    - single game tickets
+    - individual purchases
+  - description: Filter to season ticket holders
+    expr: buyer_type LIKE '%Season%'
+    name: season_ticket_holders
+    synonyms:
+    - STH
+    - season tickets
+  - description: Filter to fans attending with children
+    expr: (attend_kids_ages_bet_3_5 = 1 OR attend_kids_ages_bet_6_12 = 1 OR attend_kids_ages_bet_13_17
+      = 1)
+    name: families_with_kids
+    synonyms:
+    - family attendance
+    - with children
+  - description: Filter to fans with kids under 6
+    expr: attend_kids_ages_bet_3_5 = 1
+    name: families_with_young_kids
+    synonyms:
+    - families with young children
+    - preschool families
+  - description: Filter to fans rating 9-10
+    expr: overall_numrat >= 9
+    name: high_satisfaction
+    synonyms:
+    - promoters
+    - satisfied fans
+  - description: Filter to fans rating 0-6
+    expr: overall_numrat <= 6
+    name: low_satisfaction
+    synonyms:
+    - detractors
+    - dissatisfied fans
+  - description: Filter to fans who purchased concessions
+    expr: concess_screener_desc = 'Yes'
+    name: concession_purchasers
+    synonyms:
+    - bought food
+    - F&B customers
+  - description: Filter to fans who purchased merchandise
+    expr: merch_screener_desc = 'Yes'
+    name: merch_purchasers
+    synonyms:
+    - bought merchandise
+    - retail customers
+  - description: Filter to fans with tickets over $75
+    expr: average_tix_price > 75
+    name: high_spenders
+    synonyms:
+    - premium customers
+    - high value fans
+  - description: Filter to premium seating sections
+    expr: section_code LIKE '%CLUB%' OR section_code LIKE '%SUITE%'
+    name: premium_seats
+    synonyms:
+    - premium seating
+    - club seats
+  - description: Filter to fans who arrived early for any reason
+    expr: (pregame_plans_eat = 1 OR pregame_plans_bp = 1 OR pregame_plans_avoid_lines = 1 OR pregame_plans_merch
+      = 1 OR pregame_plans_promo = 1)
+    name: early_arrivals
+    synonyms:
+    - arrived early
+    - pregame attendees
+  - description: Filter to fans who left before game ended
+    expr: exit_stage_desc IS NOT NULL AND exit_stage_desc NOT LIKE '%After%'
+    name: left_early
+    synonyms:
+    - early departures
+    - left before end
+  - description: Filter to fans who used mobile ordering
+    expr: concess_order_method_mobile = 1
+    name: mobile_orderers
+    synonyms:
+    - used mobile app
+    - mobile customers
+  - description: Filter to fans attending first game
+    expr: games_prev_season_desc IN ('0', 'This was my first game')
+    name: first_time_attendees
+    synonyms:
+    - first game
+    - new fans
+  - description: Filter to fans who attended multiple games
+    expr: games_prev_season_desc NOT IN ('0', 'This was my first game')
+    name: repeat_attendees
+    synonyms:
+    - returning fans
+    - multi-game attendees
+  - description: Filter to fans within 25 miles of stadium
+    expr: home_dist <= 25
+    name: local_fans
+    synonyms:
+    - nearby residents
+    - close to stadium
+  - description: Filter to fans who traveled over 50 miles
+    expr: home_dist > 50
+    name: traveled_far
+    synonyms:
+    - distant fans
+    - traveled long distance
+  - description: Filter to fans who attended theme night
+    expr: theme_night_flag = 1
+    name: theme_night_attendees
+    synonyms:
+    - attended theme night
+    - special event attendees
+  - description: Filter to fans who received giveaway
+    expr: giveaway_receive_desc = 'Yes'
+    name: giveaway_recipients
+    synonyms:
+    - received giveaway
+    - got promo item
+  - description: Filter to postseason game attendees
+    expr: postseason_game = 1
+    name: postseason_attendees
+    synonyms:
+    - playoff attendees
+    - postseason games
+  measures:
+  - data_type: number
+    description: Overall satisfaction rating on 1-10 scale
+    expr: overall_numrat
+    name: overall_numrat
+    synonyms:
+    - overall satisfaction
+    - overall rating
+    - satisfaction score
+  - data_type: number
+    description: Overall satisfaction adjusted for external factors
+    expr: overall_numrat_adjusted
+    name: overall_numrat_adjusted
+    synonyms:
+    - adjusted satisfaction
+    - normalized rating
+  - data_type: number
+    description: Concession satisfaction rating on 1-10 scale
+    expr: concess_numrat
+    name: concess_numrat
+    synonyms:
+    - concession rating
+    - food rating
+    - F&B rating
+  - data_type: number
+    description: Real concession satisfaction rating on 1-10 scale
+    expr: real_concess_numrat
+    name: real_concess_numrat
+    synonyms:
+    - real concession rating
+    - actual F&B rating
+  - data_type: number
+    description: Merchandise satisfaction rating on 1-10 scale
+    expr: merch_numrat
+    name: merch_numrat
+    synonyms:
+    - merchandise rating
+    - retail rating
+  - data_type: number
+    description: Staff satisfaction rating on 1-10 scale
+    expr: staff_numrat
+    name: staff_numrat
+    synonyms:
+    - staff rating
+    - employee rating
+  - data_type: number
+    description: Parking satisfaction rating on 1-10 scale
+    expr: parking_numrat
+    name: parking_numrat
+    synonyms:
+    - parking rating
+    - parking satisfaction
+  - data_type: number
+    description: Entertainment satisfaction rating on 1-10 scale
+    expr: entertain_numrat
+    name: entertain_numrat
+    synonyms:
+    - entertainment rating
+    - in-game entertainment
+  - data_type: number
+    description: Seat view satisfaction rating on 1-10 scale
+    expr: seatview_numrat
+    name: seatview_numrat
+    synonyms:
+    - seat view rating
+    - sight line rating
+  - data_type: number
+    description: Average ticket price paid
+    expr: average_tix_price
+    name: average_tix_price
+    synonyms:
+    - ticket price
+    - avg ticket price
+    - ticket cost
+  - data_type: number
+    description: Amount spent per person on concessions
+    expr: concess_spend
+    name: concess_spend
+    synonyms:
+    - concession spending
+    - food spending
+    - F&B spend
+  - data_type: number
+    description: Total number of tickets in order
+    expr: total_tix
+    name: total_tix
+    synonyms:
+    - ticket count
+    - number of tickets
+    - ticket quantity
+  - data_type: number
+    description: Indicator if fan attended with kids aged 3-5 (1=Yes, 0=No)
+    expr: attend_kids_ages_bet_3_5
+    name: attend_kids_ages_bet_3_5
+    synonyms:
+    - kids 3-5
+    - young children
+    - preschool kids
+  - data_type: number
+    description: Indicator if fan attended with kids aged 6-12 (1=Yes, 0=No)
+    expr: attend_kids_ages_bet_6_12
+    name: attend_kids_ages_bet_6_12
+    synonyms:
+    - kids 6-12
+    - school age children
+  - data_type: number
+    description: Indicator if fan attended with kids aged 13-17 (1=Yes, 0=No)
+    expr: attend_kids_ages_bet_13_17
+    name: attend_kids_ages_bet_13_17
+    synonyms:
+    - teenagers
+    - teens
+    - kids 13-17
+  - data_type: number
+    description: Indicator if fan attended with kids under 3 (1=Yes, 0=No)
+    expr: attend_kids_ages_under_3
+    name: attend_kids_ages_under_3
+    synonyms:
+    - infants
+    - babies
+    - toddlers
+  - data_type: number
+    description: Indicator if fan attended with spouse/partner (1=Yes, 0=No)
+    expr: attend_with_category_spouse
+    name: attend_with_category_spouse
+    synonyms:
+    - with spouse
+    - with partner
+    - with significant other
+  - data_type: number
+    description: Indicator if fan attended with friends (1=Yes, 0=No)
+    expr: attend_with_category_friends
+    name: attend_with_category_friends
+    synonyms:
+    - with friends
+    - friend group
+  - data_type: number
+    description: Indicator if fan attended alone (1=Yes, 0=No)
+    expr: attend_with_category_alone
+    name: attend_with_category_alone
+    synonyms:
+    - attended alone
+    - solo attendance
+  - data_type: number
+    description: Indicator if fan attended with business associates (1=Yes, 0=No)
+    expr: attend_with_category_business
+    name: attend_with_category_business
+    synonyms:
+    - business clients
+    - work event
+  - data_type: number
+    description: Indicator if fan attended with other family (1=Yes, 0=No)
+    expr: attend_with_category_otherfam
+    name: attend_with_category_otherfam
+    synonyms:
+    - extended family
+    - other family members
+  - data_type: number
+    description: Indicator if fan attended with adult children (1=Yes, 0=No)
+    expr: attend_with_category_adult_kids
+    name: attend_with_category_adult_kids
+    synonyms:
+    - with adult children
+    - grown children
+  - data_type: number
+    description: Indicator for white ethnicity (1=Yes, 0=No)
+    expr: eth_id_white
+    name: eth_id_white
+    synonyms:
+    - white ethnicity
+    - caucasian
+  - data_type: number
+    description: Indicator for black/African American ethnicity (1=Yes, 0=No)
+    expr: eth_id_black
+    name: eth_id_black
+    synonyms:
+    - black ethnicity
+    - african american
+  - data_type: number
+    description: Indicator for Hispanic/Latinx ethnicity (1=Yes, 0=No)
+    expr: eth_id_latinx
+    name: eth_id_latinx
+    synonyms:
+    - hispanic ethnicity
+    - latino
+    - latinx
+  - data_type: number
+    description: Indicator for Asian ethnicity (1=Yes, 0=No)
+    expr: eth_id_asian
+    name: eth_id_asian
+    synonyms:
+    - asian ethnicity
+    - asian american
+  - data_type: number
+    description: Indicator if fan arrived early to eat/drink (1=Yes, 0=No)
+    expr: pregame_plans_eat
+    name: pregame_plans_eat
+    synonyms:
+    - ate before game
+    - pregame dining
+  - data_type: number
+    description: Indicator if fan arrived for batting practice (1=Yes, 0=No)
+    expr: pregame_plans_bp
+    name: pregame_plans_bp
+    synonyms:
+    - batting practice
+    - watched BP
+  - data_type: number
+    description: Indicator if fan arrived early to avoid lines (1=Yes, 0=No)
+    expr: pregame_plans_avoid_lines
+    name: pregame_plans_avoid_lines
+    synonyms:
+    - arrived early to avoid crowds
+    - beat the lines
+  - data_type: number
+    description: Indicator if fan arrived early for merchandise (1=Yes, 0=No)
+    expr: pregame_plans_merch
+    name: pregame_plans_merch
+    synonyms:
+    - shop before game
+    - pregame shopping
+  - data_type: number
+    description: Indicator if fan went to local bar before game (1=Yes, 0=No)
+    expr: pregame_plans_local_bar
+    name: pregame_plans_local_bar
+    synonyms:
+    - went to bar first
+    - pregame bar
+  - data_type: number
+    description: Indicator if fan arrived early for promotion (1=Yes, 0=No)
+    expr: pregame_plans_promo
+    name: pregame_plans_promo
+    synonyms:
+    - arrived for promotion
+    - early for giveaway
+  - data_type: number
+    description: Indicator if game was postseason (1=Yes, 0=No)
+    expr: postseason_game
+    name: postseason_game
+    synonyms:
+    - playoff game
+    - postseason
+  - data_type: number
+    description: Indicator if game was on a holiday (1=Yes, 0=No)
+    expr: holiday
+    name: holiday
+    synonyms:
+    - holiday game
+    - special date
+  - data_type: number
+    description: Indicator if game had a theme night (1=Yes, 0=No)
+    expr: theme_night_flag
+    name: theme_night_flag
+    synonyms:
+    - theme night indicator
+    - special theme
+  - data_type: number
+    description: Unique game identifier
+    expr: gamepk
+    name: gamepk
+    synonyms:
+    - game ID
+    - game key
+    - game identifier
+  - data_type: varchar
+    description: Unique survey response identifier
+    expr: qualtrics_id
+    name: qualtrics_id
+    synonyms:
+    - response ID
+    - survey ID
+  - data_type: varchar
+    description: Ticket order identifier
+    expr: order_id
+    name: order_id
+    synonyms:
+    - ticket order ID
+    - order number
+  - data_type: varchar
+    description: Individual ticket identifier
+    expr: ticket_id
+    name: ticket_id
+    synonyms:
+    - ticket number
+    - ticket identifier
+  - data_type: varchar
+    description: Perceived value of seat location
+    expr: seatview_value_seat
+    name: seatview_value_seat
+    synonyms:
+    - seat value perception
+    - seat worth
+  - data_type: varchar
+    description: Country where fan resides
+    expr: country
+    name: country
+    synonyms:
+    - fan country
+    - nation
+  - data_type: varchar
+    description: Zip code fan traveled from
+    expr: travel_start_zip
+    name: travel_start_zip
+    synonyms:
+    - home zip code
+    - origin zip
+  - data_type: number
+    description: Time in minutes to exit parking
+    expr: parking_exit_time_desc
+    name: parking_exit_time_desc
+    synonyms:
+    - parking exit time
+    - time to exit
+  - data_type: number
+    description: Distance from fan's home to stadium
+    expr: home_dist
+    name: home_dist
+    synonyms:
+    - distance from home
+    - travel distance
+  - data_type: number
+    description: Indicator if fan purchased alcohol (1=Yes, 0=No)
+    expr: concess_type_alcohol
+    name: concess_type_alcohol
+    synonyms:
+    - bought alcohol
+    - alcohol purchase
+  - data_type: number
+    description: Indicator if fan purchased hot dog (1=Yes, 0=No)
+    expr: concess_type_hotdog
+    name: concess_type_hotdog
+    synonyms:
+    - bought hot dog
+    - hot dog purchase
+  - data_type: number
+    description: Indicator if fan purchased pizza (1=Yes, 0=No)
+    expr: concess_type_pizza
+    name: concess_type_pizza
+    synonyms:
+    - bought pizza
+    - pizza purchase
+  - data_type: number
+    description: Indicator if fan purchased nachos (1=Yes, 0=No)
+    expr: concess_type_nachos
+    name: concess_type_nachos
+    synonyms:
+    - bought nachos
+    - nachos purchase
+  - data_type: number
+    description: Indicator if fan purchased burgers (1=Yes, 0=No)
+    expr: concess_type_burgers
+    name: concess_type_burgers
+    synonyms:
+    - bought burgers
+    - burger purchase
+  - data_type: number
+    description: Indicator if fan purchased chicken tenders (1=Yes, 0=No)
+    expr: concess_type_chicken
+    name: concess_type_chicken
+    synonyms:
+    - bought chicken
+    - chicken purchase
+  - data_type: number
+    description: Indicator if fan purchased fries (1=Yes, 0=No)
+    expr: concess_type_fries
+    name: concess_type_fries
+    synonyms:
+    - bought fries
+    - french fry purchase
+  - data_type: number
+    description: Indicator if fan purchased popcorn (1=Yes, 0=No)
+    expr: concess_type_popcorn
+    name: concess_type_popcorn
+    synonyms:
+    - bought popcorn
+    - popcorn purchase
+  - data_type: number
+    description: Indicator if fan purchased pretzels (1=Yes, 0=No)
+    expr: concess_type_pretzels
+    name: concess_type_pretzels
+    synonyms:
+    - bought pretzels
+    - pretzel purchase
+  - data_type: number
+    description: Indicator if fan purchased ice cream (1=Yes, 0=No)
+    expr: concess_type_icecream
+    name: concess_type_icecream
+    synonyms:
+    - bought ice cream
+    - ice cream purchase
+  - data_type: number
+    description: Indicator if fan purchased sandwich (1=Yes, 0=No)
+    expr: concess_type_sandwich
+    name: concess_type_sandwich
+    synonyms:
+    - bought sandwich
+    - sandwich purchase
+  - data_type: number
+    description: Indicator if fan purchased salad (1=Yes, 0=No)
+    expr: concess_type_salad
+    name: concess_type_salad
+    synonyms:
+    - bought salad
+    - salad purchase
+  - data_type: number
+    description: Indicator if fan purchased sausage (1=Yes, 0=No)
+    expr: concess_type_sausage
+    name: concess_type_sausage
+    synonyms:
+    - bought sausage
+    - sausage purchase
+  - data_type: number
+    description: Indicator if fan purchased nuts/peanuts (1=Yes, 0=No)
+    expr: concess_type_nuts
+    name: concess_type_nuts
+    synonyms:
+    - bought peanuts
+    - nuts purchase
+  - data_type: number
+    description: Indicator if fan purchased non-alcoholic beverage (1=Yes, 0=No)
+    expr: concess_type_nonalcohol
+    name: concess_type_nonalcohol
+    synonyms:
+    - bought non-alcoholic beverage
+    - soda purchase
+  - data_type: number
+    description: Indicator if fan purchased no concessions (1=Yes, 0=No)
+    expr: concess_type_none
+    name: concess_type_none
+    synonyms:
+    - no concession purchase
+    - bought nothing
+  - data_type: number
+    description: Indicator if fan ordered via mobile app (1=Yes, 0=No)
+    expr: concess_order_method_mobile
+    name: concess_order_method_mobile
+    synonyms:
+    - mobile app order
+    - ordered on phone
+  - data_type: number
+    description: Indicator if fan ordered at concession stand (1=Yes, 0=No)
+    expr: concess_order_method_stand
+    name: concess_order_method_stand
+    synonyms:
+    - ordered at stand
+    - counter order
+  - data_type: number
+    description: Indicator if fan ordered via touchscreen kiosk (1=Yes, 0=No)
+    expr: concess_order_method_touchscreen
+    name: concess_order_method_touchscreen
+    synonyms:
+    - kiosk order
+    - touchscreen order
+  - data_type: number
+    description: Indicator if fan ordered from vendor in stands (1=Yes, 0=No)
+    expr: concess_order_method_vendorstands
+    name: concess_order_method_vendorstands
+    synonyms:
+    - vendor in stands
+    - seat vendor
+  - data_type: number
+    description: Indicator if fan purchased at traditional stand (1=Yes, 0=No)
+    expr: concess_location_stand
+    name: concess_location_stand
+    synonyms:
+    - traditional concession stand
+    - concession counter
+  - data_type: number
+    description: Indicator if fan used grab-and-go location (1=Yes, 0=No)
+    expr: concess_location_grabandgo
+    name: concess_location_grabandgo
+    synonyms:
+    - grab and go
+    - quick service
+  - data_type: number
+    description: Indicator if fan used mobile order pickup (1=Yes, 0=No)
+    expr: concess_location_mobilepickup
+    name: concess_location_mobile_pickup
+    synonyms:
+    - mobile pickup window
+    - app pickup
+  - data_type: number
+    description: Indicator if fan had mobile order delivered to seat (1=Yes, 0=No)
+    expr: concess_location_mobiledelivery
+    name: concess_location_mobiledelivery
+    synonyms:
+    - in-seat delivery
+    - mobile delivery
+  - data_type: number
+    description: Indicator if fan used touchscreen kiosk (1=Yes, 0=No)
+    expr: concess_location_touchscreen
+    name: concess_location_touchscreen
+    synonyms:
+    - kiosk location
+    - self-service kiosk
+  - data_type: number
+    description: Indicator if fan purchased from in-seat vendor (1=Yes, 0=No)
+    expr: concess_location_vendorstands
+    name: concess_location_vendorstands
+    synonyms:
+    - purchased from vendor
+    - vendor in seats
+  metrics:
+  - description: Average overall satisfaction rating (1-10 scale)
+    expr: AVG(overall_numrat)
+    name: avg_overall_satisfaction
+    synonyms:
+    - average satisfaction
+    - mean satisfaction
+  - description: Average concession satisfaction rating (1-10 scale)
+    expr: AVG(concess_numrat)
+    name: avg_concession_satisfaction
+    synonyms:
+    - average food rating
+    - mean F&B satisfaction
+  - description: Average merchandise satisfaction rating (1-10 scale)
+    expr: AVG(merch_numrat)
+    name: avg_merch_satisfaction
+    synonyms:
+    - average merchandise rating
+    - mean retail satisfaction
+  - description: Average staff satisfaction rating (1-10 scale)
+    expr: AVG(staff_numrat)
+    name: avg_staff_satisfaction
+    synonyms:
+    - average staff rating
+    - mean employee satisfaction
+  - description: Average parking satisfaction rating (1-10 scale)
+    expr: AVG(parking_numrat)
+    name: avg_parking_satisfaction
+    synonyms:
+    - average parking rating
+  - description: Average entertainment satisfaction rating (1-10 scale)
+    expr: AVG(entertain_numrat)
+    name: avg_entertainment_satisfaction
+    synonyms:
+    - average entertainment rating
+  - description: Total number of survey responses
+    expr: COUNT(*)
+    name: total_responses
+    synonyms:
+    - response count
+    - survey count
+  - description: Average ticket price across responses
+    expr: AVG(average_tix_price)
+    name: avg_ticket_price
+    synonyms:
+    - average ticket cost
+    - mean ticket price
+  - description: Average amount spent per person on concessions
+    expr: AVG(concess_spend)
+    name: avg_concession_spend
+    synonyms:
+    - average F&B spend
+    - mean concession spending
+  - description: Total ticket revenue from responses
+    expr: SUM(average_tix_price * total_tix)
+    name: total_ticket_revenue
+    synonyms:
+    - total ticket sales
+    - ticket revenue
+  - description: Total concession revenue from responses
+    expr: SUM(concess_spend)
+    name: total_concession_revenue
+    synonyms:
+    - total F&B revenue
+    - concession sales
+  - description: Percentage of fans who purchased concessions
+    expr: AVG(CASE WHEN concess_screener_desc = 'Yes' THEN 1 ELSE 0 END) * 100
+    name: concession_purchase_rate
+    synonyms:
+    - F&B purchase rate
+    - concession penetration
+  - description: Percentage of fans who purchased merchandise
+    expr: AVG(CASE WHEN merch_screener_desc = 'Yes' THEN 1 ELSE 0 END) * 100
+    name: merch_purchase_rate
+    synonyms:
+    - merchandise penetration
+    - retail purchase rate
+  - description: Percentage of fans attending with children
+    expr: AVG(CASE WHEN attend_kids_ages_bet_3_5 = 1 OR attend_kids_ages_bet_6_12 = 1 OR attend_kids_ages_bet_13_17
+      = 1 THEN 1 ELSE 0 END) * 100
+    name: family_attendance_rate
+    synonyms:
+    - families with kids
+    - family penetration
+  - description: Percentage of fans who purchased alcohol
+    expr: AVG(CASE WHEN concess_type_alcohol = 1 THEN 1 ELSE 0 END) * 100
+    name: alcohol_purchase_rate
+    synonyms:
+    - alcohol penetration
+    - beer sales rate
+  - description: Percentage of fans rating 9-10 (promoters)
+    expr: AVG(CASE WHEN overall_numrat >= 9 THEN 1 ELSE 0 END) * 100
+    name: promoter_score
+    synonyms:
+    - NPS promoters
+    - highly satisfied
+  - description: Percentage of fans rating 7-8 (passives)
+    expr: AVG(CASE WHEN overall_numrat BETWEEN 7 AND 8 THEN 1 ELSE 0 END) * 100
+    name: passive_score
+    synonyms:
+    - NPS passives
+    - neutral satisfaction
+  - description: Percentage of fans rating 0-6 (detractors)
+    expr: AVG(CASE WHEN overall_numrat <= 6 THEN 1 ELSE 0 END) * 100
+    name: detractor_score
+    synonyms:
+    - NPS detractors
+    - dissatisfied
+  - description: Net Promoter Score (% promoters - % detractors)
+    expr: (AVG(CASE WHEN overall_numrat >= 9 THEN 1 ELSE 0 END) - AVG(CASE WHEN overall_numrat <= 6 THEN
+      1 ELSE 0 END)) * 100
+    name: net_promoter_score
+    synonyms:
+    - NPS
+    - net promoter
+  - description: Percentage likely to purchase tickets next season
+    expr: AVG(CASE WHEN purchase_intent_next_desc LIKE '%Likely%' THEN 1 ELSE 0 END) * 100
+    name: repurchase_intent_rate
+    synonyms:
+    - retention rate
+    - will buy again
+  - description: Percentage of fans who purchased hot dogs
+    expr: AVG(CASE WHEN concess_type_hotdog = 1 THEN 1 ELSE 0 END) * 100
+    name: hot_dog_purchase_rate
+    synonyms:
+    - hot dog penetration
+  - description: Percentage of fans who purchased pizza
+    expr: AVG(CASE WHEN concess_type_pizza = 1 THEN 1 ELSE 0 END) * 100
+    name: pizza_purchase_rate
+    synonyms:
+    - pizza penetration
+  - description: Percentage of fans who purchased nachos
+    expr: AVG(CASE WHEN concess_type_nachos = 1 THEN 1 ELSE 0 END) * 100
+    name: nachos_purchase_rate
+    synonyms:
+    - nachos penetration
+  - description: Percentage of fans who arrived early (for any reason)
+    expr: AVG(CASE WHEN pregame_plans_eat = 1 OR pregame_plans_bp = 1 OR pregame_plans_avoid_lines = 1
+      OR pregame_plans_merch = 1 OR pregame_plans_promo = 1 THEN 1 ELSE 0 END) * 100
+    name: early_arrival_rate
+    synonyms:
+    - arrived early percentage
+    - pregame attendance
+  - description: Percentage of fans who used mobile ordering
+    expr: AVG(CASE WHEN concess_order_method_mobile = 1 THEN 1 ELSE 0 END) * 100
+    name: mobile_order_adoption_rate
+    synonyms:
+    - mobile ordering penetration
+  - description: Percentage of fans who left before game ended
+    expr: AVG(CASE WHEN exit_stage_desc IS NOT NULL AND exit_stage_desc NOT LIKE '%After%' THEN 1 ELSE
+      0 END) * 100
+    name: left_early_rate
+    synonyms:
+    - early departure rate
+    - left before end
+  - description: Percentage of fans who attended alone
+    expr: AVG(CASE WHEN attend_with_category_alone = 1 THEN 1 ELSE 0 END) * 100
+    name: attended_alone_rate
+    synonyms:
+    - solo attendance rate
+  - description: Percentage of business/corporate attendees
+    expr: AVG(CASE WHEN attend_with_category_business = 1 THEN 1 ELSE 0 END) * 100
+    name: business_attendance_rate
+    synonyms:
+    - corporate attendance rate
+  - description: Percentage who purchased multiple food items
+    expr: AVG(CASE WHEN (concess_type_alcohol + concess_type_hotdog + concess_type_pizza + concess_type_nachos
+      + concess_type_burgers + concess_type_chicken + concess_type_fries + concess_type_popcorn + concess_type_pretzels
+      + concess_type_icecream + concess_type_sandwich + concess_type_salad) > 1 THEN 1 ELSE 0 END) * 100
+    name: multiple_item_purchase_rate
+    synonyms:
+    - bought multiple items
+  - description: Percentage who attended multiple games previous season
+    expr: AVG(CASE WHEN games_prev_season_desc NOT IN ('0', 'This was my first game') THEN 1 ELSE 0 END)
+      * 100
+    name: repeat_attender_rate
+    synonyms:
+    - returning fan rate
+  name: voc_responses
+  time_dimensions:
+  - data_type: date
+    description: Date of the game
+    expr: game_date
+    name: game_date
+    synonyms:
+    - event date
+    - match date
+  - data_type: date
+    description: Date survey was completed
+    expr: response_date
+    name: response_date
+    synonyms:
+    - survey date
+    - completion date
+  - data_type: timestamp
+    description: Timestamp when ticket was scanned at entry
+    expr: scan_timestamp
+    name: scan_timestamp
+    synonyms:
+    - entry time
+    - scan time
+    - gate entry
+- base_table:
+    database: TBRDP_DW_DEV
+    schema: IM_RPT
+    table: V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+  description: Post-game survey responses from Tampa Bay Rays attendees with demographic, behavioral,
+    and experiential data
+  dimensions:
+  - data_type: date
+    description: Date when the game was played
+    expr: game_date
+    name: game_date
+    synonyms:
+    - event date
+    - match date
+    - game day
+  - data_type: number
+    description: Baseball season year
+    expr: season
+    name: season
+    synonyms:
+    - year
+    - season year
+  - data_type: varchar
+    description: Type of ticket buyer (Single Game, Season Ticket Holder, Group, etc.)
+    expr: buyer_type
+    name: buyer_type
+    synonyms:
+    - ticket type
+    - buyer category
+    - purchase type
+  - data_type: varchar
+    description: Stadium or venue name
+    expr: stadium
+    name: stadium
+    synonyms:
+    - venue
+    - ballpark
+    - facility
+  - data_type: varchar
+    description: Home team nickname
+    expr: team_nickname
+    name: team_nickname
+    synonyms:
+    - team
+    - club
+    - team name
+  - data_type: varchar
+    description: Stadium section code where fan was seated
+    expr: section_code
+    name: section_code
+    synonyms:
+    - seating section
+    - seat section
+    - stadium section
+  - data_type: number
+    description: Year fan was born
+    expr: age
+    name: age
+    synonyms:
+    - birth year
+    - year born
+    - fan age
+  - data_type: varchar
+    description: Fan gender
+    expr: gender_id_desc
+    name: gender_id_desc
+    synonyms:
+    - gender
+    - sex
+  - data_type: varchar
+    description: City where fan resides
+    expr: city
+    name: city
+    synonyms:
+    - patron city
+    - home city
+    - residence city
+  - data_type: varchar
+    description: State where fan resides
+    expr: state
+    name: state
+    synonyms:
+    - home state
+    - residence state
+  - data_type: varchar
+    description: Household income bracket
+    expr: hhi_id_desc
+    name: hhi_id_desc
+    synonyms:
+    - household income
+    - income level
+    - income bracket
+  - data_type: varchar
+    description: Whether fan is a parent
+    expr: parent_id_desc
+    name: parent_id_desc
+    synonyms:
+    - parent status
+    - has children
+  - data_type: varchar
+    description: Size of group attending game
+    expr: group_size_desc
+    name: group_size_desc
+    synonyms:
+    - party size
+    - group size
+    - number attending
+  - data_type: varchar
+    description: Whether fan purchased concessions (Yes/No)
+    expr: concess_screener_desc
+    name: concess_screener_desc
+    synonyms:
+    - purchased concessions
+    - bought food
+  - data_type: varchar
+    description: Satisfaction with concession area cleanliness
+    expr: concess_grid_clean_desc
+    name: concess_grid_clean_desc
+    synonyms:
+    - concession cleanliness
+    - food area cleanliness
+  - data_type: varchar
+    description: Satisfaction with concession customer service
+    expr: concess_grid_custserv_desc
+    name: concess_grid_custserv_desc
+    synonyms:
+    - concession service
+    - food service quality
+  - data_type: varchar
+    description: Satisfaction with food and beverage selection
+    expr: concess_grid_selection_desc
+    name: concess_grid_selection_desc
+    synonyms:
+    - food variety
+    - concession options
+    - menu selection
+  - data_type: varchar
+    description: Perception of concession value for money
+    expr: concess_grid_value_desc
+    name: concess_grid_value_desc
+    synonyms:
+    - food value
+    - concession pricing perception
+    - price value
+  - data_type: varchar
+    description: Wait time at concession stands
+    expr: concess_wait_desc
+    name: concess_wait_desc
+    synonyms:
+    - concession wait time
+    - food line wait
+  - data_type: varchar
+    description: Whether fan purchased merchandise (Yes/No)
+    expr: merch_screener_desc
+    name: merch_screener_desc
+    synonyms:
+    - purchased merchandise
+    - bought merch
+    - retail purchase
+  - data_type: varchar
+    description: Satisfaction with merchandise customer service
+    expr: merch_grid_custserv_desc
+    name: merch_grid_custserv_desc
+    synonyms:
+    - merchandise service
+    - retail service
+  - data_type: varchar
+    description: Satisfaction with merchandise quality
+    expr: merch_grid_merchquality_desc
+    name: merch_grid_merchquality_desc
+    synonyms:
+    - merchandise quality
+    - product quality
+  - data_type: varchar
+    description: Satisfaction with merchandise pricing
+    expr: merch_grid_price_desc
+    name: merch_grid_price_desc
+    synonyms:
+    - merchandise pricing
+    - retail pricing
+  - data_type: varchar
+    description: Satisfaction with merchandise selection
+    expr: merch_grid_selection_desc
+    name: merch_grid_selection_desc
+    synonyms:
+    - merchandise variety
+    - product selection
+  - data_type: varchar
+    description: Satisfaction with concession staff
+    expr: staff_grid_concessions_desc
+    name: staff_grid_concessions_desc
+    synonyms:
+    - concession staff
+    - food staff rating
+  - data_type: varchar
+    description: Satisfaction with fan services staff
+    expr: staff_grid_fan_services_desc
+    name: staff_grid_fan_services_desc
+    synonyms:
+    - fan services staff
+    - guest services staff
+  - data_type: varchar
+    description: Satisfaction with merchandise staff
+    expr: staff_grid_merch_desc
+    name: staff_grid_merch_desc
+    synonyms:
+    - merchandise staff
+    - retail staff
+  - data_type: varchar
+    description: Satisfaction with parking staff
+    expr: staff_grid_parking_desc
+    name: staff_grid_parking_desc
+    synonyms:
+    - parking attendants
+    - parking staff
+  - data_type: varchar
+    description: Satisfaction with security staff
+    expr: staff_grid_security_desc
+    name: staff_grid_security_desc
+    synonyms:
+    - security staff
+    - security guards
+  - data_type: varchar
+    description: Satisfaction with usher staff
+    expr: staff_grid_usher_desc
+    name: staff_grid_usher_desc
+    synonyms:
+    - usher staff
+    - seat ushers
+  - data_type: varchar
+    description: Satisfaction with in-between inning games
+    expr: entertain_grid_games_desc
+    name: entertain_grid_games_desc
+    synonyms:
+    - in-game entertainment
+    - between innings games
+  - data_type: varchar
+    description: Satisfaction with kids activities
+    expr: entertain_grid_kids_activities_desc
+    name: entertain_grid_kids_activities_desc
+    synonyms:
+    - kids activities
+    - children entertainment
+  - data_type: varchar
+    description: Satisfaction with music during game
+    expr: entertain_grid_music_desc
+    name: entertain_grid_music_desc
+    synonyms:
+    - game music
+    - stadium music
+  - data_type: varchar
+    description: Satisfaction with scoreboard information
+    expr: entertain_grid_scoreboard_desc
+    name: entertain_grid_scoreboard_desc
+    synonyms:
+    - scoreboard content
+    - scoreboard display
+  - data_type: varchar
+    description: Perception of stadium accessibility
+    expr: brandhealth_grid_accessible_desc
+    name: brandhealth_grid_accessible_desc
+    synonyms:
+    - stadium accessibility
+    - accessible venue
+  - data_type: varchar
+    description: Perception of team's commitment to winning
+    expr: brandhealth_grid_champion_desc
+    name: brandhealth_grid_champion_desc
+    synonyms:
+    - winning commitment
+    - championship commitment
+  - data_type: varchar
+    description: Perception of family-friendliness
+    expr: brandhealth_grid_famfriendly_desc
+    name: brandhealth_grid_famfriendly_desc
+    synonyms:
+    - family friendly
+    - kid friendly
+  - data_type: varchar
+    description: Perception of stadium safety
+    expr: brandhealth_grid_safe_desc
+    name: brandhealth_grid_safe_desc
+    synonyms:
+    - stadium safety
+    - venue safety
+  - data_type: varchar
+    description: Perception of welcoming atmosphere
+    expr: brandhealth_grid_welcome_desc
+    name: brandhealth_grid_welcome_desc
+    synonyms:
+    - feeling welcome
+    - welcoming environment
+  - data_type: varchar
+    description: Name of giveaway/promotional item
+    expr: giveaway_name
+    name: giveaway_name
+    synonyms:
+    - promo item
+    - giveaway item
+  - data_type: varchar
+    description: Whether fan received the giveaway
+    expr: giveaway_receive_desc
+    name: giveaway_receive_desc
+    synonyms:
+    - received giveaway
+    - got promo item
+  - data_type: varchar
+    description: Satisfaction with giveaway item
+    expr: giveaway_sat_desc
+    name: giveaway_sat_desc
+    synonyms:
+    - giveaway satisfaction
+    - promo satisfaction
+  - data_type: varchar
+    description: Theme or special event name
+    expr: theme_name
+    name: theme_name
+    synonyms:
+    - theme night
+    - special event
+  - data_type: varchar
+    description: Satisfaction with theme night
+    expr: theme_sat_desc
+    name: theme_sat_desc
+    synonyms:
+    - theme satisfaction
+    - event satisfaction
+  - data_type: varchar
+    description: Ease of mobile ordering
+    expr: mobile_order_grid_easy_desc
+    name: mobile_order_grid_easy_desc
+    synonyms:
+    - mobile order ease
+    - app ease of use
+  - data_type: varchar
+    description: Accuracy of mobile orders
+    expr: mobile_order_grid_accuracy_desc
+    name: mobile_order_grid_accuracy_desc
+    synonyms:
+    - order accuracy
+    - correct order
+  - data_type: varchar
+    description: Time saved using mobile ordering
+    expr: mobile_order_exp_time_desc
+    name: mobile_order_exp_time_desc
+    synonyms:
+    - time saved
+    - mobile order speed
+  - data_type: varchar
+    description: Number of games attended in previous season
+    expr: games_prev_season_desc
+    name: games_prev_season_desc
+    synonyms:
+    - previous attendance
+    - games attended last year
+  - data_type: varchar
+    description: Number of games fan plans to attend
+    expr: attend_num_plan_desc
+    name: attend_num_plan_desc
+    synonyms:
+    - planned attendance
+    - future attendance intent
+  - data_type: varchar
+    description: Level of team fandom
+    expr: team_avidity_desc
+    name: team_avidity_desc
+    synonyms:
+    - fan loyalty
+    - fan passion
+    - fandom level
+  - data_type: varchar
+    description: Time to get through security/entry
+    expr: ge_time_desc
+    name: ge_time_desc
+    synonyms:
+    - entry time
+    - gate entry time
+    - security time
+  - data_type: varchar
+    description: What inning fan left the stadium
+    expr: exit_stage_desc
+    name: exit_stage_desc
+    synonyms:
+    - when left
+    - departure time
+    - left early
+  - data_type: varchar
+    description: Intent to purchase tickets next season
+    expr: purchase_intent_next_desc
+    name: purchase_intent_next_desc
+    synonyms:
+    - repurchase intent
+    - buy again
+    - next season intent
+  filters:
+  - description: Filter to 2024 season only
+    expr: season = 2024
+    name: season_2024
+    synonyms:
+    - 2024 season
+    - last season
+  - description: Filter to 2025 season only
+    expr: season = 2025
+    name: season_2025
+    synonyms:
+    - 2025 season
+    - current season
+  - description: Filter to single game ticket buyers
+    expr: buyer_type IN ('Single Game', 'Single Game Ticket')
+    name: single_game_buyers
+    synonyms:
+    - single game tickets
+    - individual purchases
+  - description: Filter to season ticket holders
+    expr: buyer_type LIKE '%Season%'
+    name: season_ticket_holders
+    synonyms:
+    - STH
+    - season tickets
+  - description: Filter to fans attending with children
+    expr: (attend_kids_ages_bet_3_5 = 1 OR attend_kids_ages_bet_6_12 = 1 OR attend_kids_ages_bet_13_17
+      = 1)
+    name: families_with_kids
+    synonyms:
+    - family attendance
+    - with children
+  - description: Filter to fans with kids under 6
+    expr: attend_kids_ages_bet_3_5 = 1
+    name: families_with_young_kids
+    synonyms:
+    - families with young children
+    - preschool families
+  - description: Filter to fans rating 9-10
+    expr: overall_numrat >= 9
+    name: high_satisfaction
+    synonyms:
+    - promoters
+    - satisfied fans
+  - description: Filter to fans rating 0-6
+    expr: overall_numrat <= 6
+    name: low_satisfaction
+    synonyms:
+    - detractors
+    - dissatisfied fans
+  - description: Filter to fans who purchased concessions
+    expr: concess_screener_desc = 'Yes'
+    name: concession_purchasers
+    synonyms:
+    - bought food
+    - F&B customers
+  - description: Filter to fans who purchased merchandise
+    expr: merch_screener_desc = 'Yes'
+    name: merch_purchasers
+    synonyms:
+    - bought merchandise
+    - retail customers
+  - description: Filter to fans with tickets over $75
+    expr: average_tix_price > 75
+    name: high_spenders
+    synonyms:
+    - premium customers
+    - high value fans
+  - description: Filter to premium seating sections
+    expr: section_code LIKE '%CLUB%' OR section_code LIKE '%SUITE%'
+    name: premium_seats
+    synonyms:
+    - premium seating
+    - club seats
+  measures:
+  - data_type: number
+    description: Overall satisfaction rating on 1-10 scale
+    expr: overall_numrat
+    name: overall_numrat
+    synonyms:
+    - overall satisfaction
+    - overall rating
+    - satisfaction score
+  - data_type: number
+    description: Overall satisfaction adjusted for external factors
+    expr: overall_numrat_adjusted
+    name: overall_numrat_adjusted
+    synonyms:
+    - adjusted satisfaction
+    - normalized rating
+  - data_type: number
+    description: Concession satisfaction rating on 1-10 scale
+    expr: concess_numrat
+    name: concess_numrat
+    synonyms:
+    - concession rating
+    - food rating
+    - F&B rating
+  - data_type: number
+    description: Real concession satisfaction rating on 1-10 scale
+    expr: real_concess_numrat
+    name: real_concess_numrat
+    synonyms:
+    - real concession rating
+    - actual F&B rating
+  - data_type: number
+    description: Merchandise satisfaction rating on 1-10 scale
+    expr: merch_numrat
+    name: merch_numrat
+    synonyms:
+    - merchandise rating
+    - retail rating
+  - data_type: number
+    description: Staff satisfaction rating on 1-10 scale
+    expr: staff_numrat
+    name: staff_numrat
+    synonyms:
+    - staff rating
+    - employee rating
+  - data_type: number
+    description: Parking satisfaction rating on 1-10 scale
+    expr: parking_numrat
+    name: parking_numrat
+    synonyms:
+    - parking rating
+    - parking satisfaction
+  - data_type: number
+    description: Entertainment satisfaction rating on 1-10 scale
+    expr: entertain_numrat
+    name: entertain_numrat
+    synonyms:
+    - entertainment rating
+    - in-game entertainment
+  - data_type: number
+    description: Seat view satisfaction rating on 1-10 scale
+    expr: seatview_numrat
+    name: seatview_numrat
+    synonyms:
+    - seat view rating
+    - sight line rating
+  - data_type: number
+    description: Average ticket price paid
+    expr: average_tix_price
+    name: average_tix_price
+    synonyms:
+    - ticket price
+    - avg ticket price
+    - ticket cost
+  - data_type: number
+    description: Amount spent per person on concessions
+    expr: concess_spend
+    name: concess_spend
+    synonyms:
+    - concession spending
+    - food spending
+    - F&B spend
+  - data_type: number
+    description: Total number of tickets in order
+    expr: total_tix
+    name: total_tix
+    synonyms:
+    - ticket count
+    - number of tickets
+    - ticket quantity
+  - data_type: number
+    description: Indicator if fan attended with kids aged 3-5 (1=Yes, 0=No)
+    expr: attend_kids_ages_bet_3_5
+    name: attend_kids_ages_bet_3_5
+    synonyms:
+    - kids 3-5
+    - young children
+    - preschool kids
+  - data_type: number
+    description: Indicator if fan attended with kids aged 6-12 (1=Yes, 0=No)
+    expr: attend_kids_ages_bet_6_12
+    name: attend_kids_ages_bet_6_12
+    synonyms:
+    - kids 6-12
+    - school age children
+  - data_type: number
+    description: Indicator if fan attended with kids aged 13-17 (1=Yes, 0=No)
+    expr: attend_kids_ages_bet_13_17
+    name: attend_kids_ages_bet_13_17
+    synonyms:
+    - teenagers
+    - teens
+    - kids 13-17
+  - data_type: number
+    description: Time in minutes to exit parking
+    expr: parking_exit_time_desc
+    name: parking_exit_time_desc
+    synonyms:
+    - parking exit time
+    - time to exit
+  - data_type: number
+    description: Distance from fan's home to stadium
+    expr: home_dist
+    name: home_dist
+    synonyms:
+    - distance from home
+    - travel distance
+  - data_type: number
+    description: Indicator if fan purchased alcohol (1=Yes, 0=No)
+    expr: concess_type_alcohol
+    name: concess_type_alcohol
+    synonyms:
+    - bought alcohol
+    - alcohol purchase
+  - data_type: number
+    description: Indicator if fan purchased hot dog (1=Yes, 0=No)
+    expr: concess_type_hotdog
+    name: concess_type_hotdog
+    synonyms:
+    - bought hot dog
+    - hot dog purchase
+  - data_type: number
+    description: Indicator if fan purchased pizza (1=Yes, 0=No)
+    expr: concess_type_pizza
+    name: concess_type_pizza
+    synonyms:
+    - bought pizza
+    - pizza purchase
+  - data_type: number
+    description: Indicator if fan purchased nachos (1=Yes, 0=No)
+    expr: concess_type_nachos
+    name: concess_type_nachos
+    synonyms:
+    - bought nachos
+    - nachos purchase
+  metrics:
+  - description: Average overall satisfaction rating (1-10 scale)
+    expr: AVG(overall_numrat)
+    name: avg_overall_satisfaction
+    synonyms:
+    - average satisfaction
+    - mean satisfaction
+  - description: Average concession satisfaction rating (1-10 scale)
+    expr: AVG(concess_numrat)
+    name: avg_concession_satisfaction
+    synonyms:
+    - average food rating
+    - mean F&B satisfaction
+  - description: Average merchandise satisfaction rating (1-10 scale)
+    expr: AVG(merch_numrat)
+    name: avg_merch_satisfaction
+    synonyms:
+    - average merchandise rating
+    - mean retail satisfaction
+  - description: Average staff satisfaction rating (1-10 scale)
+    expr: AVG(staff_numrat)
+    name: avg_staff_satisfaction
+    synonyms:
+    - average staff rating
+    - mean employee satisfaction
+  - description: Average parking satisfaction rating (1-10 scale)
+    expr: AVG(parking_numrat)
+    name: avg_parking_satisfaction
+    synonyms:
+    - average parking rating
+  - description: Average entertainment satisfaction rating (1-10 scale)
+    expr: AVG(entertain_numrat)
+    name: avg_entertainment_satisfaction
+    synonyms:
+    - average entertainment rating
+  - description: Total number of survey responses
+    expr: COUNT(*)
+    name: total_responses
+    synonyms:
+    - response count
+    - survey count
+  - description: Average ticket price across responses
+    expr: AVG(average_tix_price)
+    name: avg_ticket_price
+    synonyms:
+    - average ticket cost
+    - mean ticket price
+  - description: Average amount spent per person on concessions
+    expr: AVG(concess_spend)
+    name: avg_concession_spend
+    synonyms:
+    - average F&B spend
+    - mean concession spending
+  - description: Total ticket revenue from responses
+    expr: SUM(average_tix_price * total_tix)
+    name: total_ticket_revenue
+    synonyms:
+    - total ticket sales
+    - ticket revenue
+  - description: Total concession revenue from responses
+    expr: SUM(concess_spend)
+    name: total_concession_revenue
+    synonyms:
+    - total F&B revenue
+    - concession sales
+  - description: Percentage of fans who purchased concessions
+    expr: AVG(CASE WHEN concess_screener_desc = 'Yes' THEN 1 ELSE 0 END) * 100
+    name: concession_purchase_rate
+    synonyms:
+    - F&B purchase rate
+    - concession penetration
+  - description: Percentage of fans who purchased merchandise
+    expr: AVG(CASE WHEN merch_screener_desc = 'Yes' THEN 1 ELSE 0 END) * 100
+    name: merch_purchase_rate
+    synonyms:
+    - merchandise penetration
+    - retail purchase rate
+  - description: Percentage of fans attending with children
+    expr: AVG(CASE WHEN attend_kids_ages_bet_3_5 = 1 OR attend_kids_ages_bet_6_12 = 1 OR attend_kids_ages_bet_13_17
+      = 1 THEN 1 ELSE 0 END) * 100
+    name: family_attendance_rate
+    synonyms:
+    - families with kids
+    - family penetration
+  - description: Percentage of fans who purchased alcohol
+    expr: AVG(CASE WHEN concess_type_alcohol = 1 THEN 1 ELSE 0 END) * 100
+    name: alcohol_purchase_rate
+    synonyms:
+    - alcohol penetration
+    - beer sales rate
+  - description: Percentage of fans rating 9-10 (promoters)
+    expr: AVG(CASE WHEN overall_numrat >= 9 THEN 1 ELSE 0 END) * 100
+    name: promoter_score
+    synonyms:
+    - NPS promoters
+    - highly satisfied
+  - description: Percentage of fans rating 7-8 (passives)
+    expr: AVG(CASE WHEN overall_numrat BETWEEN 7 AND 8 THEN 1 ELSE 0 END) * 100
+    name: passive_score
+    synonyms:
+    - NPS passives
+    - neutral satisfaction
+  - description: Percentage of fans rating 0-6 (detractors)
+    expr: AVG(CASE WHEN overall_numrat <= 6 THEN 1 ELSE 0 END) * 100
+    name: detractor_score
+    synonyms:
+    - NPS detractors
+    - dissatisfied
+  - description: Net Promoter Score (% promoters - % detractors)
+    expr: (AVG(CASE WHEN overall_numrat >= 9 THEN 1 ELSE 0 END) - AVG(CASE WHEN overall_numrat <= 6 THEN
+      1 ELSE 0 END)) * 100
+    name: net_promoter_score
+    synonyms:
+    - NPS
+    - net promoter
+  - description: Percentage likely to purchase tickets next season
+    expr: AVG(CASE WHEN purchase_intent_next_desc LIKE '%Likely%' THEN 1 ELSE 0 END) * 100
+    name: repurchase_intent_rate
+    synonyms:
+    - retention rate
+    - will buy again
+  name: voc_responses
+  time_dimensions:
+  - data_type: date
+    description: Date of the game
+    expr: game_date
+    name: game_date
+    synonyms:
+    - event date
+    - match date
+  - data_type: date
+    description: Date survey was completed
+    expr: response_date
+    name: response_date
+    synonyms:
+    - survey date
+    - completion date
+  - data_type: timestamp
+    description: Timestamp when ticket was scanned at entry
+    expr: scan_timestamp
+    name: scan_timestamp
+    synonyms:
+    - entry time
+    - scan time
+    - gate entry
+verified_queries:
+- name: avg_satisfaction_2024
+  question: What was the average overall satisfaction rating in 2024?
+  sql: SELECT AVG(overall_numrat) as avg_satisfaction FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+    WHERE season = 2024 AND overall_numrat IS NOT NULL
+- name: satisfaction_by_buyer_type_2024
+  question: What is the average satisfaction score by buyer type in 2024?
+  sql: SELECT buyer_type, AVG(overall_numrat) as avg_satisfaction, COUNT(*) as responses FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+    WHERE season = 2024 AND overall_numrat IS NOT NULL GROUP BY buyer_type ORDER BY avg_satisfaction DESC
+- name: concession_metrics_2024
+  question: What are the key concession metrics for 2024?
+  sql: SELECT AVG(concess_numrat) as avg_rating, AVG(concess_spend) as avg_spend, AVG(CASE WHEN concess_screener_desc
+    = 'Yes' THEN 100 ELSE 0 END) as purchase_rate FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+    WHERE season = 2024
+- name: nps_by_month_2024
+  question: What is the Net Promoter Score by month for 2024?
+  sql: SELECT MONTH(game_date) as month, MONTHNAME(game_date) as month_name, (AVG(CASE WHEN overall_numrat
+    >= 9 THEN 100 ELSE 0 END) - AVG(CASE WHEN overall_numrat <= 6 THEN 100 ELSE 0 END)) as nps FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+    WHERE season = 2024 AND overall_numrat IS NOT NULL GROUP BY MONTH(game_date), MONTHNAME(game_date)
+    ORDER BY month
+- name: family_attendance_2024
+  question: What percentage of fans attended with children in 2024?
+  sql: SELECT AVG(CASE WHEN attend_kids_ages_bet_3_5 = 1 OR attend_kids_ages_bet_6_12 = 1 OR attend_kids_ages_bet_13_17
+    = 1 THEN 100 ELSE 0 END) as family_rate FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+    WHERE season = 2024
+- name: department_ratings_comparison
+  question: Compare satisfaction ratings across all departments
+  sql: SELECT AVG(overall_numrat) as overall, AVG(concess_numrat) as concessions, AVG(merch_numrat) as
+    merchandise, AVG(staff_numrat) as staff, AVG(parking_numrat) as parking, AVG(entertain_numrat) as
+    entertainment FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE season
+    = 2024
+- name: mobile_ordering_metrics
+  question: What are the key metrics for mobile ordering adoption?
+  sql: SELECT AVG(CASE WHEN concess_order_method_mobile = 1 THEN 100 ELSE 0 END) as adoption_rate, AVG(concess_numrat)
+    as avg_satisfaction FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE
+    season = 2024 AND concess_order_method_mobile = 1
+- name: food_item_popularity
+  question: What are the most popular food items purchased?
+  sql: SELECT AVG(CASE WHEN concess_type_hotdog = 1 THEN 100 ELSE 0 END) as hot_dogs, AVG(CASE WHEN concess_type_pizza
+    = 1 THEN 100 ELSE 0 END) as pizza, AVG(CASE WHEN concess_type_nachos = 1 THEN 100 ELSE 0 END) as nachos,
+    AVG(CASE WHEN concess_type_burgers = 1 THEN 100 ELSE 0 END) as burgers FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+    WHERE season = 2024 AND concess_screener_desc = 'Yes'
+- name: brand_health_overview
+  question: How do fans perceive the team across brand health dimensions?
+  sql: SELECT brandhealth_grid_champion_desc, brandhealth_grid_famfriendly_desc, brandhealth_grid_safe_desc,
+    brandhealth_grid_welcome_desc, COUNT(*) as responses FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+    WHERE season = 2024 GROUP BY brandhealth_grid_champion_desc, brandhealth_grid_famfriendly_desc, brandhealth_grid_safe_desc,
+    brandhealth_grid_welcome_desc LIMIT 10
