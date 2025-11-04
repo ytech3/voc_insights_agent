@@ -1,4 +1,4 @@
-mpa Bay Rays - Snowflake Cortex AI VOC Project
+Tampa Bay Rays - Snowflake Cortex AI VOC Project
 Natural Language Query System - Implementation Guide
 
 📋 Project Overview
