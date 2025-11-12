@@ -120,28 +120,28 @@ tables:
         synonyms: ['commercial opt in description', 'commercial opt in text', 'commercial opt in desc', 'commercial opt in']
       
       - name: CONCESS_GRID_CLEAN_DESC
-        description: "Text description for concess grid clean. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Concession cleanliness satisfaction level (text). Values like 'Very Satisfied', 'Satisfied', 'Neutral', etc. Use for distribution analysis and categorical breakdowns."
         expr: CONCESS_GRID_CLEAN_DESC
         data_type: varchar
-        synonyms: ['concess grid clean text', 'concess grid clean description', 'concess grid clean desc', 'concess grid clean']
+        synonyms: ["cleanliness satisfaction", "cleanliness level", "cleanliness feedback", "clean satisfaction level", "satisfaction category cleanliness"]
       
       - name: CONCESS_GRID_CUSTSERV_DESC
-        description: "Text description for concess grid custserv. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Concession customer service satisfaction level (text). Values like 'Excellent', 'Good', 'Fair', 'Poor'. Use for satisfaction distribution."
         expr: CONCESS_GRID_CUSTSERV_DESC
         data_type: varchar
-        synonyms: ['concess grid custserv', 'concess grid custserv text', 'concess grid custserv desc', 'concess grid custserv description']
+        synonyms: ["customer service satisfaction", "service level", "service feedback", "service satisfaction level", "staff satisfaction category"]
       
       - name: CONCESS_GRID_SELECTION_DESC
-        description: "Text description for concess grid selection. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Concession selection satisfaction level (text). Use for distribution of menu satisfaction categories."
         expr: CONCESS_GRID_SELECTION_DESC
         data_type: varchar
-        synonyms: ['concess grid selection', 'concess grid selection desc', 'concess grid selection description', 'concess grid selection text']
+        synonyms: ["selection satisfaction", "menu satisfaction", "variety satisfaction level", "selection feedback", "menu satisfaction level"]
       
       - name: CONCESS_GRID_VALUE_DESC
-        description: "Text description for concess grid value. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Concession value satisfaction level (text). Use for distribution of value satisfaction categories."
         expr: CONCESS_GRID_VALUE_DESC
         data_type: varchar
-        synonyms: ['concess grid value desc', 'concess grid value text', 'concess grid value', 'concess grid value description']
+        synonyms: ["value satisfaction", "value level", "price satisfaction level", "value feedback", "worth satisfaction level"]
       
       - name: CONCESS_INTENT_DESC
         description: "Text description for concess intent. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
@@ -426,10 +426,10 @@ tables:
         synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'concess type other entree specify topics']
       
       - name: CONCESS_WAIT_DESC
-        description: "Text description for concess wait. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Concession wait time satisfaction level (text). Use for distribution of wait time satisfaction."
         expr: CONCESS_WAIT_DESC
         data_type: varchar
-        synonyms: ['concess wait desc', 'concess wait description', 'concess wait text', 'concess wait']
+        synonyms: ["wait satisfaction", "wait time level", "wait time feedback", "line wait satisfaction level", "queue satisfaction"]
       
       - name: CONCESS_WAIT_EXPECT_DESC
         description: "Text description for concess wait expect. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
@@ -480,22 +480,40 @@ tables:
         synonyms: ['entertain grid theme description', 'entertain grid theme', 'entertain grid theme text', 'entertain grid theme desc']
       
       - name: EXIT_STAGE_DESC
-        description: "Text description for exit stage. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use EXIT_STAGE_DESC_CLEAN instead which filters codes automatically."
         expr: EXIT_STAGE_DESC
         data_type: varchar
-        synonyms: ['exit stage desc', 'exit stage description', 'exit stage text', 'exit stage']
+        synonyms: ["exit stage desc deprecated"]
+      
+      - name: EXIT_STAGE_DESC_CLEAN
+        description: "Exit Stage Desc - numeric codes filtered. Use for analysis."
+        expr: CASE WHEN REGEXP_LIKE(EXIT_STAGE_DESC, '^[0-9]+$') THEN NULL ELSE EXIT_STAGE_DESC END
+        data_type: varchar
+        synonyms: ['exit stage desc', 'exit stage desc clean']
       
       - name: FB_SAT_PREMIUM_ADD_FEEDBACK
-        description: "Text data for fb sat premium add feedback"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use FB_SAT_PREMIUM_ADD_FEEDBACK_CLEAN instead which filters codes automatically."
         expr: FB_SAT_PREMIUM_ADD_FEEDBACK
         data_type: varchar
-        synonyms: ['open ended', 'fb sat premium add feedback', 'improvements', 'suggestions', 'feedback']
+        synonyms: ["fb sat premium add feedback deprecated"]
+      
+      - name: FB_SAT_PREMIUM_ADD_FEEDBACK_CLEAN
+        description: "Fb Sat Premium Add Feedback - numeric codes filtered. Use for analysis."
+        expr: CASE WHEN REGEXP_LIKE(FB_SAT_PREMIUM_ADD_FEEDBACK, '^[0-9]+$') THEN NULL ELSE FB_SAT_PREMIUM_ADD_FEEDBACK END
+        data_type: varchar
+        synonyms: ['fb sat premium add feedback', 'fb sat premium add feedback clean']
       
       - name: GAMES_PREV_SEASON_DESC
-        description: "Text description for games prev season. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use GAMES_PREV_SEASON_DESC_CLEAN instead which filters codes automatically."
         expr: GAMES_PREV_SEASON_DESC
         data_type: varchar
-        synonyms: ['games prev season text', 'games prev season description', 'games prev season', 'games prev season desc']
+        synonyms: ["games prev season desc deprecated"]
+      
+      - name: GAMES_PREV_SEASON_DESC_CLEAN
+        description: "Games Prev Season Desc - numeric codes filtered. Use for analysis."
+        expr: CASE WHEN REGEXP_LIKE(GAMES_PREV_SEASON_DESC, '^[0-9]+$') THEN NULL ELSE GAMES_PREV_SEASON_DESC END
+        data_type: varchar
+        synonyms: ['games prev season desc', 'games prev season desc clean']
       
       - name: GENDER_ID_DESC
         description: "Text description for gender id. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
@@ -540,16 +558,28 @@ tables:
         synonyms: ['giveaway sat', 'giveaway sat text', 'giveaway sat desc', 'giveaway sat description']
       
       - name: GMS_SERVICE_RECOVERY_OTHER
-        description: "Open-ended text feedback explaining why patron selected their rating for gms service recoveryher. Contains actual text responses, not numeric codes."
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use GMS_SERVICE_RECOVERY_OTHER_CLEAN instead which filters codes automatically."
         expr: GMS_SERVICE_RECOVERY_OTHER
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'gms service recovery other']
+        synonyms: ["gms service recovery other deprecated"]
       
-      - name: GMS_SERVICE_RECOVERY_SPECIFY
-        description: "Open-ended text where patron specified other option for gms service recovery specify"
-        expr: GMS_SERVICE_RECOVERY_SPECIFY
+      - name: GMS_SERVICE_RECOVERY_OTHER_CLEAN
+        description: "GMS service recovery issue category for other - codes filtered. Use for service recovery analysis."
+        expr: CASE WHEN REGEXP_LIKE(GMS_SERVICE_RECOVERY_OTHER, '^[0-9]+$') THEN NULL ELSE GMS_SERVICE_RECOVERY_OTHER END
         data_type: varchar
-        synonyms: ['gms service recovery specify']
+        synonyms: ['service recovery other', 'gms other', 'other recovery', 'other issue']
+      
+      - name: GMS_SERVICE_RECOVERY_APP
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use GMS_SERVICE_RECOVERY_APP_CLEAN instead which filters codes automatically."
+        expr: GMS_SERVICE_RECOVERY_APP
+        data_type: varchar
+        synonyms: ["gms service recovery app deprecated"]
+      
+      - name: GMS_SERVICE_RECOVERY_APP_CLEAN
+        description: "GMS service recovery issue category for app - codes filtered. Use for service recovery analysis."
+        expr: CASE WHEN REGEXP_LIKE(GMS_SERVICE_RECOVERY_APP, '^[0-9]+$') THEN NULL ELSE GMS_SERVICE_RECOVERY_APP END
+        data_type: varchar
+        synonyms: ['service recovery app', 'gms app', 'app recovery', 'app issue']
       
       - name: GO_AHEAD_WHY_NOT_OTHERSPECIFY
         description: "Open-ended text feedback explaining why patron selected their rating for go ahead why notherspecify. Contains actual text responses, not numeric codes."
@@ -763,10 +793,16 @@ tables:
         synonyms: ['open ended', 'improvements', 'suggestions', 'mobile order issues otherspecify topics', 'feedback']
       
       - name: NON_GAME_ENT_FEEDBACK
-        description: "Text data for non game ent feedback"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use NON_GAME_ENT_FEEDBACK_CLEAN instead which filters codes automatically."
         expr: NON_GAME_ENT_FEEDBACK
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'non game ent feedback']
+        synonyms: ["non game ent feedback deprecated"]
+      
+      - name: NON_GAME_ENT_FEEDBACK_CLEAN
+        description: "Non Game Ent Feedback - numeric codes filtered. Use for analysis."
+        expr: CASE WHEN REGEXP_LIKE(NON_GAME_ENT_FEEDBACK, '^[0-9]+$') THEN NULL ELSE NON_GAME_ENT_FEEDBACK END
+        data_type: varchar
+        synonyms: ['non game ent feedback', 'non game ent feedback clean']
       
       - name: OVERALL_NUMRAT_OT
         description: "INTERNAL CODE - Use OVERALL_NUMRAT_OT_DESC instead for text feedback"
@@ -1010,34 +1046,65 @@ tables:
         synonyms: ['awaytri']
       
       - name: BRANDING_SPONSOR_1
-        description: "Text data for branding sponsor 1"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use BRANDING_SPONSOR_1_CLEAN instead which filters codes automatically."
         expr: BRANDING_SPONSOR_1
         data_type: varchar
-        synonyms: ['branding sponsor 1']
+        synonyms: ["branding sponsor 1 deprecated"]
+      
+      - name: BRANDING_SPONSOR_1_CLEAN
+        description: "First sponsor brand recalled by patron at stadium - numeric codes automatically filtered. Use this for sponsor analysis."
+        expr: CASE WHEN REGEXP_LIKE(BRANDING_SPONSOR_1, '^[0-9]+$') THEN NULL ELSE BRANDING_SPONSOR_1 END
+        data_type: varchar
+        synonyms: ['sponsor', 'brand', 'sponsor recall', 'first sponsor', 'sponsor 1', 'brand recall']
+        sample_values: ['Tropicana', 'Budweiser', 'Kanes', 'Pepsi', 'Coke']
       
       - name: BRANDING_SPONSOR_2
-        description: "Text data for branding sponsor 2"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use BRANDING_SPONSOR_2_CLEAN instead which filters codes automatically."
         expr: BRANDING_SPONSOR_2
         data_type: varchar
-        synonyms: ['branding sponsor 2']
+        synonyms: ["branding sponsor 2 deprecated"]
       
+      - name: BRANDING_SPONSOR_2_CLEAN
+        description: "Second sponsor brand recalled - codes filtered. Use for sponsor analysis."
+        expr: CASE WHEN REGEXP_LIKE(BRANDING_SPONSOR_2, '^[0-9]+$') THEN NULL ELSE BRANDING_SPONSOR_2 END
+        data_type: varchar
+        synonyms: ['second sponsor', 'brand 2', 'sponsor 2', 'sponsor recall 2']
+
       - name: BRANDING_SPONSOR_3
-        description: "Text data for branding sponsor 3"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use BRANDING_SPONSOR_3_CLEAN instead which filters codes automatically."
         expr: BRANDING_SPONSOR_3
         data_type: varchar
-        synonyms: ['branding sponsor 3']
+        synonyms: ["branding sponsor 3 deprecated"]
+      
+      - name: BRANDING_SPONSOR_3_CLEAN
+        description: "Third sponsor brand recalled - codes filtered. Use for sponsor analysis."
+        expr: CASE WHEN REGEXP_LIKE(BRANDING_SPONSOR_3, '^[0-9]+$') THEN NULL ELSE BRANDING_SPONSOR_3 END
+        data_type: varchar
+        synonyms: ['third sponsor', 'brand 3', 'sponsor 3', 'sponsor recall 3']
       
       - name: BRANDING_SPONSOR_4
-        description: "Text data for branding sponsor 4"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use BRANDING_SPONSOR_4_CLEAN instead which filters codes automatically."
         expr: BRANDING_SPONSOR_4
         data_type: varchar
-        synonyms: ['branding sponsor 4']
+        synonyms: ["branding sponsor 4 deprecated"]
+      
+      - name: BRANDING_SPONSOR_4_CLEAN
+        description: "Fourth sponsor brand recalled - codes filtered. Use for sponsor analysis."
+        expr: CASE WHEN REGEXP_LIKE(BRANDING_SPONSOR_4, '^[0-9]+$') THEN NULL ELSE BRANDING_SPONSOR_4 END
+        data_type: varchar
+        synonyms: ['fourth sponsor', 'brand 4', 'sponsor 4', 'sponsor recall 4']
       
       - name: BRANDING_SPONSOR_5
-        description: "Text data for branding sponsor 5"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use BRANDING_SPONSOR_5_CLEAN instead which filters codes automatically."
         expr: BRANDING_SPONSOR_5
         data_type: varchar
-        synonyms: ['branding sponsor 5']
+        synonyms: ["branding sponsor 5 deprecated"]
+      
+      - name: BRANDING_SPONSOR_5_CLEAN
+        description: "Fifth sponsor brand recalled - codes filtered. Use for sponsor analysis."
+        expr: CASE WHEN REGEXP_LIKE(BRANDING_SPONSOR_5, '^[0-9]+$') THEN NULL ELSE BRANDING_SPONSOR_5 END
+        data_type: varchar
+        synonyms: ['fifth sponsor', 'brand 5', 'sponsor 5', 'sponsor recall 5']
       
       - name: BROWSER
         description: "Browser"
@@ -1070,10 +1137,16 @@ tables:
         synonyms: ['email']
       
       - name: FAVORITE_TEAM_CLEAN
-        description: "Respondent's favorite team (team_interest if team_interest contained only one team selection; team_favorite if team_interest contained multiple team selections)"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use FAVORITE_TEAM_CLEAN_V2 instead which filters codes automatically."
         expr: FAVORITE_TEAM_CLEAN
         data_type: varchar
-        synonyms: ['favorite team clean']
+        synonyms: ["favorite team clean deprecated"]
+      
+      - name: FAVORITE_TEAM_CLEAN_V2
+        description: "Favorite MLB team cleaned version 2 - numeric codes filtered. Use for team analysis."
+        expr: CASE WHEN REGEXP_LIKE(FAVORITE_TEAM_CLEAN, '^[0-9]+$') THEN NULL ELSE FAVORITE_TEAM_CLEAN END
+        data_type: varchar
+        synonyms: ["favorite team", "preferred team clean", "team favorite clean"]
       
       - name: FINANCIAL_ID
         description: "Ticket financial patron ID"
@@ -1130,58 +1203,112 @@ tables:
         synonyms: ['gms service recovery entertainment']
       
       - name: GMS_SERVICE_RECOVERY_FAN_BEHAVIOR
-        description: "Text data for gms service recovery fan behavior"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use GMS_SERVICE_RECOVERY_FAN_BEHAVIOR_CLEAN instead which filters codes automatically."
         expr: GMS_SERVICE_RECOVERY_FAN_BEHAVIOR
         data_type: varchar
-        synonyms: ['gms service recovery fan behavior']
+        synonyms: ["gms service recovery fan behavior deprecated"]
+      
+      - name: GMS_SERVICE_RECOVERY_FAN_BEHAVIOR_CLEAN
+        description: "GMS service recovery issue category for fan behavior - codes filtered. Use for service recovery analysis."
+        expr: CASE WHEN REGEXP_LIKE(GMS_SERVICE_RECOVERY_FAN_BEHAVIOR, '^[0-9]+$') THEN NULL ELSE GMS_SERVICE_RECOVERY_FAN_BEHAVIOR END
+        data_type: varchar
+        synonyms: ['service recovery fan behavior', 'gms fan behavior', 'fan behavior recovery', 'fan behavior issue']
       
       - name: GMS_SERVICE_RECOVERY_FB
-        description: "Text data for gms service recovery fb"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use GMS_SERVICE_RECOVERY_FB_CLEAN instead which filters codes automatically."
         expr: GMS_SERVICE_RECOVERY_FB
         data_type: varchar
-        synonyms: ['gms service recovery fb']
+        synonyms: ["gms service recovery fb deprecated"]
+      
+      - name: GMS_SERVICE_RECOVERY_FB_CLEAN
+        description: "GMS service recovery issue category for fb - codes filtered. Use for service recovery analysis."
+        expr: CASE WHEN REGEXP_LIKE(GMS_SERVICE_RECOVERY_FB, '^[0-9]+$') THEN NULL ELSE GMS_SERVICE_RECOVERY_FB END
+        data_type: varchar
+        synonyms: ['service recovery fb', 'gms fb', 'fb recovery', 'fb issue']
       
       - name: GMS_SERVICE_RECOVERY_PARKING
-        description: "Text data for gms service recovery parking"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use GMS_SERVICE_RECOVERY_PARKING_CLEAN instead which filters codes automatically."
         expr: GMS_SERVICE_RECOVERY_PARKING
         data_type: varchar
-        synonyms: ['gms service recovery parking']
+        synonyms: ["gms service recovery parking deprecated"]
+      
+      - name: GMS_SERVICE_RECOVERY_PARKING_CLEAN
+        description: "GMS service recovery issue category for parking - codes filtered. Use for service recovery analysis."
+        expr: CASE WHEN REGEXP_LIKE(GMS_SERVICE_RECOVERY_PARKING, '^[0-9]+$') THEN NULL ELSE GMS_SERVICE_RECOVERY_PARKING END
+        data_type: varchar
+        synonyms: ['service recovery parking', 'gms parking', 'parking recovery', 'parking issue']
       
       - name: GMS_SERVICE_RECOVERY_RETAIL
-        description: "Text data for gms service recovery retail"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use GMS_SERVICE_RECOVERY_RETAIL_CLEAN instead which filters codes automatically."
         expr: GMS_SERVICE_RECOVERY_RETAIL
         data_type: varchar
-        synonyms: ['gms service recovery retail']
+        synonyms: ["gms service recovery retail deprecated"]
+      
+      - name: GMS_SERVICE_RECOVERY_RETAIL_CLEAN
+        description: "GMS service recovery issue category for retail - codes filtered. Use for service recovery analysis."
+        expr: CASE WHEN REGEXP_LIKE(GMS_SERVICE_RECOVERY_RETAIL, '^[0-9]+$') THEN NULL ELSE GMS_SERVICE_RECOVERY_RETAIL END
+        data_type: varchar
+        synonyms: ['service recovery retail', 'gms retail', 'retail recovery', 'retail issue']
       
       - name: GMS_SERVICE_RECOVERY_SAFETY
-        description: "Text data for gms service recovery safety"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use GMS_SERVICE_RECOVERY_SAFETY_CLEAN instead which filters codes automatically."
         expr: GMS_SERVICE_RECOVERY_SAFETY
         data_type: varchar
-        synonyms: ['gms service recovery safety']
+        synonyms: ["gms service recovery safety deprecated"]
+      
+      - name: GMS_SERVICE_RECOVERY_SAFETY_CLEAN
+        description: "GMS service recovery issue category for safety - codes filtered. Use for service recovery analysis."
+        expr: CASE WHEN REGEXP_LIKE(GMS_SERVICE_RECOVERY_SAFETY, '^[0-9]+$') THEN NULL ELSE GMS_SERVICE_RECOVERY_SAFETY END
+        data_type: varchar
+        synonyms: ['service recovery safety', 'gms safety', 'safety recovery', 'safety issue']
       
       - name: GMS_SERVICE_RECOVERY_STAFF
-        description: "Text data for gms service recovery staff"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use GMS_SERVICE_RECOVERY_STAFF_CLEAN instead which filters codes automatically."
         expr: GMS_SERVICE_RECOVERY_STAFF
         data_type: varchar
-        synonyms: ['gms service recovery staff']
+        synonyms: ["gms service recovery staff deprecated"]
+      
+      - name: GMS_SERVICE_RECOVERY_STAFF_CLEAN
+        description: "GMS service recovery issue category for staff - codes filtered. Use for service recovery analysis."
+        expr: CASE WHEN REGEXP_LIKE(GMS_SERVICE_RECOVERY_STAFF, '^[0-9]+$') THEN NULL ELSE GMS_SERVICE_RECOVERY_STAFF END
+        data_type: varchar
+        synonyms: ['service recovery staff', 'gms staff', 'staff recovery', 'staff issue']
       
       - name: GMS_SERVICE_RECOVERY_TIX_SEATS
-        description: "Text data for gms service recovery tix seats"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use GMS_SERVICE_RECOVERY_TIX_SEATS_CLEAN instead which filters codes automatically."
         expr: GMS_SERVICE_RECOVERY_TIX_SEATS
         data_type: varchar
-        synonyms: ['gms service recovery tix seats']
+        synonyms: ["gms service recovery tix seats deprecated"]
+      
+      - name: GMS_SERVICE_RECOVERY_TIX_SEATS_CLEAN
+        description: "GMS service recovery issue category for tix seats - codes filtered. Use for service recovery analysis."
+        expr: CASE WHEN REGEXP_LIKE(GMS_SERVICE_RECOVERY_TIX_SEATS, '^[0-9]+$') THEN NULL ELSE GMS_SERVICE_RECOVERY_TIX_SEATS END
+        data_type: varchar
+        synonyms: ['service recovery tix seats', 'gms tix seats', 'tix seats recovery', 'tix seats issue']
       
       - name: HOMETRI
-        description: "Home team"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use HOMETRI_CLEAN instead which filters codes automatically."
         expr: HOMETRI
         data_type: varchar
-        synonyms: ['hometri']
+        synonyms: ["hometri deprecated"]
+      
+      - name: HOMETRI_CLEAN
+        description: "Hometri - numeric codes filtered. Use for analysis."
+        expr: CASE WHEN REGEXP_LIKE(HOMETRI, '^[0-9]+$') THEN NULL ELSE HOMETRI END
+        data_type: varchar
+        synonyms: ['hometri', 'hometri clean']
       
       - name: INCENTIVES_QUESTION
-        description: "If 'rank', respondent saw rank question. If 'OT', respondent saw open-text question."
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use INCENTIVES_QUESTION_CLEAN instead which filters codes automatically."
         expr: INCENTIVES_QUESTION
         data_type: varchar
-        synonyms: ['incentives question']
+        synonyms: ["incentives question deprecated"]
+      
+      - name: INCENTIVES_QUESTION_CLEAN
+        description: "Incentives Question - numeric codes filtered. Use for analysis."
+        expr: CASE WHEN REGEXP_LIKE(INCENTIVES_QUESTION, '^[0-9]+$') THEN NULL ELSE INCENTIVES_QUESTION END
+        data_type: varchar
+        synonyms: ['incentives question', 'incentives question clean']
       
       - name: LAST_NAME
         description: "Ticket attending patron last name"
@@ -1262,10 +1389,16 @@ tables:
         synonyms: ['seatview value seat']
       
       - name: SECTION_CODE
-        description: "Stadium section"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use SECTION_CODE_CLEAN instead which filters codes automatically."
         expr: SECTION_CODE
         data_type: varchar
-        synonyms: ['section code']
+        synonyms: ["section code deprecated"]
+      
+      - name: SECTION_CODE_CLEAN
+        description: "Section Code - numeric codes filtered. Use for analysis."
+        expr: CASE WHEN REGEXP_LIKE(SECTION_CODE, '^[0-9]+$') THEN NULL ELSE SECTION_CODE END
+        data_type: varchar
+        synonyms: ['section code', 'section code clean']
       
       - name: SELF_CHECKOUT_NOT_REPEAT
         description: "Text data for self checkout not repeat"
@@ -1304,16 +1437,30 @@ tables:
         synonyms: ['system current flag']
       
       - name: TEAM_FAVORITE
-        description: "Favorite MLB Team selected"
+        description: "DEPRECATED - Contains mixed data with numeric codes like 87, 89. DO NOT USE for analysis. Use TEAM_FAVORITE_CLEAN instead which filters codes automatically."
         expr: TEAM_FAVORITE
         data_type: varchar
-        synonyms: ['team favorite']
+        synonyms: ["team favorite deprecated", "favorite team old"]
+      
+      - name: TEAM_FAVORITE_CLEAN
+        description: "Patron's favorite MLB team - numeric codes automatically filtered. Use this for team preference analysis. Returns only team names like Rays, Yankees, Red Sox."
+        expr: CASE WHEN REGEXP_LIKE(TEAM_FAVORITE, '^[0-9]+$') THEN NULL ELSE TEAM_FAVORITE END
+        data_type: varchar
+        synonyms: ["favorite team", "preferred team", "fan of", "team preference", "favorite baseball team", "team favorite"]
+        sample_values: ["Tampa Bay Rays", "Rays", "New York Yankees", "Yankees", "Boston Red Sox", "Red Sox", "Atlanta Braves"]
+      
       
       - name: TEAM_INTEREST
-        description: "All teams that Patrons has some interest in"
+        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use TEAM_INTEREST_CLEAN instead which filters codes automatically."
         expr: TEAM_INTEREST
         data_type: varchar
-        synonyms: ['team interest']
+        synonyms: ["team interest deprecated"]
+      
+      - name: TEAM_INTEREST_CLEAN
+        description: "MLB teams patron has interest in - numeric codes filtered. Use for team interest analysis."
+        expr: CASE WHEN REGEXP_LIKE(TEAM_INTEREST, '^[0-9]+$') THEN NULL ELSE TEAM_INTEREST END
+        data_type: varchar
+        synonyms: ["team interest", "teams interested in", "teams follow", "interested teams", "teams of interest"]
       
       - name: TEAM_NICKNAME
         description: "Club Short-name"
@@ -1435,48 +1582,7 @@ tables:
         data_type: number
         default_aggregation: sum
         synonyms: ["total responses"]
-      
-      - name: AVG_OVERALL_SATISFACTION
-        description: "Average overall satisfaction rating"
-        expr: AVG(OVERALL_NUMRAT)
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["avg overall satisfaction"]
-      
-      - name: AVG_CONCESSION_SATISFACTION
-        description: "Average concession satisfaction"
-        expr: AVG(CONCESS_NUMRAT)
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["avg concession satisfaction"]
-      
-      - name: AVG_PARKING_SATISFACTION
-        description: "Average parking satisfaction"
-        expr: AVG(PARKING_NUMRAT)
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["avg parking satisfaction"]
-      
-      - name: AVG_MERCH_SATISFACTION
-        description: "Average merchandise satisfaction"
-        expr: AVG(MERCH_NUMRAT)
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["avg merch satisfaction"]
-      
-      - name: AVG_STAFF_SATISFACTION
-        description: "Average staff satisfaction"
-        expr: AVG(STAFF_NUMRAT)
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["avg staff satisfaction"]
-      
-      - name: AVG_ENTERTAINMENT_SATISFACTION
-        description: "Average entertainment satisfaction"
-        expr: AVG(ENTERTAIN_NUMRAT)
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["avg entertainment satisfaction"]
+
       
       - name: TOTAL_TICKET_REVENUE
         description: "Total ticket revenue"
@@ -1846,36 +1952,32 @@ tables:
         synonyms: ["concessions comp"]
       
       - name: CONCESS_GRID_CLEAN
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_GRID_CLEAN_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
+        description: "Concession cleanliness rating. How clean and sanitary were the food and beverage areas. Use for cleanliness trend analysis."
         expr: CONCESS_GRID_CLEAN
         data_type: number
         default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess grid clean"]
+        synonyms: ["concession cleanliness", "food cleanliness", "fb cleanliness", "sanitary", "clean concessions", "hygiene rating"]
       
       - name: CONCESS_GRID_CUSTSERV
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_GRID_CUSTSERV_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
+        description: "Concession customer service rating 0-10 scale. Quality of service from F&B staff. Use for trend analysis and service quality tracking."
         expr: CONCESS_GRID_CUSTSERV
         data_type: number
         default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess grid custserv"]
+        synonyms: ["customer service rating", "service score", "staff rating", "service quality score", "fb service rating", "concession service score"]
       
       - name: CONCESS_GRID_SELECTION
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_GRID_SELECTION_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
+        description: "Concession selection rating 0-10 scale. Variety and options for food and beverages. Use for menu variety trend analysis."
         expr: CONCESS_GRID_SELECTION
         data_type: number
         default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess grid selection"]
+        synonyms: ["selection rating", "menu rating", "variety score", "selection score", "menu variety rating", "food options rating"]
       
       - name: CONCESS_GRID_VALUE
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_GRID_VALUE_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
+        description: "Concession value rating 0-10 scale. Perceived value and price fairness. Use for value perception trend analysis."
         expr: CONCESS_GRID_VALUE
         data_type: number
         default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess grid value"]
+        synonyms: ["value rating", "value score", "price rating", "worth rating", "value for money score", "pricing rating"]
       
       - name: CONCESS_INTENT
         description: "NUMERIC CODE ONLY - For text analysis use CONCESS_INTENT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
@@ -1951,11 +2053,11 @@ tables:
         synonyms: ["concess no"]
       
       - name: CONCESS_NUMRAT
-        description: "Numeric overall rating of concessions at the stadium"
+        description: "Overall concession satisfaction rating 0-10 scale. Use for general food and beverage satisfaction analysis, trending, and averaging."
         expr: CONCESS_NUMRAT
         data_type: number
         default_aggregation: avg
-        synonyms: ["concess numrat"]
+        synonyms: ["concession satisfaction", "food satisfaction", "fb satisfaction", "concession rating", "food and beverage rating", "f&b satisfaction", "concession score"]
       
       - name: CONCESS_ORDER_METHOD_MOBILE
         description: "Place a mobile order"
@@ -2414,12 +2516,11 @@ tables:
         synonyms: ["concess type sausage"]
       
       - name: CONCESS_WAIT
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_WAIT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
+        description: "Concession wait time rating 0-10 scale. How long patrons waited in line. Use for wait time trend analysis."
         expr: CONCESS_WAIT
         data_type: number
         default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess wait"]
+        synonyms: ["wait time rating", "wait score", "line wait rating", "queue rating", "service speed score", "wait time number"]
       
       - name: CONCESS_WAIT_EXPECT
         description: "NUMERIC CODE ONLY - For text analysis use CONCESS_WAIT_EXPECT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
@@ -2528,11 +2629,18 @@ tables:
         synonyms: ["entertain grid theme"]
       
       - name: ENTERTAIN_NUMRAT
-        description: "Numeric rating on game presentation"
+        description: "INTERNAL - Entertainment satisfaction on 1-100 scale. Use ENTERTAINMENT_SATISFACTION instead for 1-10 scale."
         expr: ENTERTAIN_NUMRAT
         data_type: number
         default_aggregation: avg
-        synonyms: ["entertain numrat"]
+        access_modifier: private_access
+        synonyms: ["entertain numrat original"]
+      
+      - name: ENTERTAINMENT_SATISFACTION
+        description: "Entertainment satisfaction rating 1-10 scale (normalized from 1-100). Game presentation and entertainment experience. Use for entertainment satisfaction analysis and comparison with other ratings."
+        expr: ENTERTAIN_NUMRAT / 10.0
+        data_type: number
+        default_aggregation: avg
       
       - name: ENTREES_PREV_PURCH
         description: "Numeric data for entrees prev purch"
@@ -2627,67 +2735,67 @@ tables:
         synonyms: ["exit stage"]
       
       - name: FB_SAT_PREMIUM_CLEANLINESS
-        description: "Numeric data for fb sat premium cleanliness"
+        description: "Premium concession cleanliness rating. Cleanliness of premium F&B areas. Use for premium cleanliness trend analysis."
         expr: FB_SAT_PREMIUM_CLEANLINESS
         data_type: number
         default_aggregation: avg
-        synonyms: ["fb sat premium cleanliness"]
+        synonyms: ["premium cleanliness", "premium clean rating", "premium hygiene score", "premium sanitary rating"]
       
       - name: FB_SAT_PREMIUM_CUST_SERVICE
-        description: "Numeric data for fb sat premium cust service"
+        description: "Premium concession customer service rating. Service quality at premium F&B locations. Use for premium service trend analysis."
         expr: FB_SAT_PREMIUM_CUST_SERVICE
         data_type: number
         default_aggregation: avg
-        synonyms: ["fb sat premium cust service"]
+        synonyms: ["premium customer service", "premium service rating", "premium staff score", "premium service score"]
       
       - name: FB_SAT_PREMIUM_FOOD_PRESENTATION
-        description: "Numeric data for fb sat premium food presentation"
+        description: "Premium food presentation rating. Visual appeal and presentation of premium food items. Use for presentation trend analysis."
         expr: FB_SAT_PREMIUM_FOOD_PRESENTATION
         data_type: number
         default_aggregation: avg
-        synonyms: ["fb sat premium food presentation"]
+        synonyms: ["food presentation", "plating rating", "food appearance score", "visual appeal", "presentation score"]
       
       - name: FB_SAT_PREMIUM_FOOD_TEMP
-        description: "Numeric data for fb sat premium food temp"
+        description: "Premium food temperature rating. Proper hot/cold temperature of premium items. Use for temperature trend analysis."
         expr: FB_SAT_PREMIUM_FOOD_TEMP
         data_type: number
         default_aggregation: avg
-        synonyms: ["fb sat premium food temp"]
+        synonyms: ["food temperature", "temperature rating", "temp score", "hot food rating", "cold drinks rating", "temperature score"]
       
       - name: FB_SAT_PREMIUM_FRESHNESS
-        description: "Numeric data for fb sat premium freshness"
+        description: "Premium food freshness rating. How fresh premium concession items were. Use for freshness trend analysis."
         expr: FB_SAT_PREMIUM_FRESHNESS
         data_type: number
         default_aggregation: avg
-        synonyms: ["fb sat premium freshness"]
+        synonyms: ["premium freshness", "food freshness", "fresh food rating", "freshness score", "fresh rating"]
       
       - name: FB_SAT_PREMIUM_PORTION_SIZE
-        description: "Numeric data for fb sat premium portion size"
+        description: "Premium portion size rating. Satisfaction with portion sizes for premium items. Use for portion trend analysis."
         expr: FB_SAT_PREMIUM_PORTION_SIZE
         data_type: number
         default_aggregation: avg
-        synonyms: ["fb sat premium portion size"]
+        synonyms: ["portion size", "portion rating", "food portion score", "serving size rating", "portion score"]
       
       - name: FB_SAT_PREMIUM_SELECTION
-        description: "Numeric data for fb sat premium selection"
+        description: "Premium concession selection rating. Variety of premium food and beverage options. Use for premium menu trend analysis."
         expr: FB_SAT_PREMIUM_SELECTION
         data_type: number
         default_aggregation: avg
-        synonyms: ["fb sat premium selection"]
+        synonyms: ["premium selection", "premium menu rating", "premium options score", "premium variety", "premium menu score"]
       
       - name: FB_SAT_PREMIUM_TASTE
-        description: "Numeric data for fb sat premium taste"
+        description: "Premium food taste rating. Quality and flavor of premium concession items. Use for taste/quality trend analysis."
         expr: FB_SAT_PREMIUM_TASTE
         data_type: number
         default_aggregation: avg
-        synonyms: ["fb sat premium taste"]
+        synonyms: ["premium taste", "food taste", "flavor rating", "food quality", "taste score", "premium food quality rating", "quality rating"]
       
       - name: FB_SAT_PREMIUM_VALUE
-        description: "Numeric data for fb sat premium value"
+        description: "Premium concession value rating. Value perception for premium food and beverage offerings. Use for premium value trend analysis."
         expr: FB_SAT_PREMIUM_VALUE
         data_type: number
         default_aggregation: avg
-        synonyms: ["fb sat premium value"]
+        synonyms: ["premium value", "premium value rating", "premium pricing score", "premium worth", "premium value score"]
       
       - name: FLASH_SALE
         description: "Flag for whether the ticket was sold as part of a flash sale"
@@ -2941,11 +3049,19 @@ tables:
         synonyms: ["merch no"]
       
       - name: MERCH_NUMRAT
-        description: "Numeric rating for satisfaction on experience purchasing merchendise while at the stadium"
+        description: "INTERNAL - Merchandise satisfaction on 1-100 scale. Use MERCHANDISE_SATISFACTION instead for 1-10 scale."
         expr: MERCH_NUMRAT
         data_type: number
         default_aggregation: avg
-        synonyms: ["merch numrat"]
+        access_modifier: private_access
+        synonyms: ["merch numrat original"]
+      
+      - name: MERCHANDISE_SATISFACTION
+        description: "Merchandise satisfaction rating 1-10 scale (normalized from 1-100). Merchandise purchasing experience. Use for retail satisfaction analysis and comparison with other ratings."
+        expr: MERCH_NUMRAT / 10.0
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["merchandise satisfaction", "merch satisfaction", "merch rating", "retail rating", "merch experience", "merch numrat", "avg merch satisfaction"]
       
       - name: MERCH_PAYMENT_TYPE
         description: "Numeric data for merch payment type"
@@ -3077,11 +3193,11 @@ tables:
         synonyms: ["opt in"]
       
       - name: OVERALL_NUMRAT
-        description: "Overall gameday experience rating"
+        description: "Overall gameday experience rating 1-10 scale. Use for overall satisfaction analysis."
         expr: OVERALL_NUMRAT
         data_type: number
         default_aggregation: avg
-        synonyms: ["overall numrat"]
+        synonyms: ["overall satisfaction", "overall rating", "overall experience", "satisfaction score", "overall numrat"]
       
       - name: OVERALL_NUMRAT_ADJUSTED
         description: "Overall experience rating after applying adjustments"
@@ -3350,13 +3466,14 @@ tables:
         synonyms: ["purchase intent next"]
       
       - name: REAL_CONCESS_NUMRAT
-        description: "Numeric data for real concess numrat"
+        description: "INTERNAL - Data quality field. Use CONCESS_NUMRAT instead."
         expr: REAL_CONCESS_NUMRAT
         data_type: number
         default_aggregation: avg
         synonyms: ["real concess numrat"]
       
       - name: REAL_OVERALL_NUMRAT
+        access_modifier: private_access
         description: "Numeric data for real overall numrat"
         expr: REAL_OVERALL_NUMRAT
         data_type: number
@@ -3378,6 +3495,7 @@ tables:
         synonyms: ["real seatview numrat"]
       
       - name: REAL_STAFF_NUMRAT
+        access_modifier: private_access  
         description: "Numeric data for real staff numrat"
         expr: REAL_STAFF_NUMRAT
         data_type: number
@@ -3623,11 +3741,19 @@ tables:
         synonyms: ["staff grid usher"]
       
       - name: STAFF_NUMRAT
-        description: "Numeric satisfaction level with staff at the stadium"
+        description: "INTERNAL - Staff satisfaction on 1-100 scale. Use STAFF_SATISFACTION instead for 1-10 scale."
         expr: STAFF_NUMRAT
         data_type: number
         default_aggregation: avg
-        synonyms: ["staff numrat"]
+        access_modifier: private_access
+        synonyms: ["staff numrat original"]
+      
+      - name: STAFF_SATISFACTION
+        description: "Staff satisfaction rating 1-10 scale (normalized from 1-100). Quality of service from stadium staff. Use for satisfaction trend analysis and comparison with other ratings."
+        expr: STAFF_NUMRAT / 10.0
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["staff satisfaction", "staff rating", "staff service rating", "staff experience", "staff numrat", "avg staff satisfaction"]
       
       - name: STAFF_RAT_2024_ACCESSIBILITY_SUPPORT
         description: "Numeric data for staff rat 2024 accessibility support"
