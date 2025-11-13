@@ -101,11 +101,20 @@ tables:
         synonyms: ['cih id', 'cih id text', 'cih id desc', 'cih id description']
       
       - name: CLUB_PARKING_LOT_DESC
-        description: "Text description for club parking lot. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Yes or No, Indicates whether the fan parked in a stadium-affiliated parking lot (Yes/No/Not sure). For specific parking lot names in 2025 at GMS field, use parking_lot_name."
         expr: CLUB_PARKING_LOT_DESC
         data_type: varchar
-        synonyms: ['club parking lot description', 'club parking lot text', 'club parking lot desc', 'club parking lot']
+        synonyms: ['did you park in a stadium affiliated parking lot', 'parked at the stadium in 202', 'club parking lot yes or no']
       
+      - name: parking_lot_name
+        expr: TB_ADDON_12
+        data_type: varchar
+        description: "Name of the specific parking lot used by the fan. Options include General Parking (Lots 1-4) and Premium Parking."
+        synonyms: ["which lot in 2025", "lot name in 2025", "parking location", "where parked in 2025", "parking lot in 2025"]
+
+    sample_values:
+    - "General Parking (Lots 1-4)"
+    - "Premium Parking"
       - name: COMMENTS_GMS_STAFF
         description: "Open-ended text comments about staff member interactions and service"
         expr: COMMENTS_GMS_STAFF
