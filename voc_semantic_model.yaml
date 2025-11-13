@@ -112,6 +112,7 @@ tables:
         description: "Name of the specific parking lot used by the fan. Options include General Parking (Lots 1-4) and Premium Parking."
         synonyms: ["which lot in 2025", "lot name in 2025", "parking location", "where parked in 2025", "parking lot in 2025"]
         sample_values: ["General Parking (Lots 1-4)", "Premium Parking"]
+        
       - name: COMMENTS_GMS_STAFF
         description: "Open-ended text comments about staff member interactions and service"
         expr: COMMENTS_GMS_STAFF
