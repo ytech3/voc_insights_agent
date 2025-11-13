@@ -1,7 +1,7 @@
 name: tampa_bay_rays_voc_complete
 description: "Complete Voice of Customer semantic model for Tampa Bay Rays - Use text description fields (_DESC, _OT, COMMENTS) for feedback analysis instead of numeric codes"
 
-tables:
+tables\
   - name: voc_survey_responses
     description: "Post-game survey responses - For feedback and suggestions, always use text description fields ending in _DESC or _OT, not numeric code fields"
     base_table:
