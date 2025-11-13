@@ -821,10 +821,10 @@ tables:
         synonyms: ['non game ent feedback', 'non game ent feedback clean']
       
       - name: OVERALL_NUMRAT_OT
-        description: "INTERNAL CODE - Use OVERALL_NUMRAT_OT_DESC instead for text feedback"
+        description: "Fan's explanation of why they gave their satisfaction rating"
         expr: OVERALL_NUMRAT_OT
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'overall numrat ot']
+        synonyms: ["feedback", "comments", "why rated", "explanation", "fan comments", "open ended feedback"]
       
       - name: OVERALL_NUMRAT_OT_PARENT_TOPICS
         description: "Open-ended text feedback explaining why patron selected their rating for overall numrat parent topics. Contains actual text responses, not numeric codes."
@@ -1132,7 +1132,7 @@ tables:
         description: "Ticket Buyer Type description"
         expr: BUYER_TYPE
         data_type: varchar
-        synonyms: ['buyer type']
+        synonyms: ["ticket type", "ticket category", "purchase type", "how purchased", "single game", "season tickets", "STH", "season ticket holder", "group tickets", "comp tickets", "complimentary tickets"]
       
       - name: CITY
         description: "City"
@@ -1945,7 +1945,7 @@ tables:
         synonyms: ["cih id"]
       
       - name: CLUB_PARKING_LOT
-        description: "NUMERIC CODE ONLY - For text analysis use CLUB_PARKING_LOT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
+        description: "Whether fan parked in stadium-affiliated lot (Yes/No/Not sure). For specific lot names, use parking_lot_name."
         expr: CLUB_PARKING_LOT
         data_type: number
         default_aggregation: avg
