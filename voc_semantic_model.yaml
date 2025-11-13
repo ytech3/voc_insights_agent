@@ -708,6 +708,14 @@ tables:
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'merch options ot topics']
       
+
+      - name: USED_MOBILE_ORDERING
+        description: "CRITICAL: Use this field to identify fans who ACTUALLY PLACED a mobile order (not just considered it). Values: 'Yes' if patron placed a mobile order (CONCESS_ORDER_METHOD_MOBILE = 1), 'No' otherwise. This is the ONLY correct way to filter for mobile order users when analyzing mobile ordering satisfaction, repeat intent, or usage. DO NOT use MOBILE_ORDER_CONSID_DESC to identify actual users - that field only captures if they thought about it, not if they did it."
+        expr: CASE WHEN CONCESS_ORDER_METHOD_MOBILE = 1 THEN 'Yes' ELSE 'No' END
+        data_type: varchar
+        sample_values: ['Yes', 'No']
+        synonyms: ['used mobile ordering', 'placed mobile order', 'actually used mobile ordering', 'mobile order user', 'fans who used mobile ordering', 'mobile ordering users']
+        
       - name: MERCH_SCREENER_DESC
         description: "Text description for merch screener. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: MERCH_SCREENER_DESC
@@ -715,35 +723,36 @@ tables:
         synonyms: ['merch screener text', 'merch screener', 'merch screener desc', 'merch screener description']
       
       - name: MOBILE_CONSID_REASON_DESC
-        description: "Text description for mobile consid reason. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Reasons why patron CONSIDERED but did NOT place a mobile order. Use when analyzing barriers to adoption among those who thought about it but chose not to use it."
         expr: MOBILE_CONSID_REASON_DESC
         data_type: varchar
-        synonyms: ['mobile consid reason text', 'mobile consid reason desc', 'mobile consid reason', 'mobile consid reason description']
+        synonyms: ['mobile consid reason', 'why not use mobile ordering', 'reasons for not ordering', 'barriers to mobile ordering', 'why fans did not place mobile orders', 'why not mobile order', 'mobile ordering barriers', 'reasons to not use mobile']
       
       - name: MOBILE_CONSID_REASON_OTHERSPECIFY
-        description: "Open-ended text feedback explaining why patron selected their rating for mobile consid reasonherspecify. Contains actual text responses, not numeric codes."
+        description: "Open-ended text feedback with additional details on why patron did NOT place a mobile order. Use alongside MOBILE_CONSID_REASON_DESC for detailed barrier analysis. Contains free-text responses."
         expr: MOBILE_CONSID_REASON_OTHERSPECIFY
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'mobile consid reason otherspecify', 'feedback']
+        synonyms: ['mobile consid reason other', 'mobile order barrier details', 'why not mobile order comments']
       
       - name: MOBILE_CONSID_REASON_OTHERSPECIFY_TOPICS
-        description: "Open-ended text feedback explaining why patron selected their rating for mobile consid reasonherspecify topics. Contains actual text responses, not numeric codes."
+        description: "Classified topics from open-ended feedback on why patrons did NOT use mobile ordering. Contains topic codes extracted from free-text responses."
         expr: MOBILE_CONSID_REASON_OTHERSPECIFY_TOPICS
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'mobile consid reason otherspecify topics']
+        synonyms: ['mobile consid reason topics', 'mobile barrier topics']
       
       - name: MOBILE_ORDER_CONSID_DESC
-        description: "Text description for mobile order consid. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description:  "⚠️ WARNING: This field shows if patron CONSIDERED mobile ordering - NOT if they actually used it! Values: 'Yes, I considered it', 'No, I did not consider it', 'I did not know mobile ordering was available'. Many fans consider mobile ordering but don't use it (17,796 considered vs only 809 actually used in 2024). ⚠️ DO NOT USE this field to identify mobile order users. Instead use USED_MOBILE_ORDERING = 'Yes' or CONCESS_ORDER_METHOD_MOBILE = 1 to identify fans who ACTUALLY placed mobile orders."
         expr: MOBILE_ORDER_CONSID_DESC
         data_type: varchar
-        synonyms: ['mobile order consid desc', 'mobile order consid description', 'mobile order consid text', 'mobile order consid']
+        synonyms: ['mobile order consideration', 'considered mobile ordering', 'mobile order consid text', 'mobile order consid']
       
       - name: MOBILE_ORDER_EXP_FUTURE_DESC
-        description: "Text description for mobile order exp future. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Would patron use mobile ordering again? Values: 'Yes' (93% of users) or 'No' (7% of users). ⚠️ CRITICAL FILTER REQUIREMENT: This field is ONLY valid for fans who ACTUALLY placed mobile orders. You MUST filter by USED_MOBILE_ORDERING = 'Yes' or CONCESS_ORDER_METHOD_MOBILE = 1 when using this field, otherwise results will be incorrect. When calculating percentage who would use mobile ordering again, the denominator must be actual mobile order users (CONCESS_ORDER_METHOD_MOBILE = 1), NOT fans who considered it (mobile_order_consid_desc)."
         expr: MOBILE_ORDER_EXP_FUTURE_DESC
         data_type: varchar
-        synonyms: ['mobile order exp future description', 'mobile order exp future', 'mobile order exp future text', 'mobile order exp future desc']
-      
+        synonyms: ['mobile order  future intent', 'would use mobile ordering again', 'mobile order exp future', 'future mobile order likelihood', use mobile ordering in future']
+        sample_values: ['Yes', 'No']
+
       - name: MOBILE_ORDER_EXP_TIME_DESC
         description: "Text description for mobile order exp time. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: MOBILE_ORDER_EXP_TIME_DESC
@@ -775,22 +784,22 @@ tables:
         synonyms: ['mobile order grid timeframe', 'mobile order grid timeframe text', 'mobile order grid timeframe desc', 'mobile order grid timeframe description']
       
       - name: MOBILE_ORDER_ISSUES_DESC
-        description: "Text description for mobile order issues. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Problems experienced by patrons who DID place mobile orders. Use this field when asking about issues, problems, or complaints from fans who actually used mobile ordering. Contains problems like 'Order was incorrect', 'Took too long', 'App crashed', etc. NOTE: This is NOT for reasons why fans didn't use mobile ordering - use MOBILE_CONSID_REASON_DESC for that."
         expr: MOBILE_ORDER_ISSUES_DESC
         data_type: varchar
-        synonyms: ['mobile order issues description', 'mobile order issues', 'mobile order issues desc', 'mobile order issues text']
+        synonyms: ['mobile order issues', 'mobile order problems', 'mobile ordering complaints', 'issues with mobile orders', 'problems with mobile ordering']
       
       - name: MOBILE_ORDER_ISSUES_OTHERSPECIFY
-        description: "Open-ended text feedback explaining why patron selected their rating for mobile order issuesherspecify. Contains actual text responses, not numeric codes."
+        description: "Open-ended details on problems experienced with mobile orders that were placed. Use alongside MOBILE_ORDER_ISSUES_DESC."
         expr: MOBILE_ORDER_ISSUES_OTHERSPECIFY
         data_type: varchar
-        synonyms: ['mobile order issues otherspecify', 'open ended', 'improvements', 'suggestions', 'feedback']
+        synonyms: ['mobile order issue details', 'mobile order problem comments']
       
       - name: MOBILE_ORDER_ISSUES_OTHERSPECIFY_TOPICS
-        description: "Open-ended text feedback explaining why patron selected their rating for mobile order issuesherspecify topics. Contains actual text responses, not numeric codes."
+        description: "Classified topics from mobile order problem feedback."
         expr: MOBILE_ORDER_ISSUES_OTHERSPECIFY_TOPICS
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'mobile order issues otherspecify topics', 'feedback']
+        synonyms: ['mobile issues topics']
       
       - name: NON_GAME_ENT_FEEDBACK
         description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use NON_GAME_ENT_FEEDBACK_CLEAN instead which filters codes automatically."
@@ -2060,11 +2069,11 @@ tables:
         synonyms: ["concession satisfaction", "food satisfaction", "fb satisfaction", "concession rating", "food and beverage rating", "f&b satisfaction", "concession score"]
       
       - name: CONCESS_ORDER_METHOD_MOBILE
-        description: "Place a mobile order"
+        description: "Binary indicator: 1 = patron placed a mobile order, 0 = did not. Use for counting mobile order users or filtering to actual users. In 2024: 809 users (value = 1), rest did not use (value = 0)."
         expr: CONCESS_ORDER_METHOD_MOBILE
         data_type: number
-        default_aggregation: avg
-        synonyms: ["concess order method mobile"]
+        default_aggregation: sum
+        synonyms: ["mobile order method", "mobile ordering usage"]
       
       - name: CONCESS_ORDER_METHOD_OTHER
         description: "Other"
@@ -3085,9 +3094,23 @@ tables:
         default_aggregation: avg
         access_modifier: private_access
         synonyms: ["mobile consid reason"]
+
+      - name: MOBILE_ORDER_USERS_COUNT
+        description: "Total number of patrons who actually placed a mobile order. Use for mobile order adoption analysis."
+        expr: SUM(CONCESS_ORDER_METHOD_MOBILE)
+        data_type: number
+        default_aggregation: sum
+        synonyms: ["number of mobile order users", "mobile order count", "how many used mobile ordering", "mobile ordering usage count"]   
+
+      - name: MOBILE_ORDER_REPEAT_INTENT_PCT
+        description: "Percentage of mobile order users who said they would use mobile ordering again in the future. Calculated as: (users who said Yes to future use / total mobile order users) * 100. Use for measuring mobile order satisfaction and likelihood of repeat usage. ONLY includes patrons who actually placed a mobile order (CONCESS_ORDER_METHOD_MOBILE = 1)."
+        expr: (SUM(CASE WHEN CONCESS_ORDER_METHOD_MOBILE = 1 AND MOBILE_ORDER_EXP_FUTURE_DESC = 'Yes' THEN 1 ELSE 0 END) * 100.0) / NULLIF(SUM(CASE WHEN CONCESS_ORDER_METHOD_MOBILE = 1 THEN 1 ELSE 0 END), 0)
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["mobile order repeat intent", "would use mobile ordering again percentage", "likelihood to use mobile ordering again", "mobile order retention rate", "mobile ordering repeat rate", "percentage would use mobile ordering again"] 
       
       - name: MOBILE_ORDER_CONSID
-        description: "NUMERIC CODE ONLY - For text analysis use MOBILE_ORDER_CONSID_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
+        description: "INTERNAL - Numeric code for mobile order consideration. Use MOBILE_ORDER_CONSID_DESC instead."
         expr: MOBILE_ORDER_CONSID
         data_type: number
         default_aggregation: avg
@@ -3095,7 +3118,7 @@ tables:
         synonyms: ["mobile order consid"]
       
       - name: MOBILE_ORDER_EXP_FUTURE
-        description: "NUMERIC CODE ONLY - For text analysis use MOBILE_ORDER_EXP_FUTURE_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
+        description: "INTERNAL - Numeric code for future mobile order intent. Use MOBILE_ORDER_EXP_FUTURE_DESC instead."
         expr: MOBILE_ORDER_EXP_FUTURE
         data_type: number
         default_aggregation: avg
