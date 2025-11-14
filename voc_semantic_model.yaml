@@ -933,7 +933,7 @@ tables:
         expr: PURCHASE_INTENT_DESC
         data_type: varchar
         synonyms: ['purchase intent description', 'purchase intent desc', 'likelihood to repurchase', 'likely to buy tickets again', 'repurchase likelihood', 'will buy tickets again', 'return likelihood']
-        sample_values: ['Highly likely', 'Somewhat likely', 'Neither likely nor unlikely', 'Somewhat unlikely', 'Highly unlikely']
+        sample_values: ['Yes, I do', 'I am not sure', 'No, I do not']
         is_enum: true
       
       - name: PURCHASE_INTENT_NEXT_DESC
