@@ -929,10 +929,12 @@ tables:
         synonyms: ['previous purchase text', 'previous purchase', 'previous purchase description', 'previous purchase desc']
       
       - name: PURCHASE_INTENT_DESC
-        description: "Text description for purchase intent. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Text description for purchase intent indicating likelihood of buying tickets again. Contains human-readable descriptions (Highly likely, Somewhat likely, Neither likely nor unlikely, Somewhat unlikely, Highly unlikely). Use this for text analysis. Values of 'Highly likely' and 'Somewhat likely' indicate fans are likely to purchase again."
         expr: PURCHASE_INTENT_DESC
         data_type: varchar
-        synonyms: ['purchase intent description', 'purchase intent desc', 'purchase intent', 'purchase intent text']
+        synonyms: ['purchase intent description', 'purchase intent desc', 'likelihood to repurchase', 'likely to buy tickets again', 'repurchase likelihood', 'will buy tickets again', 'return likelihood']
+        sample_values: ['Highly likely', 'Somewhat likely', 'Neither likely nor unlikely', 'Somewhat unlikely', 'Highly unlikely']
+        is_enum: true
       
       - name: PURCHASE_INTENT_NEXT_DESC
         description: "Text description for purchase intent next. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
