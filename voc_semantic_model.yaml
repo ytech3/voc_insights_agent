@@ -385,22 +385,28 @@ tables:
         synonyms: ['concess qual reason sausage text', 'concess qual reason sausage desc', 'concess qual reason sausage description', 'concess qual reason sausage']
       
       - name: CONCESS_SCREENER_DESC
-        description: "Text description for concess screener. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Text description indicating whether fan purchased concessions. Contains human-readable values (Yes, I did or No, I did not). Use this to filter for concession purchasers."
         expr: CONCESS_SCREENER_DESC
         data_type: varchar
-        synonyms: ['concess screener description', 'concess screener text', 'concess screener desc', 'concess screener']
+        synonyms: ['concess screener desc', 'purchased concessions', 'bought food', 'concession buyer']
+        sample_values: ['Yes, I did', 'No, I did not']
+        is_enum: true
       
       - name: CONCESS_SPEND_DESC
-        description: "Text description for concess spend. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Text description for amount spent on concessions per person. Contains human-readable spending ranges (More than $50, Between $31 and $40, Between $21 and $30, Less than $20). Use this for grouping and filtering spending analysis. For calculating average or total spend, use the numeric CONCESS_SPEND field instead."
         expr: CONCESS_SPEND_DESC
         data_type: varchar
-        synonyms: ['concess spend desc', 'concess spend', 'concess spend text', 'concess spend description']
+        synonyms: ['concess spend desc', 'concess spend', 'concess spend text', 'concess spend description', 'spending range', 'how much spent', 'concession spending category']
+        sample_values: ['More than $50','Between $41 and $50', 'Between $31 and $40', 'Between $21 and $30', 'Less than $20']
+        is_enum: true
       
       - name: CONCESS_SPEND_EXPECT_DESC
-        description: "Text description for concess spend expect. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Text description comparing actual spending to expected spending on concessions. Contains human-readable comparison values (Much more than I expected, Slightly more than I expected, About what I expected, Slightly less than I expected, Less than I expected). Use this to analyze whether fans felt spending met expectations."
         expr: CONCESS_SPEND_EXPECT_DESC
         data_type: varchar
-        synonyms: ['concess spend expect desc', 'concess spend expect description', 'concess spend expect', 'concess spend expect text']
+        synonyms: ['concess spend expect desc', 'concess spend expect description', 'concess spend expect', 'concess spend expect text', 'spending expectations', 'expected vs actual', 'spending surprise']
+        sample_values: ['Much more than what I expected', 'Slightly more than what I expected', 'About what I expected', 'Slightly less than what I expected', 'Much less than what I expected']
+        is_enum: true
       
       - name: CONCESS_TRANSACTIONS_DESC
         description: "Text description for concess transactions. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
@@ -757,7 +763,7 @@ tables:
         description: "Would patron use mobile ordering again? Values: 'Yes' (93% of users) or 'No' (7% of users). ⚠️ CRITICAL FILTER REQUIREMENT: This field is ONLY valid for fans who ACTUALLY placed mobile orders. You MUST filter by USED_MOBILE_ORDERING = 'Yes' or CONCESS_ORDER_METHOD_MOBILE = 1 when using this field, otherwise results will be incorrect. When calculating percentage who would use mobile ordering again, the denominator must be actual mobile order users (CONCESS_ORDER_METHOD_MOBILE = 1), NOT fans who considered it (mobile_order_consid_desc)."
         expr: MOBILE_ORDER_EXP_FUTURE_DESC
         data_type: varchar
-        synonyms: ['mobile order  future intent', 'would use mobile ordering again', 'mobile order exp future', 'future mobile order likelihood', use mobile ordering in future']
+        synonyms: ['mobile order future intent', 'would use mobile ordering again', 'mobile order exp future', 'future mobile order likelihood', 'use mobile ordering in future']
         sample_values: ['Yes', 'No']
 
       - name: MOBILE_ORDER_EXP_TIME_DESC
@@ -929,10 +935,12 @@ tables:
         synonyms: ['previous purchase text', 'previous purchase', 'previous purchase description', 'previous purchase desc']
       
       - name: PURCHASE_INTENT_DESC
-        description: "Text description for purchase intent. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Text description for purchase intent indicating likelihood of buying tickets again. Contains human-readable descriptions (Highly likely, Somewhat likely, Neither likely nor unlikely, Somewhat unlikely, Highly unlikely). Use this for text analysis. Values of 'Highly likely' and 'Somewhat likely' indicate fans are likely to purchase again."
         expr: PURCHASE_INTENT_DESC
         data_type: varchar
-        synonyms: ['purchase intent description', 'purchase intent desc', 'purchase intent', 'purchase intent text']
+        synonyms: ['purchase intent description', 'purchase intent desc', 'likelihood to repurchase', 'likely to buy tickets again', 'repurchase likelihood', 'will buy tickets again', 'return likelihood']
+        sample_values: ['Highly likely', 'Somewhat likely', 'Neither likely nor unlikely', 'Somewhat unlikely', 'Highly unlikely']
+        is_enum: true
       
       - name: PURCHASE_INTENT_NEXT_DESC
         description: "Text description for purchase intent next. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
@@ -1532,13 +1540,13 @@ tables:
         expr: _FIVETRAN_ID
         data_type: varchar
         unique: true
-        synonyms: [' fivetran id']
+        synonyms: ['fivetran id']
       
       - name: _FIVETRAN_DELETED
         description: "Boolean flag for fivetran deleted"
         expr: _FIVETRAN_DELETED
         data_type: varchar
-        synonyms: [" fivetran deleted"]
+        synonyms: ["fivetran deleted"]
       
     
     time_dimensions:
@@ -1588,7 +1596,7 @@ tables:
         description: "Timestamp for fivetran synced"
         expr: _FIVETRAN_SYNCED
         data_type: timestamp
-        synonyms: [" fivetran synced"]
+        synonyms: ["fivetran synced"]
       
     
     measures:
@@ -1597,54 +1605,39 @@ tables:
         expr: COUNT(*)
         data_type: number
         default_aggregation: sum
-        synonyms: ["total responses"]
-
-      
-      - name: TOTAL_TICKET_REVENUE
-        description: "Total ticket revenue"
-        expr: SUM(AVERAGE_TIX_PRICE * TOTAL_TIX)
-        data_type: number
-        default_aggregation: sum
-        synonyms: ["total ticket revenue"]
-      
-      - name: TOTAL_CONCESSION_REVENUE
-        description: "Total concession revenue"
-        expr: SUM(CONCESS_SPEND)
-        data_type: number
-        default_aggregation: sum
-        synonyms: ["total concession revenue"]
+        synonyms: ["total responses", "response count", "sample size", "n", "N"]
       
       - name: CONCESSION_PURCHASE_RATE
         description: "Percentage who purchased concessions"
-        expr: AVG(CASE WHEN CONCESS_SCREENER = 1 THEN 1 ELSE 0 END) * 100
+        expr: ROUND(AVG(CASE WHEN CONCESS_SCREENER = 1 THEN 1 ELSE 0 END) * 100, 2)
         data_type: number
         default_aggregation: avg
         synonyms: ["concession purchase rate"]
       
       - name: PROMOTER_RATE
         description: "Percentage who are promoters NPS 9-10"
-        expr: AVG(CASE WHEN TB_ADDON_9 >= 9 THEN 1 ELSE 0 END) * 100
+        expr: ROUND(AVG(CASE WHEN TB_ADDON_9 >= 9 THEN 1 ELSE 0 END) * 100, 2)
         data_type: number
         default_aggregation: avg
         synonyms: ["promoter rate"]
       
       - name: DETRACTOR_RATE
         description: "Percentage who are detractors NPS 0-6"
-        expr: AVG(CASE WHEN TB_ADDON_9 <= 6 THEN 1 ELSE 0 END) * 100
+        expr: ROUND(AVG(CASE WHEN TB_ADDON_9 <= 6 THEN 1 ELSE 0 END) * 100, 2)
         data_type: number
         default_aggregation: avg
         synonyms: ["detractor rate"]
       
       - name: NET_PROMOTER_SCORE
         description: "Net Promoter Score"
-        expr: (SUM(CASE WHEN TB_ADDON_9 >= 9 THEN 1 ELSE 0 END) - SUM(CASE WHEN TB_ADDON_9 <= 6 THEN 1 ELSE 0 END)) * 100.0 / NULLIF(COUNT(*), 0)
+        expr: ROUND((SUM(CASE WHEN TB_ADDON_9 >= 9 THEN 1 ELSE 0 END) - SUM(CASE WHEN TB_ADDON_9 <= 6 THEN 1 ELSE 0 END)) * 100.0 / NULLIF(COUNT(*), 0), 2)
         data_type: number
         default_aggregation: avg
         synonyms: ["net promoter score"]
       
       - name: FAMILY_ATTENDANCE_RATE
         description: "Percentage who attended with children"
-        expr: AVG(CASE WHEN ATTEND_WITH_CATEGORY_YOUNG_KIDS = 1 THEN 1 ELSE 0 END) * 100
+        expr: ROUND(AVG(CASE WHEN ATTEND_WITH_CATEGORY_YOUNG_KIDS = 1 THEN 1 ELSE 0 END) * 100, 2)
         data_type: number
         default_aggregation: avg
         synonyms: ["family attendance rate"]
@@ -3111,11 +3104,39 @@ tables:
 
       - name: MOBILE_ORDER_REPEAT_INTENT_PCT
         description: "Percentage of mobile order users who said they would use mobile ordering again in the future. Calculated as: (users who said Yes to future use / total mobile order users) * 100. Use for measuring mobile order satisfaction and likelihood of repeat usage. ONLY includes patrons who actually placed a mobile order (CONCESS_ORDER_METHOD_MOBILE = 1)."
-        expr: (SUM(CASE WHEN CONCESS_ORDER_METHOD_MOBILE = 1 AND MOBILE_ORDER_EXP_FUTURE_DESC = 'Yes' THEN 1 ELSE 0 END) * 100.0) / NULLIF(SUM(CASE WHEN CONCESS_ORDER_METHOD_MOBILE = 1 THEN 1 ELSE 0 END), 0)
+        expr: ROUND((SUM(CASE WHEN CONCESS_ORDER_METHOD_MOBILE = 1 AND MOBILE_ORDER_EXP_FUTURE_DESC = 'Yes' THEN 1 ELSE 0 END) * 100.0) / NULLIF(SUM(CASE WHEN CONCESS_ORDER_METHOD_MOBILE = 1 THEN 1 ELSE 0 END), 0), 2)
         data_type: number
         default_aggregation: avg
         synonyms: ["mobile order repeat intent", "would use mobile ordering again percentage", "likelihood to use mobile ordering again", "mobile order retention rate", "mobile ordering repeat rate", "percentage would use mobile ordering again"] 
       
+      - name: MIN_GAME_DATE
+        description: "Earliest game date in the filtered dataset"
+        expr: MIN(GAME_DATE)
+        data_type: timestamp
+        default_aggregation: min
+        synonyms: ["min game date", "start date", "date range start"]
+
+      - name: MAX_GAME_DATE
+        description: "Latest game date in the filtered dataset"
+        expr: MAX(GAME_DATE)
+        data_type: timestamp
+        default_aggregation: max
+        synonyms: ["max game date", "end date", "date range end"]
+
+      - name: LIKELY_TO_REPURCHASE_COUNT
+        description: "Number of fans likely to purchase again (Highly likely or Somewhat likely)"
+        expr: SUM(CASE WHEN PURCHASE_INTENT_DESC IN ('Highly likely','Somewhat likely') THEN 1 ELSE 0 END)
+        data_type: number
+        default_aggregation: sum
+        synonyms: ["repurchase likely count", "likely to buy again count", "return likelihood count"]
+
+      - name: LIKELY_TO_REPURCHASE_PCT
+        description: "Percentage of fans likely to purchase again (Highly likely or Somewhat likely)"
+        expr: ROUND(100.0 * SUM(CASE WHEN PURCHASE_INTENT_DESC IN ('Highly likely','Somewhat likely') THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 2)
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["repurchase likely percentage", "likely to buy again %", "return likelihood %"]
+
       - name: MOBILE_ORDER_CONSID
         description: "INTERNAL - Numeric code for mobile order consideration. Use MOBILE_ORDER_CONSID_DESC instead."
         expr: MOBILE_ORDER_CONSID
@@ -3749,14 +3770,14 @@ tables:
         synonyms: ["staff grid security"]
       
       - name: STAFF_GRID_SECURITY_SCANNER
-        description: "Security / Ticket Sanner"
+        description: "Security / Ticket Scanner"
         expr: STAFF_GRID_SECURITY_SCANNER
         data_type: number
         default_aggregation: avg
         synonyms: ["staff grid security scanner"]
       
       - name: STAFF_GRID_TICKET_SCANNER
-        description: "Security / Ticket Sanner"
+        description: "Security / Ticket Scanner"
         expr: STAFF_GRID_TICKET_SCANNER
         data_type: number
         default_aggregation: avg
@@ -4698,4 +4719,3 @@ tables:
         default_aggregation: avg
         access_modifier: private_access
         synonyms: ["walk out grid timeframe"]
-      
