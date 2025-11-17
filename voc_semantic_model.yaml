@@ -439,16 +439,20 @@ tables:
         synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'concess type other entree specify topics']
       
       - name: CONCESS_WAIT_DESC
-        description: "Concession wait time satisfaction level (text). Use for distribution of wait time satisfaction."
+        description: "Text description for actual concession wait time experienced by fans. Contains human-readable time ranges (Less than 5 minutes, Between 5 and 15 minutes, Between 16 and 30 minutes, More than 30 minutes). Use this to analyze wait time distribution and identify operational bottlenecks."
         expr: CONCESS_WAIT_DESC
         data_type: varchar
-        synonyms: ["wait satisfaction", "wait time level", "wait time feedback", "line wait satisfaction level", "queue satisfaction"]
+        synonyms: ['concess wait desc', 'concession wait time', 'wait satisfaction', 'wait time level', 'wait time feedback', 'line wait', 'queue time', 'how long wait', 'wait time description']
+        sample_values: ['Less than 5 minutes', 'Between 5 and 15 minutes', 'Between 16 and 30 minutes', 'More than 30 minutes']
+        is_enum: true
       
       - name: CONCESS_WAIT_EXPECT_DESC
-        description: "Text description for concess wait expect. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Text description comparing actual wait time to expected wait time at concessions. Contains human-readable comparison values (Much more than I expected, Slightly more than I expected, About what I expected, Slightly less than I expected, Much less than I expected). Use this to analyze whether wait times met fan expectations."
         expr: CONCESS_WAIT_EXPECT_DESC
         data_type: varchar
-        synonyms: ['concess wait expect', 'concess wait expect text', 'concess wait expect desc', 'concess wait expect description']
+        synonyms: ['concess wait expect desc', 'concess wait expect', 'concess wait expect text', 'concess wait expect description', 'wait expectations', 'expected vs actual wait', 'wait time surprise', 'wait time comparison']
+        sample_values: ['Much more than I expected', 'Slightly more than I expected', 'About what I expected', 'Slightly less than I expected', 'Much less than I expected']
+        is_enum: true
       
       - name: ENTERTAIN_GRID_GAMES_DESC
         description: "Text description for entertain grid games. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
