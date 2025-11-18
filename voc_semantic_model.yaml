@@ -496,18 +496,6 @@ tables:
         data_type: varchar
         synonyms: ['entertain grid theme description', 'entertain grid theme', 'entertain grid theme text', 'entertain grid theme desc']
       
-      - name: EXIT_STAGE_DESC
-        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use EXIT_STAGE_DESC_CLEAN instead which filters codes automatically."
-        expr: EXIT_STAGE_DESC
-        data_type: varchar
-        synonyms: ["exit stage desc deprecated"]
-      
-      - name: EXIT_STAGE_DESC_CLEAN
-        description: "Exit Stage Desc - numeric codes filtered. Use for analysis."
-        expr: CASE WHEN REGEXP_LIKE(EXIT_STAGE_DESC, '^[0-9]+$') THEN NULL ELSE EXIT_STAGE_DESC END
-        data_type: varchar
-        synonyms: ['exit stage desc', 'exit stage desc clean']
-      
       - name: FB_SAT_PREMIUM_ADD_FEEDBACK
         description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use FB_SAT_PREMIUM_ADD_FEEDBACK_CLEAN instead which filters codes automatically."
         expr: FB_SAT_PREMIUM_ADD_FEEDBACK
@@ -554,14 +542,15 @@ tables:
         description: "Text description for giveaway arrival. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: GIVEAWAY_ARRIVAL_DESC
         data_type: varchar
-        synonyms: ['giveaway arrival', 'giveaway arrival text', 'giveaway arrival description', 'giveaway arrival desc']
+        synonyms: ['It had no impact / I arrived when I usually would', 'I arrived less than 15 minutes earlier than normal', 'I arrived between 15 and 30 minutes earlier than normal', 'I arrived between 31 and 60 minutes earlier than normal']
       
       - name: GIVEAWAY_AWARENESS_DESC
         description: "Text description for giveaway awareness. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: GIVEAWAY_AWARENESS_DESC
         data_type: varchar
-        synonyms: ['giveaway awareness desc', 'giveaway awareness text', 'giveaway awareness description', 'giveaway awareness']
-      
+        synonyms: ['I cared about this', I didnt't know about this', I knew about this, but I didn't care about it']  
+        is_enum: true
+
       - name: GIVEAWAY_RECEIVE_DESC
         description: "Text description for giveaway receive. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: GIVEAWAY_RECEIVE_DESC
@@ -687,7 +676,8 @@ tables:
         description: "Text description for merch intent. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: MERCH_INTENT_DESC
         data_type: varchar
-        synonyms: ['merch intent', 'merch intent desc', 'merch intent text', 'merch intent description']
+        sample values: ["Yes", "No"]
+        enum: true
       
       - name: MERCH_NO_DESC
         description: "Text description for merch no. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
@@ -737,7 +727,8 @@ tables:
         description: "Text description for merch screener. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: MERCH_SCREENER_DESC
         data_type: varchar
-        synonyms: ['merch screener text', 'merch screener', 'merch screener desc', 'merch screener description']
+        sample_values: ["I don't remember", "No, I didn't", "Yes, I did"]
+        is_enum: true
       
       - name: MOBILE_CONSID_REASON_DESC
         description: "Reasons why patron CONSIDERED but did NOT place a mobile order. Use when analyzing barriers to adoption among those who thought about it but chose not to use it."
@@ -857,7 +848,7 @@ tables:
 
       - name: pa_promo_grid_2
         description: "Before arriving at the stadium for this game, which best describes how you felt about the following?* - [Field-theme_name] Fans awareness about a THEME NIGHT before attending a THEME giveaway game."
-        expr: pa_promo_grid_1
+        expr: pa_promo_grid_2
         data_type: varchar
         synonyms: ['I cared about this', I didnt't know about this', I knew about this, but I didn't care about it']  
         is_enum: true
@@ -2755,14 +2746,6 @@ tables:
         default_aggregation: avg
         synonyms: ["excitement adjustment"]
       
-      - name: EXIT_STAGE
-        description: "NUMERIC CODE ONLY - For text analysis use EXIT_STAGE_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: EXIT_STAGE
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["exit stage"]
-      
       - name: FB_SAT_PREMIUM_CLEANLINESS
         description: "Premium concession cleanliness rating. Cleanliness of premium F&B areas. Use for premium cleanliness trend analysis."
         expr: FB_SAT_PREMIUM_CLEANLINESS
@@ -3293,15 +3276,8 @@ tables:
         access_modifier: private_access
         synonyms: ["parking exit expect"]
       
-      - name: PARKING_EXIT_NUMRAT
-        description: "Exiting the parking lot after the game"
-        expr: PARKING_EXIT_NUMRAT
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["parking exit numrat"]
-      
       - name: PARKING_EXIT_TIME
-        description: "NUMERIC CODE ONLY - For text analysis use PARKING_EXIT_TIME_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
+        description: "Overall gameday experience rating 1-10 scale. Use for overall satisfaction analysis."
         expr: PARKING_EXIT_TIME
         data_type: number
         default_aggregation: avg
@@ -4113,7 +4089,7 @@ tables:
         default_aggregation: avg
         synonyms: ["tb addon 14 2"]
       
-      - name: TB_ADDON_14_3
+      - name: portion_size_satisfaction
         description: "How would you rate the quality of the food / beverages included in your premium area?"
         expr: TB_ADDON_14_3
         data_type: number
