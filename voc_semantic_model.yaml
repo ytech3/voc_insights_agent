@@ -682,13 +682,13 @@ tables:
         description: "Text description for merch no. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: MERCH_NO_DESC
         data_type: varchar
-        synonyms: ['merch no text', 'merch no description', 'merch no desc', 'merch no']
+        synonyms: ['Customer service was poor', 'Merchandise selection was limited', 'Merchandise was too expensive', 'Other (please specify below)', 'The lines were too long', 'The merchandise store / stands were too far from my seat', 'There was no merchandise for my preferred player']
       
       - name: MERCH_NO_OTHERSPECIFY
         description: "Open-ended text feedback explaining why patron selected their rating for merch noherspecify. Contains actual text responses, not numeric codes."
         expr: MERCH_NO_OTHERSPECIFY
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'merch no otherspecify', 'feedback']
+        synonyms: ['open ended', 'merch suggestions', 'reasons merch was not purchased', 'merch improvement feedback']
       
       - name: MERCH_NO_OTHERSPECIFY_PARENT_TOPICS
         description: "Open-ended text feedback explaining why patron selected their rating for merch noherspecify parent topics. Contains actual text responses, not numeric codes."
@@ -713,7 +713,6 @@ tables:
         expr: MERCH_OPTIONS_OT_TOPICS
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'merch options ot topics']
-      
 
       - name: USED_MOBILE_ORDERING
         description: "CRITICAL: Use this field to identify fans who ACTUALLY PLACED a mobile order (not just considered it). Values: 'Yes' if patron placed a mobile order (CONCESS_ORDER_METHOD_MOBILE = 1), 'No' otherwise. This is the ONLY correct way to filter for mobile order users when analyzing mobile ordering satisfaction, repeat intent, or usage. DO NOT use MOBILE_ORDER_CONSID_DESC to identify actual users - that field only captures if they thought about it, not if they did it."
