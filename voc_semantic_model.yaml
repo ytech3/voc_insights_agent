@@ -848,6 +848,20 @@ tables:
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'comments']
       
+      - name: pa_promo_grid_1
+        description: "Before arriving at the stadium for this game, which best describes how you felt about the following?* - [Field-giveaway_name] Fans awareness about a GIVEAWAY before attending a specific GIVEAWAY game."
+        expr: pa_promo_grid_1
+        data_type: varchar
+        synonyms: ['I cared about this', I didnt't know about this', I knew about this, but I didn't care about it']  
+        is_enum: true
+
+      - name: pa_promo_grid_2
+        description: "Before arriving at the stadium for this game, which best describes how you felt about the following?* - [Field-theme_name] Fans awareness about a THEME NIGHT before attending a THEME giveaway game."
+        expr: pa_promo_grid_1
+        data_type: varchar
+        synonyms: ['I cared about this', I didnt't know about this', I knew about this, but I didn't care about it']  
+        is_enum: true
+
       - name: PARENT_ID_DESC
         description: "Text description for parent id. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: PARENT_ID_DESC
@@ -882,7 +896,7 @@ tables:
         description: "Text description for pa giveaway intent. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: PA_GIVEAWAY_INTENT_DESC
         data_type: varchar
-        synonyms: ['pa giveaway intent desc', 'pa giveaway intent description', 'pa giveaway intent', 'pa giveaway intent text']
+        synonyms: ['I still would have gone to this game', 'I would of chose a game on another day']
       
       - name: PA_PROMO_GRID_GIVEAWAY_DESC
         description: "Text description for pa promo grid giveaway. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
@@ -1016,19 +1030,21 @@ tables:
         description: "Text description for travelto method. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: TRAVELTO_METHOD_DESC
         data_type: varchar
-        synonyms: ['travelto method', 'travelto method text', 'travelto method desc', 'travelto method description']
+        synonyms: ['Bus', Car / personal vehicle', 'Cross Bay Ferry', 'Rideshare service (e.g. Uber, Lyft)', 'Walk / bike / scooter', 'Sunrunner']
       
       - name: TRAVELTO_TIME_DESC
         description: "Text description for travelto time. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: TRAVELTO_TIME_DESC
         data_type: varchar
-        synonyms: ['travelto time', 'travelto time text', 'travelto time desc', 'travelto time description']
+        synonyms: ['Less than 10 minutes', 'Between 10 and 30 minutes', 'Between 31 and 60 minutes', 'More than 60 minutes']
+        is_enum: true
       
       - name: TRAVELTO_TIME_EXPECT_DESC
         description: "Text description for travelto time expect. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: TRAVELTO_TIME_EXPECT_DESC
         data_type: varchar
-        synonyms: ['travelto time expect text', 'travelto time expect description', 'travelto time expect', 'travelto time expect desc']
+        synonyms: ['Less than I expected', 'About what I expected', 'More than I expected']
+        is_enum: true
       
       - name: WALK_OUT_EXP_FUTURE_DESC
         description: "Text description for walk out exp future. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
