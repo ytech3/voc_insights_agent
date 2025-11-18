@@ -676,9 +676,8 @@ tables:
         description: "Text description for merch intent. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: MERCH_INTENT_DESC
         data_type: varchar
-        sample values: ["Yes", "No"]
-        enum: true
-      
+        sample_values: ["Yes", "No"]
+       
       - name: MERCH_NO_DESC
         description: "Text description for merch no. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: MERCH_NO_DESC
@@ -728,8 +727,7 @@ tables:
         expr: MERCH_SCREENER_DESC
         data_type: varchar
         sample_values: ["I don't remember", "No, I didn't", "Yes, I did"]
-        is_enum: true
-      
+
       - name: MOBILE_CONSID_REASON_DESC
         description: "Reasons why patron CONSIDERED but did NOT place a mobile order. Use when analyzing barriers to adoption among those who thought about it but chose not to use it."
         expr: MOBILE_CONSID_REASON_DESC
@@ -851,7 +849,6 @@ tables:
         expr: pa_promo_grid_2
         data_type: varchar
         synonyms: ['I cared about this', I didnt't know about this', I knew about this, but I didn't care about it']  
-        is_enum: true
 
       - name: PARENT_ID_DESC
         description: "Text description for parent id. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
