@@ -688,7 +688,7 @@ tables:
         description: "Open-ended text feedback explaining why patron selected their rating for merch noherspecify. Contains actual text responses, not numeric codes."
         expr: MERCH_NO_OTHERSPECIFY
         data_type: varchar
-        synonyms: ['open ended', 'merch suggestions', 'reasons merch was not purchased', 'merch improvement feedback']
+        synonyms: ['merchandise non-purchase reasons', 'reasons merch was not purchased', 'merch improvement feedback']
       
       - name: MERCH_NO_OTHERSPECIFY_PARENT_TOPICS
         description: "Open-ended text feedback explaining why patron selected their rating for merch noherspecify parent topics. Contains actual text responses, not numeric codes."
@@ -819,19 +819,19 @@ tables:
         synonyms: ['non game ent feedback', 'non game ent feedback clean']
       
       - name: OVERALL_NUMRAT_OT
-        description: "Fan's explanation of why they gave their satisfaction rating"
+        description:  "Fan's detailed explanation of their overall game day experience and satisfaction rating. Analyzed for themes including food quality, staff service, parking, seating, entertainment, facilities, pricing, and game atmosphere."
         expr: OVERALL_NUMRAT_OT
         data_type: varchar
         synonyms: ["feedback", "comments", "why rated", "explanation", "fan comments", "open ended feedback"]
       
       - name: OVERALL_NUMRAT_OT_PARENT_TOPICS
-        description: "Open-ended text feedback explaining why patron selected their rating for overall numrat parent topics. Contains actual text responses, not numeric codes."
+        description: "Pre-classified sub-topic categories for overall feedback"
         expr: OVERALL_NUMRAT_OT_PARENT_TOPICS
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'comments']
+        synonyms: ['categories of feedback'] 
       
       - name: OVERALL_NUMRAT_OT_TOPICS
-        description: "Open-ended text feedback explaining why patron selected their rating for overall numrat topics. Contains actual text responses, not numeric codes."
+        description: "Pre-classified sub-topic categories for overall feedback"
         expr: OVERALL_NUMRAT_OT_TOPICS
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'comments']
