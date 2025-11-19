@@ -676,20 +676,19 @@ tables:
         description: "Text description for merch intent. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: MERCH_INTENT_DESC
         data_type: varchar
-        sample values: ["Yes", "No"]
-        enum: true
-      
+        sample_values: ["Yes", "No"]
+       
       - name: MERCH_NO_DESC
         description: "Text description for merch no. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: MERCH_NO_DESC
         data_type: varchar
-        synonyms: ['merch no text', 'merch no description', 'merch no desc', 'merch no']
+        synonyms: ['Customer service was poor', 'Merchandise selection was limited', 'Merchandise was too expensive', 'Other (please specify below)', 'The lines were too long', 'The merchandise store / stands were too far from my seat', 'There was no merchandise for my preferred player']
       
       - name: MERCH_NO_OTHERSPECIFY
         description: "Open-ended text feedback explaining why patron selected their rating for merch noherspecify. Contains actual text responses, not numeric codes."
         expr: MERCH_NO_OTHERSPECIFY
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'merch no otherspecify', 'feedback']
+        synonyms: ['merchandise non-purchase reasons', 'reasons merch was not purchased', 'merch improvement feedback']
       
       - name: MERCH_NO_OTHERSPECIFY_PARENT_TOPICS
         description: "Open-ended text feedback explaining why patron selected their rating for merch noherspecify parent topics. Contains actual text responses, not numeric codes."
@@ -714,7 +713,6 @@ tables:
         expr: MERCH_OPTIONS_OT_TOPICS
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'merch options ot topics']
-      
 
       - name: USED_MOBILE_ORDERING
         description: "CRITICAL: Use this field to identify fans who ACTUALLY PLACED a mobile order (not just considered it). Values: 'Yes' if patron placed a mobile order (CONCESS_ORDER_METHOD_MOBILE = 1), 'No' otherwise. This is the ONLY correct way to filter for mobile order users when analyzing mobile ordering satisfaction, repeat intent, or usage. DO NOT use MOBILE_ORDER_CONSID_DESC to identify actual users - that field only captures if they thought about it, not if they did it."
@@ -728,8 +726,7 @@ tables:
         expr: MERCH_SCREENER_DESC
         data_type: varchar
         sample_values: ["I don't remember", "No, I didn't", "Yes, I did"]
-        is_enum: true
-      
+
       - name: MOBILE_CONSID_REASON_DESC
         description: "Reasons why patron CONSIDERED but did NOT place a mobile order. Use when analyzing barriers to adoption among those who thought about it but chose not to use it."
         expr: MOBILE_CONSID_REASON_DESC
@@ -822,19 +819,19 @@ tables:
         synonyms: ['non game ent feedback', 'non game ent feedback clean']
       
       - name: OVERALL_NUMRAT_OT
-        description: "Fan's explanation of why they gave their satisfaction rating"
+        description:  "Fan's detailed explanation of their overall game day experience and satisfaction rating. Analyzed for themes including food quality, staff service, parking, seating, entertainment, facilities, pricing, and game atmosphere."
         expr: OVERALL_NUMRAT_OT
         data_type: varchar
         synonyms: ["feedback", "comments", "why rated", "explanation", "fan comments", "open ended feedback"]
       
       - name: OVERALL_NUMRAT_OT_PARENT_TOPICS
-        description: "Open-ended text feedback explaining why patron selected their rating for overall numrat parent topics. Contains actual text responses, not numeric codes."
+        description: "Pre-classified sub-topic categories for overall feedback"
         expr: OVERALL_NUMRAT_OT_PARENT_TOPICS
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'comments']
+        synonyms: ['categories of feedback'] 
       
       - name: OVERALL_NUMRAT_OT_TOPICS
-        description: "Open-ended text feedback explaining why patron selected their rating for overall numrat topics. Contains actual text responses, not numeric codes."
+        description: "Pre-classified sub-topic categories for overall feedback"
         expr: OVERALL_NUMRAT_OT_TOPICS
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'comments']
@@ -851,7 +848,6 @@ tables:
         expr: pa_promo_grid_2
         data_type: varchar
         synonyms: ['I cared about this', I didnt't know about this', I knew about this, but I didn't care about it']  
-        is_enum: true
 
       - name: PARENT_ID_DESC
         description: "Text description for parent id. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
