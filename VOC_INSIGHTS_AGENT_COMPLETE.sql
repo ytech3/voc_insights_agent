@@ -478,7 +478,7 @@ sentiment_classification AS (
   FROM individual_sentences
 ),
 
--- Step 5: Categorize topic for each sentence
+-- Step 5: Categorize topic for each sentence (UPDATED CATEGORIES)
 topic_classification AS (
   SELECT
     *,
@@ -492,7 +492,47 @@ topic_classification AS (
       ARRAY_CONSTRUCT(
         OBJECT_CONSTRUCT(
           'role', 'system',
-          'content', 'You are a feedback categorization expert for a baseball stadium. Classify into ONE category: Food & Beverage Quality, Staff & Service, Parking & Transportation, Seating & Views, Entertainment & Atmosphere, Cleanliness & Facilities, Pricing & Value, Game Experience, Safety & Security, General Positive, or Other. Respond with ONLY the category name.'
+          'content', 'You are a feedback categorization expert for a baseball stadium analyzing fan experience. Classify each sentence into ONE specific category from this list:
+
+PRE-ARRIVAL & ARRIVAL:
+- "Ticketing & Purchase Experience" - ticket buying, pricing, promotions, ticket offers, purchase process
+- "Parking & Arrival" - parking lots, traffic, arrival process, finding parking, parking cost
+
+ENTRY & NAVIGATION:
+- "Gate Entry & Security" - entry lines, security screening, ticket scanning, gate staff, Go-Ahead Entry
+- "Wayfinding & Accessibility" - finding seats, navigating venue, ADA services, elevators, signage
+
+IN-SEAT EXPERIENCE:
+- "Seating & Venue Comfort" - seat quality, views, sightlines, temperature, comfort, legroom, seat location
+- "Crowd & Atmosphere" - fan energy, crowd excitement, stadium atmosphere, game environment, fan behavior
+
+CONCESSIONS & AMENITIES:
+- "Food & Beverage Quality" - taste, freshness, food temperature, portion size, presentation, menu variety
+- "Concession Service & Speed" - wait times, line length, staff service at concessions, mobile ordering speed, checkout process
+- "Merchandise & Team Store" - team store products, merchandise selection, quality, availability, sizing, retail staff
+
+ENTERTAINMENT & ENGAGEMENT:
+- "Game Entertainment & Presentation" - scoreboard content, music, videos, between-inning activities, announcer, sound quality
+- "Promotions & Special Events" - giveaways, theme nights, pregame ceremonies, special activities, promotions
+- "Team Performance & Game Quality" - on-field action, players, game excitement, win or loss, team performance
+
+SERVICE & OPERATIONS:
+- "Staff Interactions & Service" - staff helpfulness, friendliness, professionalism (ushers, guest services, any staff)
+- "Facilities & Cleanliness" - restrooms, walkways, seating area cleanliness, maintenance, facility condition
+- "Technology & Digital Experience" - mobile app, Wi-Fi, mobile ordering, touchscreens, digital features, website
+
+VALUE & OVERALL:
+- "Pricing & Value Perception" - ticket prices, concession prices, overall cost, affordability, value for money
+- "Overall Experience & Loyalty" - general satisfaction, would return, recommend to others, overall impression, best/worst experience, memories
+- "Other" - anything that does not fit the above categories
+
+IMPORTANT RULES:
+- Be SPECIFIC. Do NOT use "Overall Experience & Loyalty" unless the sentence is truly about general satisfaction or future intent
+- Positive comments about atmosphere should go to "Crowd & Atmosphere", NOT "Overall Experience"
+- Comments about the team or game action go to "Team Performance & Game Quality"
+- Staff comments go to "Staff Interactions & Service" regardless of which staff type
+- Food quality vs service are DIFFERENT categories
+- Respond with ONLY the category name exactly as written above, no explanation.'
         ),
         OBJECT_CONSTRUCT(
           'role', 'user',
@@ -507,7 +547,6 @@ topic_classification AS (
   FROM sentiment_classification
 )
 
--- Final output
 SELECT
   QUALTRICS_ID,
   SEASON,
