@@ -4715,291 +4715,291 @@ tables:
   - name: overall_feedback_analysis
     description: "AI-powered analysis of fan open-ended feedback with sentiment classification and topic categorization across all seasons (2023-present)"
     base_table:
-    database: TBRDP_DW_DEV
-    schema: IM_RPT
-    table: V_OVERALL_FEEDBACK_ANALYSIS
-  
+      database: TBRDP_DW_DEV
+      schema: IM_RPT
+      table: V_OVERALL_FEEDBACK_ANALYSIS
+    
     dimensions:
-    - name: qualtrics_id
-      description: "Unique survey response identifier"
-      expr: qualtrics_id
-      data_type: varchar
-      synonyms: ['response ID', 'survey ID']
+      - name: qualtrics_id
+        description: "Unique survey response identifier"
+        expr: qualtrics_id
+        data_type: varchar
+        synonyms: ['response ID', 'survey ID']
+      
+      - name: season
+        description: "Baseball season year (2023, 2024, 2025, etc.)"
+        expr: season
+        data_type: number
+        synonyms: ['year', 'season year']
+      
+      - name: game_date
+        description: "Date of the game"
+        expr: game_date
+        data_type: date
+        synonyms: ['event date', 'match date', 'game day']
+      
+      - name: buyer_type
+        description: "Type of ticket buyer (Single Game, Season Ticket Holder, Group, etc.)"
+        expr: buyer_type
+        data_type: varchar
+        synonyms: ['ticket type', 'customer type', 'buyer category']
+      
+      - name: ai_category
+        description: "AI-classified topic category from fan feedback. Categories include: Food & Beverage Quality, Staff & Service, Parking & Transportation, Seating & Views, Entertainment & Atmosphere, Cleanliness & Facilities, Pricing & Value, Game Experience, Safety & Security, and General Positive"
+        expr: ai_category
+        data_type: varchar
+        synonyms: 
+          - 'feedback topic'
+          - 'feedback category'
+          - 'topic'
+          - 'category'
+          - 'issue category'
+          - 'complaint category'
+      
+      - name: sentiment_category
+        description: "AI-classified sentiment from text feedback. Values are Positive, Neutral, or Negative based on the tone and content of fan comments"
+        expr: sentiment_category
+        data_type: varchar
+        synonyms: 
+          - 'sentiment'
+          - 'feedback sentiment'
+          - 'tone'
+          - 'emotional tone'
+          - 'fan sentiment'
+      
+      - name: detailed_category
+        description: "Combined topic and sentiment for granular analysis (e.g., 'Food & Beverage Quality - Negative', 'Staff & Service - Positive')"
+        expr: detailed_category
+        data_type: varchar
+        synonyms: 
+          - 'detailed topic'
+          - 'topic with sentiment'
+          - 'category and sentiment'
+      
+      - name: nps_segment
+        description: "NPS classification based on satisfaction rating: Promoter (9-10), Passive (7-8), Detractor (0-6)"
+        expr: nps_segment
+        data_type: varchar
+        synonyms: 
+          - 'NPS'
+          - 'promoter status'
+          - 'NPS group'
+          - 'customer segment'
+      
+      - name: feedback_text
+        description: "Original open-ended feedback text from fans explaining their game day experience"
+        expr: feedback_text
+        data_type: varchar
+        synonyms: 
+          - 'comment'
+          - 'feedback'
+          - 'text feedback'
+          - 'fan comment'
+          - 'open ended feedback'
+      
+      - name: existing_parent_topic
+        description: "Pre-classified parent topic from Qualtrics"
+        expr: existing_parent_topic
+        data_type: varchar
+      
+      - name: existing_topic
+        description: "Pre-classified detailed topic from Qualtrics"
+        expr: existing_topic
+        data_type: varchar
     
-    - name: season
-      description: "Baseball season year (2023, 2024, 2025, etc.)"
-      expr: season
-      data_type: number
-      synonyms: ['year', 'season year']
+    measures:
+      - name: satisfaction_rating
+        description: "Numeric satisfaction rating provided by fan (1-10 scale)"
+        expr: satisfaction_rating
+        data_type: number
+        synonyms: ['rating', 'score', 'satisfaction score']
+      
+      - name: feedback_length
+        description: "Length of feedback text in characters"
+        expr: feedback_length
+        data_type: number
+        synonyms: ['comment length', 'text length']
     
-    - name: game_date
-      description: "Date of the game"
-      expr: game_date
-      data_type: date
-      synonyms: ['event date', 'match date', 'game day']
+    metrics:
+      - name: total_feedback_responses
+        description: "Total number of feedback responses"
+        expr: COUNT(*)
+        synonyms: 
+          - 'feedback count'
+          - 'response count'
+          - 'number of responses'
+          - 'total responses'
+      
+      - name: avg_satisfaction
+        description: "Average satisfaction rating across responses"
+        expr: AVG(satisfaction_rating)
+        synonyms: 
+          - 'average rating'
+          - 'mean satisfaction'
+          - 'avg rating'
+      
+      - name: positive_feedback_count
+        description: "Number of responses with positive sentiment"
+        expr: COUNT(CASE WHEN sentiment_category = 'Positive' THEN 1 END)
+        synonyms: 
+          - 'positive responses'
+          - 'positive sentiment count'
+          - 'positive feedback'
+      
+      - name: negative_feedback_count
+        description: "Number of responses with negative sentiment"
+        expr: COUNT(CASE WHEN sentiment_category = 'Negative' THEN 1 END)
+        synonyms: 
+          - 'negative responses'
+          - 'negative sentiment count'
+          - 'negative feedback'
+          - 'complaints'
+      
+      - name: neutral_feedback_count
+        description: "Number of responses with neutral sentiment"
+        expr: COUNT(CASE WHEN sentiment_category = 'Neutral' THEN 1 END)
+        synonyms: 
+          - 'neutral responses'
+          - 'neutral sentiment count'
+          - 'neutral feedback'
+      
+      - name: promoter_feedback_count
+        description: "Number of feedback responses from promoters"
+        expr: COUNT(CASE WHEN nps_segment = 'Promoter' THEN 1 END)
+        synonyms: ['promoter count', 'promoter responses']
+      
+      - name: detractor_feedback_count
+        description: "Number of feedback responses from detractors"
+        expr: COUNT(CASE WHEN nps_segment = 'Detractor' THEN 1 END)
+        synonyms: ['detractor count', 'detractor responses']
     
-    - name: buyer_type
-      description: "Type of ticket buyer (Single Game, Season Ticket Holder, Group, etc.)"
-      expr: buyer_type
-      data_type: varchar
-      synonyms: ['ticket type', 'customer type', 'buyer category']
+    time_dimensions:
+      - name: game_date
+        description: "Date of the game"
+        expr: game_date
+        data_type: date
+        synonyms: ['event date', 'match date']
     
-    - name: ai_category
-      description: "AI-classified topic category from fan feedback. Categories include: Food & Beverage Quality, Staff & Service, Parking & Transportation, Seating & Views, Entertainment & Atmosphere, Cleanliness & Facilities, Pricing & Value, Game Experience, Safety & Security, and General Positive"
-      expr: ai_category
-      data_type: varchar
-      synonyms: 
-        - 'feedback topic'
-        - 'feedback category'
-        - 'topic'
-        - 'category'
-        - 'issue category'
-        - 'complaint category'
-    
-    - name: sentiment_category
-      description: "AI-classified sentiment from text feedback. Values are Positive, Neutral, or Negative based on the tone and content of fan comments"
-      expr: sentiment_category
-      data_type: varchar
-      synonyms: 
-        - 'sentiment'
-        - 'feedback sentiment'
-        - 'tone'
-        - 'emotional tone'
-        - 'fan sentiment'
-    
-    - name: detailed_category
-      description: "Combined topic and sentiment for granular analysis (e.g., 'Food & Beverage Quality - Negative', 'Staff & Service - Positive')"
-      expr: detailed_category
-      data_type: varchar
-      synonyms: 
-        - 'detailed topic'
-        - 'topic with sentiment'
-        - 'category and sentiment'
-    
-    - name: nps_segment
-      description: "NPS classification based on satisfaction rating: Promoter (9-10), Passive (7-8), Detractor (0-6)"
-      expr: nps_segment
-      data_type: varchar
-      synonyms: 
-        - 'NPS'
-        - 'promoter status'
-        - 'NPS group'
-        - 'customer segment'
-    
-    - name: feedback_text
-      description: "Original open-ended feedback text from fans explaining their game day experience"
-      expr: feedback_text
-      data_type: varchar
-      synonyms: 
-        - 'comment'
-        - 'feedback'
-        - 'text feedback'
-        - 'fan comment'
-        - 'open ended feedback'
-    
-    - name: existing_parent_topic
-      description: "Pre-classified parent topic from Qualtrics"
-      expr: existing_parent_topic
-      data_type: varchar
-    
-    - name: existing_topic
-      description: "Pre-classified detailed topic from Qualtrics"
-      expr: existing_topic
-      data_type: varchar
-  
-      measures:
-    - name: satisfaction_rating
-      description: "Numeric satisfaction rating provided by fan (1-10 scale)"
-      expr: satisfaction_rating
-      data_type: number
-      synonyms: ['rating', 'score', 'satisfaction score']
-    
-    - name: feedback_length
-      description: "Length of feedback text in characters"
-      expr: feedback_length
-      data_type: number
-      synonyms: ['comment length', 'text length']
-  
-      metrics:
-    - name: total_feedback_responses
-      description: "Total number of feedback responses"
-      expr: COUNT(*)
-      synonyms: 
-        - 'feedback count'
-        - 'response count'
-        - 'number of responses'
-        - 'total responses'
-    
-    - name: avg_satisfaction
-      description: "Average satisfaction rating across responses"
-      expr: AVG(satisfaction_rating)
-      synonyms: 
-        - 'average rating'
-        - 'mean satisfaction'
-        - 'avg rating'
-    
-    - name: positive_feedback_count
-      description: "Number of responses with positive sentiment"
-      expr: COUNT(CASE WHEN sentiment_category = 'Positive' THEN 1 END)
-      synonyms: 
-        - 'positive responses'
-        - 'positive sentiment count'
-        - 'positive feedback'
-    
-    - name: negative_feedback_count
-      description: "Number of responses with negative sentiment"
-      expr: COUNT(CASE WHEN sentiment_category = 'Negative' THEN 1 END)
-      synonyms: 
-        - 'negative responses'
-        - 'negative sentiment count'
-        - 'negative feedback'
-        - 'complaints'
-    
-    - name: neutral_feedback_count
-      description: "Number of responses with neutral sentiment"
-      expr: COUNT(CASE WHEN sentiment_category = 'Neutral' THEN 1 END)
-      synonyms: 
-        - 'neutral responses'
-        - 'neutral sentiment count'
-        - 'neutral feedback'
-    
-    - name: promoter_feedback_count
-      description: "Number of feedback responses from promoters"
-      expr: COUNT(CASE WHEN nps_segment = 'Promoter' THEN 1 END)
-      synonyms: ['promoter count', 'promoter responses']
-    
-    - name: detractor_feedback_count
-      description: "Number of feedback responses from detractors"
-      expr: COUNT(CASE WHEN nps_segment = 'Detractor' THEN 1 END)
-      synonyms: ['detractor count', 'detractor responses']
-  
-      time_dimensions:
-    - name: game_date
-      description: "Date of the game"
-      expr: game_date
-      data_type: date
-      synonyms: ['event date', 'match date']
-  
     filters:
-    - name: positive_sentiment
-      description: "Filter to positive feedback only"
-      expr: sentiment_category = 'Positive'
-      synonyms: ['positive feedback', 'good feedback', 'praise']
-    
-    - name: negative_sentiment
-      description: "Filter to negative feedback only"
-      expr: sentiment_category = 'Negative'
-      synonyms: ['negative feedback', 'complaints', 'critical feedback', 'issues']
-    
-    - name: neutral_sentiment
-      description: "Filter to neutral feedback only"
-      expr: sentiment_category = 'Neutral'
-      synonyms: ['neutral feedback', 'mixed feedback']
-    
-    - name: promoters_only
-      description: "Filter to promoters (NPS 9-10)"
-      expr: nps_segment = 'Promoter'
-      synonyms: ['promoter feedback', 'highly satisfied', 'promoters']
-    
-    - name: detractors_only
-      description: "Filter to detractors (NPS 0-6)"
-      expr: nps_segment = 'Detractor'
-      synonyms: ['detractor feedback', 'dissatisfied', 'detractors']
-    
-    - name: season_2023
-      description: "Filter to 2023 season only"
-      expr: season = 2023
-      synonyms: ['2023', '2023 season']
-    
-    - name: season_2024
-      description: "Filter to 2024 season only"
-      expr: season = 2024
-      synonyms: ['2024', '2024 season', 'last season']
-    
-    - name: season_2025
-      description: "Filter to 2025 season only"
-      expr: season = 2025
-      synonyms: ['2025', '2025 season', 'current season']
+      - name: positive_sentiment
+        description: "Filter to positive feedback only"
+        expr: sentiment_category = 'Positive'
+        synonyms: ['positive feedback', 'good feedback', 'praise']
+      
+      - name: negative_sentiment
+        description: "Filter to negative feedback only"
+        expr: sentiment_category = 'Negative'
+        synonyms: ['negative feedback', 'complaints', 'critical feedback', 'issues']
+      
+      - name: neutral_sentiment
+        description: "Filter to neutral feedback only"
+        expr: sentiment_category = 'Neutral'
+        synonyms: ['neutral feedback', 'mixed feedback']
+      
+      - name: promoters_only
+        description: "Filter to promoters (NPS 9-10)"
+        expr: nps_segment = 'Promoter'
+        synonyms: ['promoter feedback', 'highly satisfied', 'promoters']
+      
+      - name: detractors_only
+        description: "Filter to detractors (NPS 0-6)"
+        expr: nps_segment = 'Detractor'
+        synonyms: ['detractor feedback', 'dissatisfied', 'detractors']
+      
+      - name: season_2023
+        description: "Filter to 2023 season only"
+        expr: season = 2023
+        synonyms: ['2023', '2023 season']
+      
+      - name: season_2024
+        description: "Filter to 2024 season only"
+        expr: season = 2024
+        synonyms: ['2024', '2024 season', 'last season']
+      
+      - name: season_2025
+        description: "Filter to 2025 season only"
+        expr: season = 2025
+        synonyms: ['2025', '2025 season', 'current season']
 
   - name: merch_no_purchase_analysis
     description: "AI-powered analysis of reasons why fans did not purchase merchandise across all seasons with sentiment classification"
     base_table:
-    database: TBRDP_DW_DEV
-    schema: IM_RPT
-    table: V_MERCH_NO_ANALYSIS_SIMPLE
-  
+      database: TBRDP_DW_DEV
+      schema: IM_RPT
+      table: V_MERCH_NO_ANALYSIS_SIMPLE
+    
     dimensions:
-    - name: season
-      description: "Baseball season year"
-      expr: season
-      data_type: number
-      synonyms: ['year', 'season year']
+      - name: season
+        description: "Baseball season year"
+        expr: season
+        data_type: number
+        synonyms: ['year', 'season year']
+      
+      - name: game_date
+        description: "Date of the game"
+        expr: game_date
+        data_type: date
+      
+      - name: buyer_type
+        description: "Type of ticket buyer"
+        expr: buyer_type
+        data_type: varchar
+      
+      - name: reason_category
+        description: "AI-classified reason for not purchasing merchandise. Categories include: Budget/Cost, No Time, Product Selection, Sizing Issues, Not Interested, Already Own Items, Forgot"
+        expr: reason_category
+        data_type: varchar
+        synonyms: 
+          - 'merch reason'
+          - 'non-purchase reason'
+          - 'why no merch'
+          - 'merchandise issue'
+      
+      - name: sentiment_category
+        description: "Sentiment of the feedback (Positive, Neutral, Negative)"
+        expr: sentiment_category
+        data_type: varchar
+        synonyms: ['sentiment', 'tone']
+      
+      - name: feedback_text
+        description: "Original feedback text explaining why they didn't purchase merchandise"
+        expr: feedback_text
+        data_type: varchar
+        synonyms: 
+          - 'comment'
+          - 'reason text'
+          - 'explanation'
     
-    - name: game_date
-      description: "Date of the game"
-      expr: game_date
-      data_type: date
-    
-    - name: buyer_type
-      description: "Type of ticket buyer"
-      expr: buyer_type
-      data_type: varchar
-    
-    - name: reason_category
-      description: "AI-classified reason for not purchasing merchandise. Categories include: Budget/Cost, No Time, Product Selection, Sizing Issues, Not Interested, Already Own Items, Forgot"
-      expr: reason_category
-      data_type: varchar
-      synonyms: 
-        - 'merch reason'
-        - 'non-purchase reason'
-        - 'why no merch'
-        - 'merchandise issue'
-    
-    - name: sentiment_category
-      description: "Sentiment of the feedback (Positive, Neutral, Negative)"
-      expr: sentiment_category
-      data_type: varchar
-      synonyms: ['sentiment', 'tone']
-    
-    - name: feedback_text
-      description: "Original feedback text explaining why they didn't purchase merchandise"
-      expr: feedback_text
-      data_type: varchar
-      synonyms: 
-        - 'comment'
-        - 'reason text'
-        - 'explanation'
-  
     metrics:
-    - name: total_non_purchase_responses
-      description: "Total responses explaining merchandise non-purchase"
-      expr: COUNT(*)
-      synonyms: 
-        - 'response count'
-        - 'merch non-purchase count'
+      - name: total_non_purchase_responses
+        description: "Total responses explaining merchandise non-purchase"
+        expr: COUNT(*)
+        synonyms: 
+          - 'response count'
+          - 'merch non-purchase count'
+      
+      - name: negative_merch_feedback_count
+        description: "Number of negative responses about merchandise"
+        expr: COUNT(CASE WHEN sentiment_category = 'Negative' THEN 1 END)
     
-    - name: negative_merch_feedback_count
-      description: "Number of negative responses about merchandise"
-      expr: COUNT(CASE WHEN sentiment_category = 'Negative' THEN 1 END)
-  
     time_dimensions:
-    - name: game_date
-      description: "Date of the game"
-      expr: game_date
-      data_type: date
-  
+      - name: game_date
+        description: "Date of the game"
+        expr: game_date
+        data_type: date
+    
     filters:
-    - name: budget_concerns
-      description: "Filter to budget/cost related reasons"
-      expr: reason_category = 'Budget/Cost'
-      synonyms: ['cost issues', 'price concerns', 'too expensive']
-    
-    - name: sizing_issues
-      description: "Filter to sizing related complaints"
-      expr: reason_category = 'Sizing Issues'
-      synonyms: ['size problems', 'fit issues']
-    
-    - name: selection_issues
-      description: "Filter to product selection concerns"
-      expr: reason_category = 'Product Selection'
-      synonyms: ['availability issues', 'product options']
+      - name: budget_concerns
+        description: "Filter to budget/cost related reasons"
+        expr: reason_category = 'Budget/Cost'
+        synonyms: ['cost issues', 'price concerns', 'too expensive']
+      
+      - name: sizing_issues
+        description: "Filter to sizing related complaints"
+        expr: reason_category = 'Sizing Issues'
+        synonyms: ['size problems', 'fit issues']
+      
+      - name: selection_issues
+        description: "Filter to product selection concerns"
+        expr: reason_category = 'Product Selection'
+        synonyms: ['availability issues', 'product options']
