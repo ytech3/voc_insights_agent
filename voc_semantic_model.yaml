@@ -4711,8 +4711,205 @@ tables:
         default_aggregation: avg
         access_modifier: private_access
         synonyms: ["walk out grid timeframe"]
+  
+  - name: overall_feedback_sentence_level
+    description: "PRIMARY: Sentence-by-sentence breakdown of fan feedback with individual sentiment and topic classification for each sentence. Use this as the default for detailed feedback analysis. Each response can have multiple sentences with different sentiments and topics. Ideal for understanding mixed feedback like 'food was great but parking was terrible'."
+    base_table:
+      database: TBRDP_DW_DEV
+      schema: IM_RPT
+      table: V_OVERALL_FEEDBACK_SENTENCE_LEVEL
+    
+    dimensions:
+      - name: qualtrics_id
+        description: "Unique survey response identifier"
+        expr: qualtrics_id
+        data_type: varchar
+        synonyms: ['response ID', 'survey ID']
+      
+      - name: season
+        description: "Baseball season year"
+        expr: season
+        data_type: number
+        synonyms: ['year', 'season year']
+      
+      - name: game_date
+        description: "Date of the game"
+        expr: game_date
+        data_type: date
+        synonyms: ['event date', 'match date', 'game day']
+      
+      - name: buyer_type
+        description: "Type of ticket buyer"
+        expr: buyer_type
+        data_type: varchar
+        synonyms: ['ticket type', 'customer type']
+      
+      - name: sentence_number
+        description: "Sequential number of the sentence within the original feedback (1, 2, 3, etc.)"
+        expr: sentence_number
+        data_type: number
+        synonyms: ['sentence order', 'sentence index', 'sentence position']
+      
+      - name: sentence_text
+        description: "Individual sentence extracted from the original feedback"
+        expr: sentence_text
+        data_type: varchar
+        synonyms: ['sentence', 'individual sentence', 'parsed sentence', 'text']
+      
+      - name: sentiment_category
+        description: "Sentiment classification for this specific sentence (Positive, Neutral, or Negative)"
+        expr: sentiment_category
+        data_type: varchar
+        synonyms: ['sentence sentiment', 'sentiment', 'tone', 'feeling']
+      
+      - name: ai_category
+        description: "Topic category for this specific sentence (Food & Beverage Quality, Staff & Service, Parking & Transportation, Seating & Views, Entertainment & Atmosphere, Cleanliness & Facilities, Pricing & Value, Game Experience, Safety & Security, General Positive, Other)"
+        expr: ai_category
+        data_type: varchar
+        synonyms: ['sentence topic', 'sentence category', 'topic', 'category', 'subject']
+      
+      - name: detailed_category
+        description: "Combined topic and sentiment for this sentence (e.g., 'Food & Beverage Quality - Positive')"
+        expr: detailed_category
+        data_type: varchar
+        synonyms: ['sentence detail', 'detailed topic']
+      
+      - name: original_feedback
+        description: "Complete original feedback text before sentence splitting"
+        expr: original_feedback
+        data_type: varchar
+        synonyms: ['full feedback', 'original text', 'complete feedback']
+      
+      - name: nps_segment
+        description: "NPS classification of the respondent (Promoter, Passive, Detractor)"
+        expr: nps_segment
+        data_type: varchar
+        synonyms: ['NPS', 'promoter status', 'customer segment']
+    
+    measures:
+      - name: satisfaction_rating
+        description: "Overall satisfaction rating (1-10 scale)"
+        expr: satisfaction_rating
+        data_type: number
+        synonyms: ['rating', 'score', 'satisfaction']
+      
+      - name: sentence_length
+        description: "Character length of the sentence"
+        expr: sentence_length
+        data_type: number
+        synonyms: ['length', 'character count']
+    
+    metrics:
+      - name: total_sentences
+        description: "Total number of individual sentences analyzed"
+        expr: COUNT(*)
+        synonyms: 
+          - 'sentence count'
+          - 'number of sentences'
+          - 'total sentence count'
+      
+      - name: unique_responses
+        description: "Number of unique survey responses"
+        expr: COUNT(DISTINCT qualtrics_id)
+        synonyms:
+          - 'response count'
+          - 'number of responses'
+          - 'unique feedback count'
+      
+      - name: positive_sentences
+        description: "Number of sentences with positive sentiment"
+        expr: COUNT(CASE WHEN sentiment_category = 'Positive' THEN 1 END)
+        synonyms: 
+          - 'positive count'
+          - 'positive sentence count'
+      
+      - name: negative_sentences
+        description: "Number of sentences with negative sentiment"
+        expr: COUNT(CASE WHEN sentiment_category = 'Negative' THEN 1 END)
+        synonyms: 
+          - 'negative count'
+          - 'negative sentence count'
+          - 'complaints'
+      
+      - name: neutral_sentences
+        description: "Number of sentences with neutral sentiment"
+        expr: COUNT(CASE WHEN sentiment_category = 'Neutral' THEN 1 END)
+        synonyms: 
+          - 'neutral count'
+          - 'neutral sentence count'
+      
+      - name: avg_sentences_per_response
+        description: "Average number of sentences per feedback response"
+        expr: COUNT(*) / NULLIF(COUNT(DISTINCT qualtrics_id), 0)
+        synonyms: 
+          - 'average sentences'
+          - 'mean sentences per response'
+      
+      - name: positive_sentence_pct
+        description: "Percentage of sentences that are positive"
+        expr: ROUND(100.0 * COUNT(CASE WHEN sentiment_category = 'Positive' THEN 1 END) / NULLIF(COUNT(*), 0), 2)
+        synonyms:
+          - 'percent positive'
+          - 'positive percentage'
+      
+      - name: negative_sentence_pct
+        description: "Percentage of sentences that are negative"
+        expr: ROUND(100.0 * COUNT(CASE WHEN sentiment_category = 'Negative' THEN 1 END) / NULLIF(COUNT(*), 0), 2)
+        synonyms:
+          - 'percent negative'
+          - 'negative percentage'
+    
+    time_dimensions:
+      - name: game_date
+        description: "Date of the game"
+        expr: game_date
+        data_type: date
+        synonyms: ['event date', 'match date']
+    
+    filters:
+      - name: positive_sentences_only
+        description: "Filter to sentences with positive sentiment"
+        expr: sentiment_category = 'Positive'
+        synonyms: ['positive', 'positive feedback', 'praise']
+      
+      - name: negative_sentences_only
+        description: "Filter to sentences with negative sentiment"
+        expr: sentiment_category = 'Negative'
+        synonyms: ['negative', 'negative feedback', 'complaints', 'issues']
+      
+      - name: neutral_sentences_only
+        description: "Filter to sentences with neutral sentiment"
+        expr: sentiment_category = 'Neutral'
+        synonyms: ['neutral', 'neutral feedback']
+      
+      - name: food_beverage_sentences
+        description: "Filter to food and beverage related sentences"
+        expr: ai_category = 'Food & Beverage Quality'
+        synonyms: ['food feedback', 'beverage feedback', 'concessions']
+      
+      - name: parking_sentences
+        description: "Filter to parking related sentences"
+        expr: ai_category = 'Parking & Transportation'
+        synonyms: ['parking feedback', 'transportation feedback']
+      
+      - name: seating_sentences
+        description: "Filter to seating and view related sentences"
+        expr: ai_category = 'Seating & Views'
+        synonyms: ['seating feedback', 'view feedback', 'seat complaints']
+      
+      - name: first_sentences_only
+        description: "Filter to only the first sentence of each response"
+        expr: sentence_number = 1
+        synonyms: ['first sentence', 'opening sentence']
 
-  - name: overall_feedback_analysis
+  - name: overall_feedback_response_level
+    description: "SECONDARY: Response-level analysis of fan feedback. Each row is one complete survey response with overall sentiment/topic. Use this for aggregate statistics and when you don't need sentence-level detail. For detailed analysis of mixed feedback, use overall_feedback_sentence_level instead."
+    base_table:
+      database: TBRDP_DW_DEV
+      schema: IM_RPT
+      table: V_OVERALL_FEEDBACK_ANALYSIS
+   
+  - name: overall_feedback_response 
     description: "AI-powered analysis of fan open-ended feedback with sentiment classification and topic categorization across all seasons (2023-present)"
     base_table:
       database: TBRDP_DW_DEV
