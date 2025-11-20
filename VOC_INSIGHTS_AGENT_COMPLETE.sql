@@ -376,6 +376,194 @@ FROM TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_ANALYSIS
 GROUP BY ai_category, sentiment_category
 ORDER BY total_responses DESC;
 
+USE ROLE ACCOUNTADMIN;
+USE WAREHOUSE TBRDP_DW_CORTEX_XS_WH;
+
+CREATE OR REPLACE VIEW TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_SENTENCE_LEVEL AS
+WITH feedback_data AS (
+  SELECT 
+    QUALTRICS_ID,
+    SEASON,
+    GAME_DATE,
+    BUYER_TYPE,
+    OVERALL_NUMRAT_OT AS feedback_text,
+    OVERALL_NUMRAT AS satisfaction_rating
+  FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+  WHERE OVERALL_NUMRAT_OT IS NOT NULL
+    AND LENGTH(TRIM(OVERALL_NUMRAT_OT)) > 10
+    AND season >= 2023
+),
+
+-- Step 1: Split text into sentences
+sentence_extraction AS (
+  SELECT
+    QUALTRICS_ID,
+    SEASON,
+    GAME_DATE,
+    BUYER_TYPE,
+    feedback_text,
+    satisfaction_rating,
+    SNOWFLAKE.CORTEX.COMPLETE(
+      'mistral-large2',
+      ARRAY_CONSTRUCT(
+        OBJECT_CONSTRUCT(
+          'role', 'system',
+          'content', 'You are a text parsing assistant. Split the given text into individual sentences. Return a valid JSON array where each sentence is a separate string. Format: ["sentence 1", "sentence 2"]. Return ONLY the JSON array, no other text.'
+        ),
+        OBJECT_CONSTRUCT(
+          'role', 'user',
+          'content', feedback_text
+        )
+      ),
+      OBJECT_CONSTRUCT(
+        'temperature', 0.1,
+        'max_tokens', 1000
+      )
+    ):choices[0]:messages AS sentences_response
+  FROM feedback_data
+),
+
+-- Step 2: Parse sentences
+parsed_sentences AS (
+  SELECT
+    QUALTRICS_ID,
+    SEASON,
+    GAME_DATE,
+    BUYER_TYPE,
+    feedback_text,
+    satisfaction_rating,
+    TRY_PARSE_JSON(sentences_response) AS sentences_json
+  FROM sentence_extraction
+  WHERE sentences_response IS NOT NULL
+),
+
+-- Step 3: Flatten to individual sentences
+individual_sentences AS (
+  SELECT
+    QUALTRICS_ID,
+    SEASON,
+    GAME_DATE,
+    BUYER_TYPE,
+    feedback_text AS original_feedback,
+    satisfaction_rating,
+    TRIM(sentence.VALUE::STRING) AS sentence_text,
+    sentence.INDEX + 1 AS sentence_number
+  FROM parsed_sentences,
+  LATERAL FLATTEN(input => sentences_json) sentence
+  WHERE sentence.VALUE::STRING IS NOT NULL
+    AND LENGTH(TRIM(sentence.VALUE::STRING)) > 5
+),
+
+-- Step 4: Classify sentiment for each sentence
+sentiment_classification AS (
+  SELECT
+    *,
+    SNOWFLAKE.CORTEX.COMPLETE(
+      'mistral-large2',
+      ARRAY_CONSTRUCT(
+        OBJECT_CONSTRUCT(
+          'role', 'system',
+          'content', 'You are a sentiment classifier. Respond with ONLY one word: Positive, Neutral, or Negative. No explanation.'
+        ),
+        OBJECT_CONSTRUCT(
+          'role', 'user',
+          'content', sentence_text
+        )
+      ),
+      OBJECT_CONSTRUCT(
+        'temperature', 0.1,
+        'max_tokens', 10
+      )
+    ):choices[0]:messages AS sentiment_raw
+  FROM individual_sentences
+),
+
+-- Step 5: Categorize topic for each sentence
+topic_classification AS (
+  SELECT
+    *,
+    CASE 
+      WHEN UPPER(TRIM(sentiment_raw)) IN ('POSITIVE', 'NEUTRAL', 'NEGATIVE') 
+      THEN INITCAP(TRIM(sentiment_raw))
+      ELSE 'Neutral'
+    END AS sentiment_category,
+    SNOWFLAKE.CORTEX.COMPLETE(
+      'mistral-large2',
+      ARRAY_CONSTRUCT(
+        OBJECT_CONSTRUCT(
+          'role', 'system',
+          'content', 'You are a feedback categorization expert for a baseball stadium. Classify into ONE category: Food & Beverage Quality, Staff & Service, Parking & Transportation, Seating & Views, Entertainment & Atmosphere, Cleanliness & Facilities, Pricing & Value, Game Experience, Safety & Security, General Positive, or Other. Respond with ONLY the category name.'
+        ),
+        OBJECT_CONSTRUCT(
+          'role', 'user',
+          'content', sentence_text
+        )
+      ),
+      OBJECT_CONSTRUCT(
+        'temperature', 0.1,
+        'max_tokens', 50
+      )
+    ):choices[0]:messages AS topic_raw
+  FROM sentiment_classification
+)
+
+-- Final output
+SELECT
+  QUALTRICS_ID,
+  SEASON,
+  GAME_DATE,
+  BUYER_TYPE,
+  original_feedback,
+  satisfaction_rating,
+  sentence_number,
+  sentence_text,
+  sentiment_category,
+  TRIM(topic_raw) AS ai_category,
+  CONCAT(TRIM(topic_raw), ' - ', sentiment_category) AS detailed_category,
+  LENGTH(sentence_text) AS sentence_length,
+  CASE 
+    WHEN satisfaction_rating >= 9 THEN 'Promoter'
+    WHEN satisfaction_rating >= 7 THEN 'Passive'
+    ELSE 'Detractor'
+  END AS nps_segment
+FROM topic_classification
+ORDER BY QUALTRICS_ID, sentence_number;
+
+-- Grant access
+GRANT SELECT ON VIEW TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_SENTENCE_LEVEL 
+    TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+
+COMMENT ON VIEW TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_SENTENCE_LEVEL IS 
+'Sentence-by-sentence AI analysis of fan feedback. Each sentence is individually 
+classified for sentiment and topic. Use this view for granular analysis of specific 
+aspects within mixed feedback responses. Covers all seasons from 2023 forward.';
+
+-- =====================================================
+-- VERIFICATION QUERY - SENTENCE LEVEL ANALYSIS
+-- =====================================================
+
+-- Test the sentence-level view
+SELECT 
+  season,
+  sentence_number,
+  sentence_text,
+  sentiment_category,
+  ai_category,
+  COUNT(*) OVER (PARTITION BY qualtrics_id) AS total_sentences_in_response
+FROM TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_SENTENCE_LEVEL
+WHERE season = 2024
+LIMIT 20;
+
+-- Summary statistics
+SELECT 
+  season,
+  sentiment_category,
+  ai_category,
+  COUNT(*) AS sentence_count,
+  COUNT(DISTINCT qualtrics_id) AS unique_responses
+FROM TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_SENTENCE_LEVEL
+GROUP BY season, sentiment_category, ai_category
+ORDER BY season DESC, sentence_count DESC;
 -- =====================================================
 -- VERIFICATION QUERIES
 -- =====================================================
