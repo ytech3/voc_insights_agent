@@ -178,6 +178,204 @@ CROSS JOIN measures_header mh
 CROSS JOIN measures_yaml m
 CROSS JOIN static_yaml s;
 
+
+-- =====================================================
+-- OVERALL FEEDBACK ANALYSIS VIEW - ALL YEARS
+-- =====================================================
+-- Description: AI-powered analysis of open-ended overall feedback
+--              Provides sentiment classification and topic categorization
+--              Covers all seasons (2023, 2024, 2025, and future)
+-- =====================================================
+
+USE ROLE ACCOUNTADMIN;
+USE WAREHOUSE TBRDP_DW_CORTEX_XS_WH;
+
+CREATE OR REPLACE VIEW TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_ANALYSIS AS
+WITH base_data AS (
+  SELECT
+    qualtrics_id,
+    game_date,
+    season,
+    buyer_type,
+    OVERALL_NUMRAT AS satisfaction_rating,
+    OVERALL_NUMRAT_OT AS feedback_text,
+    LENGTH(OVERALL_NUMRAT_OT) AS feedback_length,
+    OVERALL_NUMRAT_OT_PARENT_TOPICS AS existing_parent_topic,
+    OVERALL_NUMRAT_OT_TOPICS AS existing_topic
+  FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+  WHERE OVERALL_NUMRAT_OT IS NOT NULL
+    AND LENGTH(TRIM(OVERALL_NUMRAT_OT)) > 10
+    AND season >= 2023  -- All years from 2023 forward
+),
+with_ai_analysis AS (
+  SELECT
+    *,
+    -- Topic classification
+    AI_CLASSIFY(
+      feedback_text,
+      ARRAY_CONSTRUCT(
+        'Food & Beverage Quality',
+        'Staff & Service',
+        'Parking & Transportation',
+        'Seating & Views',
+        'Entertainment & Atmosphere',
+        'Cleanliness & Facilities',
+        'Pricing & Value',
+        'Game Experience',
+        'Safety & Security',
+        'General Positive'
+      )
+    )['labels'][0]::VARCHAR AS ai_category,
+    
+    -- Sentiment classification directly from text
+    AI_CLASSIFY(
+      feedback_text,
+      ARRAY_CONSTRUCT('Positive', 'Neutral', 'Negative')
+    )['labels'][0]::VARCHAR AS sentiment_category,
+    
+    -- Keep original AI_SENTIMENT for reference
+    AI_SENTIMENT(feedback_text):sentiment AS sentiment_value,
+    
+    -- NPS segment
+    CASE 
+      WHEN satisfaction_rating >= 9 THEN 'Promoter'
+      WHEN satisfaction_rating BETWEEN 7 AND 8 THEN 'Passive'
+      WHEN satisfaction_rating <= 6 THEN 'Detractor'
+      ELSE 'Unknown'
+    END AS nps_segment
+  FROM base_data
+)
+SELECT
+  qualtrics_id,
+  game_date,
+  season,
+  buyer_type,
+  satisfaction_rating,
+  feedback_text,
+  feedback_length,
+  existing_parent_topic,
+  existing_topic,
+  ai_category,
+  sentiment_category,
+  sentiment_value,
+  nps_segment,
+  CONCAT(ai_category, ' - ', sentiment_category) AS detailed_category
+FROM with_ai_analysis;
+
+-- Grant access
+GRANT SELECT ON VIEW TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_ANALYSIS 
+    TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+
+COMMENT ON VIEW TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_ANALYSIS IS 
+'AI-powered analysis of all fan open-ended feedback across all seasons. 
+Provides sentiment classification (Positive/Neutral/Negative) and topic categorization 
+using Snowflake Cortex AI_CLASSIFY. Analyzes feedback from 2023 onwards.';
+
+-- =====================================================
+-- MERCHANDISE NON-PURCHASE FEEDBACK ANALYSIS - ALL YEARS
+-- =====================================================
+-- Description: AI classification of why fans didn't purchase merchandise
+--              Covers all seasons
+-- =====================================================
+
+CREATE OR REPLACE VIEW TBRDP_DW_DEV.IM_RPT.V_MERCH_NO_ANALYSIS_SIMPLE AS
+SELECT
+  qualtrics_id,
+  game_date,
+  season,
+  buyer_type,
+  merch_no_otherspecify AS feedback_text,
+  
+  -- Classification into reason categories
+  AI_CLASSIFY(
+    merch_no_otherspecify,
+    ARRAY_CONSTRUCT(
+      'Budget/Cost',
+      'No Time',
+      'Product Selection',
+      'Sizing Issues',
+      'Not Interested',
+      'Already Own Items',
+      'Forgot'
+    )
+  )['labels'][0]::VARCHAR AS reason_category,
+  
+  -- Sentiment classification
+  AI_CLASSIFY(
+    merch_no_otherspecify,
+    ARRAY_CONSTRUCT('Positive', 'Neutral', 'Negative')
+  )['labels'][0]::VARCHAR AS sentiment_category,
+  
+  AI_SENTIMENT(merch_no_otherspecify):sentiment AS sentiment_score
+FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+WHERE merch_no_otherspecify IS NOT NULL
+  AND LENGTH(TRIM(merch_no_otherspecify)) > 10
+  AND season >= 2023;  -- All years from 2023 forward
+
+-- Grant access
+GRANT SELECT ON VIEW TBRDP_DW_DEV.IM_RPT.V_MERCH_NO_ANALYSIS_SIMPLE 
+    TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+
+COMMENT ON VIEW TBRDP_DW_DEV.IM_RPT.V_MERCH_NO_ANALYSIS_SIMPLE IS 
+'AI-powered analysis of merchandise non-purchase reasons across all seasons. 
+Classifies feedback into reason categories and sentiment using Snowflake Cortex AI.';
+
+-- =====================================================
+-- VERIFICATION QUERIES FOR NEW VIEWS
+-- =====================================================
+
+-- Verify overall feedback analysis - show counts by year
+SELECT 
+  season,
+  sentiment_category,
+  ai_category,
+  COUNT(*) AS responses
+FROM TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_ANALYSIS
+GROUP BY season, sentiment_category, ai_category
+ORDER BY season DESC, responses DESC;
+
+-- Verify merchandise feedback analysis - show counts by year
+SELECT 
+  season,
+  reason_category,
+  COUNT(*) AS responses
+FROM TBRDP_DW_DEV.IM_RPT.V_MERCH_NO_ANALYSIS_SIMPLE
+GROUP BY season, reason_category
+ORDER BY season DESC, responses DESC;
+
+-- Check total records by year
+SELECT 
+  season,
+  COUNT(*) AS total_feedback_responses
+FROM TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_ANALYSIS
+GROUP BY season
+ORDER BY season DESC;
+
+-- =====================================================
+-- SUMMARY ANALYSIS QUERIES
+-- =====================================================
+
+-- Year-over-year sentiment trends
+SELECT 
+  season,
+  sentiment_category,
+  COUNT(*) AS responses,
+  ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (PARTITION BY season), 1) AS pct_of_year
+FROM TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_ANALYSIS
+GROUP BY season, sentiment_category
+ORDER BY season DESC, responses DESC;
+
+-- Top feedback categories across all years
+SELECT 
+  ai_category,
+  sentiment_category,
+  COUNT(*) AS total_responses,
+  ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 1) AS pct_of_all,
+  COUNT(DISTINCT season) AS seasons_present
+FROM TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_ANALYSIS
+GROUP BY ai_category, sentiment_category
+ORDER BY total_responses DESC;
+
 -- =====================================================
 -- VERIFICATION QUERIES
 -- =====================================================
