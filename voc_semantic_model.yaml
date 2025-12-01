@@ -944,7 +944,7 @@ tables:
         expr: PURCHASE_INTENT_DESC
         data_type: varchar
         synonyms: ['purchase intent description', 'purchase intent desc', 'likelihood to repurchase', 'likely to buy tickets again', 'repurchase likelihood', 'will buy tickets again', 'return likelihood']
-        sample_values: ['Highly likely', 'Somewhat likely', 'Neither likely nor unlikely', 'Somewhat unlikely', 'Highly unlikely']
+        sample_values: ['Im not sure yet', 'Yes, I do', 'No, i dont']
         is_enum: true
       
       - name: PURCHASE_INTENT_NEXT_DESC
@@ -4713,7 +4713,7 @@ tables:
         synonyms: ["walk out grid timeframe"]
   
   - name: overall_feedback_sentence_level
-    description: "PRIMARY: Sentence-by-sentence breakdown of fan feedback with individual sentiment and topic classification for each sentence. Use this as the default for detailed feedback analysis. Each response can have multiple sentences with different sentiments and topics. Ideal for understanding mixed feedback like 'food was great but parking was terrible'."
+    description: "PRIMARY TABLE for analyzing fan feedback. Use this table by default for all feedback analysis questions. Each row represents one sentence from fan feedback, with individual sentiment and topic classification. Perfect for understanding mixed feedback (e.g., 'food was great but parking terrible'). Covers all seasons from 2023 forward."
     base_table:
       database: TBRDP_DW_DEV
       schema: IM_RPT
@@ -4766,7 +4766,7 @@ tables:
         description: "Topic category for this specific sentence (Food & Beverage Quality, Staff & Service, Parking & Transportation, Seating & Views, Entertainment & Atmosphere, Cleanliness & Facilities, Pricing & Value, Game Experience, Safety & Security, General Positive, Other)"
         expr: ai_category
         data_type: varchar
-        synonyms: ['sentence topic', 'sentence category', 'topic', 'category', 'subject']
+        synonyms: ['topic', 'category', 'feedback', 'subject', 'sentence topic', 'sentence category', 'topic', 'category', 'subject']
       
       - name: detailed_category
         description: "Combined topic and sentiment for this sentence (e.g., 'Food & Beverage Quality - Positive')"
@@ -4950,7 +4950,8 @@ tables:
           - 'feedback category'
           - 'topic'
           - 'category'
-          - 'issue category'
+          - 'subject'
+          - 'feedback area'
           - 'complaint category'
       
       - name: sentiment_category
