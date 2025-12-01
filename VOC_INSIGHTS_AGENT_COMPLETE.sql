@@ -526,6 +526,10 @@ VALUE & OVERALL:
 - "Overall Experience & Loyalty" - general satisfaction, would return, recommend to others, overall impression, best/worst experience, memories
 - "Other" - anything that does not fit the above categories
 
+EGRESS & DEPARTURE:
+- "Egress" - Leaving the stadium, time spent leaving, parking exit
+- "stadium departure" - Experience leaving the stadium, exiting the stadium 
+
 IMPORTANT RULES:
 - Be SPECIFIC. Do NOT use "Overall Experience & Loyalty" unless the sentence is truly about general satisfaction or future intent
 - Positive comments about atmosphere should go to "Crowd & Atmosphere", NOT "Overall Experience"
