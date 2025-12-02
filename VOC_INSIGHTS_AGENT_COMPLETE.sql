@@ -622,18 +622,168 @@ COMMENT ON VIEW TBRDP_DW_DEV.IM_RPT.V_QUALITATIVE_FEEDBACK_ALL IS
 -- =====================================================
 
 CREATE OR REPLACE VIEW TBRDP_DW_DEV.IM_RPT.V_QUALITATIVE_FEEDBACK_SENTENCE_LEVEL AS
-WITH raw AS (
+- Step 1: Gather all qualitative feedback directly from base table
+WITH raw_feedback AS (
+  -- Overall Experience (PRIMARY)
   SELECT
     qualtrics_id,
     game_date,
     season,
     buyer_type,
-    feedback_source,
-    source_field,
-    feedback_text
-  FROM TBRDP_DW_DEV.IM_RPT.V_QUALITATIVE_FEEDBACK_ALL
+    'Overall Experience' AS feedback_source,
+    'OVERALL_NUMRAT_OT' AS source_field,
+    OVERALL_NUMRAT_OT AS feedback_text
+  FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+  WHERE OVERALL_NUMRAT_OT IS NOT NULL 
+    AND LENGTH(TRIM(OVERALL_NUMRAT_OT)) > 5
+    AND season BETWEEN 2023 AND 2025
+
+  UNION ALL
+
+  -- TB_ADDON_8_1: Tickets/Seats Issues
+  SELECT qualtrics_id, game_date, season, buyer_type,
+    'Tickets/Seats Issues' AS feedback_source,
+    'TB_ADDON_8_1' AS source_field,
+    TB_ADDON_8_1 AS feedback_text
+  FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+  WHERE TB_ADDON_8_1 IS NOT NULL 
+    AND LENGTH(TRIM(TB_ADDON_8_1)) > 5 
+    AND season BETWEEN 2023 AND 2025
+
+  UNION ALL
+
+  -- TB_ADDON_8_2: Staff/Service Issues
+  SELECT qualtrics_id, game_date, season, buyer_type,
+    'Staff/Service Issues' AS feedback_source,
+    'TB_ADDON_8_2' AS source_field,
+    TB_ADDON_8_2 AS feedback_text
+  FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+  WHERE TB_ADDON_8_2 IS NOT NULL 
+    AND LENGTH(TRIM(TB_ADDON_8_2)) > 5 
+    AND season BETWEEN 2023 AND 2025
+
+  UNION ALL
+
+  -- TB_ADDON_8_3: Entertainment Issues
+  SELECT qualtrics_id, game_date, season, buyer_type,
+    'Entertainment Issues' AS feedback_source,
+    'TB_ADDON_8_3' AS source_field,
+    TB_ADDON_8_3 AS feedback_text
+  FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+  WHERE TB_ADDON_8_3 IS NOT NULL 
+    AND LENGTH(TRIM(TB_ADDON_8_3)) > 5 
+    AND season BETWEEN 2023 AND 2025
+
+  UNION ALL
+
+  -- TB_ADDON_8_4: Concessions/Food Issues
+  SELECT qualtrics_id, game_date, season, buyer_type,
+    'Concessions/Food Issues' AS feedback_source,
+    'TB_ADDON_8_4' AS source_field,
+    TB_ADDON_8_4 AS feedback_text
+  FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+  WHERE TB_ADDON_8_4 IS NOT NULL 
+    AND LENGTH(TRIM(TB_ADDON_8_4)) > 5 
+    AND season BETWEEN 2023 AND 2025
+
+  UNION ALL
+
+  -- TB_ADDON_8_5: Cleanliness Issues
+  SELECT qualtrics_id, game_date, season, buyer_type,
+    'Cleanliness Issues' AS feedback_source,
+    'TB_ADDON_8_5' AS source_field,
+    TB_ADDON_8_5 AS feedback_text
+  FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+  WHERE TB_ADDON_8_5 IS NOT NULL 
+    AND LENGTH(TRIM(TB_ADDON_8_5)) > 5 
+    AND season BETWEEN 2023 AND 2025
+
+  UNION ALL
+
+  -- TB_ADDON_8_6: Parking Issues
+  SELECT qualtrics_id, game_date, season, buyer_type,
+    'Parking Issues' AS feedback_source,
+    'TB_ADDON_8_6' AS source_field,
+    TB_ADDON_8_6 AS feedback_text
+  FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+  WHERE TB_ADDON_8_6 IS NOT NULL 
+    AND LENGTH(TRIM(TB_ADDON_8_6)) > 5 
+    AND season BETWEEN 2023 AND 2025
+
+  UNION ALL
+
+  -- TB_ADDON_8_7: Retail/Merchandise Issues
+  SELECT qualtrics_id, game_date, season, buyer_type,
+    'Retail/Merchandise Issues' AS feedback_source,
+    'TB_ADDON_8_7' AS source_field,
+    TB_ADDON_8_7 AS feedback_text
+  FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+  WHERE TB_ADDON_8_7 IS NOT NULL 
+    AND LENGTH(TRIM(TB_ADDON_8_7)) > 5 
+    AND season BETWEEN 2023 AND 2025
+
+  UNION ALL
+
+  -- TB_ADDON_8_8: Safety/Security Issues
+  SELECT qualtrics_id, game_date, season, buyer_type,
+    'Safety/Security Issues' AS feedback_source,
+    'TB_ADDON_8_8' AS source_field,
+    TB_ADDON_8_8 AS feedback_text
+  FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+  WHERE TB_ADDON_8_8 IS NOT NULL 
+    AND LENGTH(TRIM(TB_ADDON_8_8)) > 5 
+    AND season BETWEEN 2023 AND 2025
+
+  UNION ALL
+
+  -- TB_ADDON_8_9: App Issues
+  SELECT qualtrics_id, game_date, season, buyer_type,
+    'App Issues' AS feedback_source,
+    'TB_ADDON_8_9' AS source_field,
+    TB_ADDON_8_9 AS feedback_text
+  FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+  WHERE TB_ADDON_8_9 IS NOT NULL 
+    AND LENGTH(TRIM(TB_ADDON_8_9)) > 5 
+    AND season BETWEEN 2023 AND 2025
+
+  UNION ALL
+
+  -- TB_ADDON_8_10: Other Fan Behavior Issues
+  SELECT qualtrics_id, game_date, season, buyer_type,
+    'Other Fan Behavior Issues' AS feedback_source,
+    'TB_ADDON_8_10' AS source_field,
+    TB_ADDON_8_10 AS feedback_text
+  FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+  WHERE TB_ADDON_8_10 IS NOT NULL 
+    AND LENGTH(TRIM(TB_ADDON_8_10)) > 5 
+    AND season BETWEEN 2023 AND 2025
+
+  UNION ALL
+
+  -- TB_ADDON_8_11: Other Miscellaneous Issues
+  SELECT qualtrics_id, game_date, season, buyer_type,
+    'Other Issues' AS feedback_source,
+    'TB_ADDON_8_11' AS source_field,
+    TB_ADDON_8_11 AS feedback_text
+  FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+  WHERE TB_ADDON_8_11 IS NOT NULL 
+    AND LENGTH(TRIM(TB_ADDON_8_11)) > 5 
+    AND season BETWEEN 2023 AND 2025
+
+  UNION ALL
+
+  -- INCENTIVES_OT: Ticket Purchase Decision Factors
+  SELECT qualtrics_id, game_date, season, buyer_type,
+    'Ticket Purchase Incentives' AS feedback_source,
+    'INCENTIVES_OT' AS source_field,
+    INCENTIVES_OT AS feedback_text
+  FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+  WHERE INCENTIVES_OT IS NOT NULL 
+    AND LENGTH(TRIM(INCENTIVES_OT)) > 5 
+    AND season BETWEEN 2023 AND 2025
 ),
 
+-- Step 2: Single AI call for sentence splitting + sentiment + category classification
 combined_analysis AS (
   SELECT
     qualtrics_id,
@@ -645,26 +795,44 @@ combined_analysis AS (
     feedback_text,
     AI_COMPLETE(
       'snowflake-llama3.3-70b',
-      'Split the following fan feedback into individual sentences. For each sentence, classify the sentiment.
+      'Analyze this fan feedback from a baseball stadium. Split into sentences and classify each.
 
 FEEDBACK: ' || feedback_text || '
 
 Return ONLY a valid JSON array. Each element must have:
 - "sentence": the exact sentence text
 - "sentiment": exactly one of "Positive", "Neutral", or "Negative"
+- "category": exactly one of these categories:
+  "Parking & Arrival", "Gate Entry & Security", "Wayfinding & Accessibility",
+  "Seating & Venue Comfort", "Crowd & Atmosphere", "Food & Beverage Quality",
+  "Concession Service & Speed", "Merchandise & Team Store",
+  "Game Entertainment & Presentation", "Promotions & Special Events",
+  "Team Performance & Game Quality", "Staff Interactions & Service",
+  "Facilities & Cleanliness", "Weather", "Technology & Digital Experience",
+  "Pricing & Value Perception", "Overall Experience & Loyalty",
+  "Ticketing & Purchase Experience", "Egress", "stadium departure", "Other"
 
-Example:
-[{"sentence":"The ushers were very friendly.","sentiment":"Positive"},
- {"sentence":"The bathrooms were dirty.","sentiment":"Negative"}]',
+CLASSIFICATION RULES:
+- Be SPECIFIC with categories. Do not overuse "Overall Experience & Loyalty"
+- Food quality vs service speed are DIFFERENT categories
+- Staff comments go to "Staff Interactions & Service"
+- Positive atmosphere comments go to "Crowd & Atmosphere", NOT "Overall Experience"
+- Team/game action comments go to "Team Performance & Game Quality"
+- Comments about leaving or exiting the stadium go to "Egress" or "stadium departure"
+- Return ONLY the JSON array, nothing else.
+
+Example output:
+[{"sentence":"The food was great","sentiment":"Positive","category":"Food & Beverage Quality"},{"sentence":"Parking was terrible","sentiment":"Negative","category":"Parking & Arrival"}]',
       {
         'temperature': 0.1,
-        'max_tokens': 1500
+        'max_tokens': 2000
       }
     ) AS analysis_json
-  FROM raw
+  FROM raw_feedback
 ),
 
-parsed AS (
+-- Step 3: Parse the JSON response
+parsed_analysis AS (
   SELECT
     qualtrics_id,
     game_date,
@@ -678,6 +846,7 @@ parsed AS (
   WHERE analysis_json IS NOT NULL
 ),
 
+-- Step 4: Flatten to individual sentences
 flattened AS (
   SELECT
     qualtrics_id,
@@ -689,13 +858,15 @@ flattened AS (
     original_feedback,
     sentence.INDEX + 1 AS sentence_number,
     TRIM(sentence.VALUE:sentence::STRING) AS sentence_text,
-    TRIM(sentence.VALUE:sentiment::STRING) AS sentiment_category
-  FROM parsed,
+    TRIM(sentence.VALUE:sentiment::STRING) AS sentiment_category,
+    TRIM(sentence.VALUE:category::STRING) AS ai_category
+  FROM parsed_analysis,
   LATERAL FLATTEN(input => sentences_array) sentence
   WHERE sentence.VALUE:sentence IS NOT NULL
     AND LENGTH(TRIM(sentence.VALUE:sentence::STRING)) > 5
 )
 
+-- Step 5: Final output with parent category mapping
 SELECT
   qualtrics_id,
   game_date,
@@ -707,6 +878,20 @@ SELECT
   sentence_number,
   sentence_text,
   sentiment_category,
+  ai_category,
+  -- Parent category mapping (matches YAML taxonomy)
+  CASE 
+    WHEN ai_category = 'Parking & Arrival' THEN 'PRE-ARRIVAL & ARRIVAL'
+    WHEN ai_category IN ('Gate Entry & Security', 'Wayfinding & Accessibility') THEN 'ENTRY & NAVIGATION'
+    WHEN ai_category IN ('Seating & Venue Comfort', 'Crowd & Atmosphere') THEN 'IN-SEAT EXPERIENCE'
+    WHEN ai_category IN ('Food & Beverage Quality', 'Concession Service & Speed', 'Merchandise & Team Store') THEN 'CONCESSIONS & AMENITIES'
+    WHEN ai_category IN ('Game Entertainment & Presentation', 'Promotions & Special Events', 'Team Performance & Game Quality') THEN 'ENTERTAINMENT & ENGAGEMENT'
+    WHEN ai_category IN ('Staff Interactions & Service', 'Facilities & Cleanliness', 'Weather', 'Technology & Digital Experience') THEN 'SERVICE & OPERATIONS'
+    WHEN ai_category IN ('Pricing & Value Perception', 'Overall Experience & Loyalty', 'Ticketing & Purchase Experience') THEN 'VALUE & OVERALL'
+    WHEN ai_category IN ('Egress', 'stadium departure') THEN 'EGRESS & DEPARTURE'
+    ELSE 'OTHER'
+  END AS parent_category,
+  CONCAT(ai_category, ' - ', sentiment_category) AS detailed_category,
   LENGTH(sentence_text) AS sentence_length
 FROM flattened
 ORDER BY season DESC, game_date DESC, qualtrics_id, feedback_source, sentence_number;
@@ -715,9 +900,10 @@ GRANT SELECT ON VIEW TBRDP_DW_DEV.IM_RPT.V_QUALITATIVE_FEEDBACK_SENTENCE_LEVEL
     TO ROLE TBRDP_DW_PROD_CORTEX_USER;
 
 COMMENT ON VIEW TBRDP_DW_DEV.IM_RPT.V_QUALITATIVE_FEEDBACK_SENTENCE_LEVEL IS 
-'Sentence-level analysis of ALL qualitative feedback fields (2023–2025).';
-
-
+'OPTIMIZED: Sentence-level analysis of ALL qualitative feedback fields (2023-2025).
+Reads directly from base table (not nested view) for cost efficiency.
+Uses single AI_COMPLETE call per feedback for sentence splitting, sentiment, AND category classification.
+Categories aligned with YAML taxonomy (21 categories incl. "stadium departure").';
 -- =====================================================
 -- 8) CORTEX AI COST MONITORING VIEW
 -- =====================================================
