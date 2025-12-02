@@ -1,5 +1,69 @@
 name: tampa_bay_rays_voc_complete
-description: "Complete Voice of Customer semantic model for Tampa Bay Rays - Use text description fields (_DESC, _OT, COMMENTS) for feedback analysis instead of numeric codes"
+description:  "Semantic model for Voice of Customer post-attendance survey data, enabling natural language queries about fan experience, satisfaction ratings, and attendance patterns."
+
+custom_instructions: |
+  QUERY ROUTING RULES - FOLLOW THESE STRICTLY:
+  
+  QUALITATIVE FEEDBACK QUERIES:
+  When the user asks about "qualitative feedback", ALWAYS use and prioritize these fields:
+  
+  - OVERALL_NUMRAT_OT: Primary source for general fan feedback (MOST IMPORTANT)
+  - INCENTIVES_OT: Open text about ticket purchasing decisions
+  - TB_ADDON_8_1: Open text about tickets/seats issues
+  - TB_ADDON_8_2: Open text about staff/service issues  
+  - TB_ADDON_8_3: Open text about entertainment issues
+  - TB_ADDON_8_4: Open text about concessions/food/beverage issues
+  - TB_ADDON_8_5: Open text about cleanliness issues
+  - TB_ADDON_8_6: Open text about parking issues
+  - TB_ADDON_8_7: Open text about retail/merchandise issues
+  - TB_ADDON_8_8: Open text about safety/security issues
+  - TB_ADDON_8_9: Open text about app issues
+  - TB_ADDON_8_10: Open text about other fan behavior issues
+  - TB_ADDON_8_11: Open text about other issues not mentioned
+  
+  For qualitative queries, use AI_CLASSIFY or AI_SENTIMENT on these text fields.
+  For topic-specific qualitative queries (e.g., "what are qualitative feedback about parking"), 
+  prioritize the relevant TB_ADDON_8_* field AND filter OVERALL_NUMRAT_OT for that topic.
+
+  CATEGORY TAXONOMY for classifying OVERALL_NUMRAT_OT:
+  PRE-ARRIVAL & ARRIVAL:
+  - "Parking & Arrival" - parking lots, traffic, arrival process, finding parking, parking cost
+
+  ENTRY & NAVIGATION:
+  - "Gate Entry & Security" - entry lines, security screening, ticket scanning, gate staff, Go-Ahead Entry
+  - "Wayfinding & Accessibility" - finding seats, navigating venue, ADA services, elevators, signage
+
+  IN-SEAT EXPERIENCE:
+  - "Seating & Venue Comfort" - seat quality, views, sightlines, temperature, comfort, legroom, seat location
+  - "Crowd & Atmosphere" - fan energy, crowd excitement, stadium atmosphere, game environment, fan behavior
+
+  CONCESSIONS & AMENITIES:
+  - "Food & Beverage Quality" Taste, freshness, food temperature, portion size, presentation, menu variety
+  - "Concession Service & Speed" - wait times, line length, staff service at concessions, mobile ordering speed, checkout process
+  - "Merchandise & Team Store" - team store products, merchandise selection, quality, availability, sizing, retail staff
+
+  ENTERTAINMENT & ENGAGEMENT:
+  - "Game Entertainment & Presentation" - scoreboard content, music, videos, between-inning activities, announcer, sound quality
+  - "Promotions & Special Events" - giveaways, theme nights, pregame ceremonies, special activities, promotions
+  - "Team Performance & Game Quality" - on-field action, players, game excitement, win or loss, team performance
+
+  SERVICE & OPERATIONS:
+  - "Staff Interactions & Service" - staff helpfulness, friendliness, professionalism (ushers, guest services, any staff)
+  - "Facilities & Cleanliness" - restrooms, walkways, seating area cleanliness, maintenance, facility condition
+  - "Weather" - Stadium temperature, air conditioning, 
+  - "Technology & Digital Experience" - mobile app, Wi-Fi, mobile ordering, touchscreens, digital features, website
+
+  VALUE & OVERALL:
+  - "Pricing & Value Perception" - ticket prices, concession prices, overall cost, affordability, value for money
+  - "Overall Experience & Loyalty" - general satisfaction, would return, recommend to others, overall impression, best/worst experience, memories
+  - "Ticketing & Purchase Experience" - ticket buying, pricing, promotions, ticket offers, purchase process
+
+  EGRESS & DEPARTURE:
+  - "Egress" - Leaving the stadium, time spent leaving, parking exit
+  - "stadium departure" - Experience leaving the stadium, exiting the stadium 
+
+  OTHER
+  - "Other" - anything that does not fit the above categories
 
 tables:
   - name: voc_survey_responses
@@ -106,6 +170,78 @@ tables:
         data_type: varchar
         synonyms: ['did you park in a stadium affiliated parking lot', 'parked at the stadium in 202', 'club parking lot yes or no']
       
+      - name: TB_ADDON_8_1
+        description: "QUALITATIVE FEEDBACK - TICKETS/SEATS: Open text feedback where fans describe issues with their tickets or seats in their own words. Use when users ask about 'qualitative feedback on tickets'. This is NOT a rating - it contains actual written fan responses."
+        expr: TB_ADDON_8_1
+        data_type: varchar
+        synonyms: ["tb addon 8 1","qualitative feedback tickets seats"]
+
+      - name: TB_ADDON_8_2
+        description: "QUALITATIVE FEEDBACK - STAFF/SERVICE: Open text feedback where fans describe issues with staff and service in their own words. Use when users ask about 'qualitative feedback on staff', 'qualitative feedback on service'. This is NOT a rating - it contains actual written fan responses."
+        expr: TB_ADDON_8_2
+        data_type: varchar
+        synonyms: ["tb addon 8_2", "Qualitative Feedback - Staff/Service"]
+
+      - name: TB_ADDON_8_3
+        description: "QUALITATIVE FEEDBACK - ENTERTAINMENT: Open text feedback where fans describe issues with entertainment in their own words. Use when users ask about 'qualitative feedback on entertainment'. This is NOT a rating - it contains actual written fan responses."
+        expr: TB_ADDON_8_3
+        data_type: varchar
+        synonyms: ["tb addon 8_3", "Quantiative feedback - entertainment"]
+      
+      - name: TB_ADDON_8_4
+        description: "QUALITATIVE FEEDBACK - CONCESSIONS/FOOD/BEVERAGE: Open text feedback where fans describe issues with food and beverages in their own words. Use when users ask about 'qualitative feedback on food'. This is NOT a rating - it contains actual written fan responses."
+        expr: TB_ADDON_8_4
+        data_type: varchar
+        synonyms: ["tb addon 8_4","Qualitative Feedback - Concessions/Food/Beverage"]
+      
+      - name: TB_ADDON_8_5
+        description: "QUALITATIVE FEEDBACK - CLEANLINESS: Open text feedback where fans describe issues with cleanliness in their own words. Use when users ask about 'qualitative feedback on cleanliness'.This is NOT a rating - it contains actual written fan responses."
+        expr: TB_ADDON_8_5
+        data_type: varchar
+        synonyms: ["tb addon TB_ADDON_8_5","Qualitative Feedback - Cleanliness"]
+      
+      - name: TB_ADDON_8_6
+        description: "QUALITATIVE FEEDBACK - PARKING: Open text feedback where fans describe issues with parking in their own words. Use when users ask about 'qualitative feedback on parking; This is NOT a rating - it contains actual written fan responses." 
+        expr: TB_ADDON_8_6
+        data_type: varchar
+        synonyms: ["tb addon 8_6", "Qualitative Feedback - Parking"]
+      
+      - name: TB_ADDON_8_7
+        description: "QUALITATIVE FEEDBACK - RETAIL/MERCHANDISE: Open text feedback where fans describe issues with retail and merchandise in their own words. Use when users ask about 'qualitative feedback on merchandise', 'qualitative feedback on team store'. This is NOT a rating - it contains actual written fan responses."
+        expr: TB_ADDON_8_7
+        data_type: varchar
+        synonyms: ["tb addon 8_7", "Qualitative Feedback - Retail/Merchandise"]
+      
+      - name: TB_ADDON_8_8
+        description: "QUALITATIVE FEEDBACK - SAFETY/SECURITY: Open text feedback where fans describe issues with safety and security in their own words. Use when users ask about 'qualitative feedback on security', 'qualitative feedback on safety'. This is NOT a rating - it contains actual written fan responses."
+        expr: TB_ADDON_8_8
+        data_type: varchar
+        synonyms: ["tb addon 8_8", "Qualitative Feedback - Safety/Security"]
+      
+      - name: TB_ADDON_8_9
+        description: "QUALITATIVE FEEDBACK - APP: Open text feedback where fans describe issues with the mobile app in their own words. Use when users ask about 'qualitative feedback on app', 'qualitative feedback on mobile', This is NOT a rating - it contains actual written fan responses."
+        expr: TB_ADDON_8_9
+        data_type: varchar
+        synonyms: ["tb addon 8_9", "Qualitative Feedback - App"]
+
+      - name: TB_ADDON_8_10
+        description: "QUALITATIVE FEEDBACK - OTHER FAN BEHAVIOR: Open text feedback where fans describe issues with other fans' behavior in their own words. Use when users ask about 'qualitative feedback on fan behavior'. This is NOT a rating - it contains actual written fan responses."
+        expr: TB_ADDON_8_10
+        data_type: varchar
+        synonyms: ["tb addon 8_10", "Qualitative Feedback - Other Fan Behavior"]
+      
+      - name: TB_ADDON_8_11
+        description: "QUALITATIVE FEEDBACK - OTHER ISSUES: Open text feedback where fans describe other issues not covered by specific categories. Use when users ask about 'qualitative feedback on other miscellaneous'. This is NOT a rating - it contains actual written fan responses."
+        expr: TB_ADDON_8_11
+        data_type: varchar
+        synonyms: ["tb addon 8_11", "Qualitative Feedback - Other Issues or miscellaneous"]
+
+      - name: INCENTIVES_OT
+        description: "QUALITATIVE FEEDBACK - TICKET PURCHASE DECISIONS: Open text feedback explaining factors that influence ticket purchasing decisions. Use when users ask about 'qualitative feedback on purchasing'. This is NOT a rating - it contains actual written fan responses."
+        expr: INCENTIVES_OT
+        data_type: varchar
+        synonyms: ["incentives_ot","qualitative feedback on purchasing", "qualitative feedback on ticket purchase decisions feedback", "qualitative feedback on ticket purchasing factors"]
+
       - name: parking_lot_name
         expr: TB_ADDON_12
         data_type: varchar
@@ -605,13 +741,6 @@ tables:
         data_type: varchar
         synonyms: ['hhi id text', 'hhi id desc', 'hhi id description', 'hhi id']
       
-      - name: INCENTIVES_OT
-        description: "Open-ended text feedback on factors that influence ticket purchasing decisions"
-        expr: INCENTIVES_OT
-        data_type: varchar
-        sample_values: ["Better food options", "Lower prices", "More entertainment", "Improved parking"]
-        synonyms: ['open ended', 'improvements', 'incentives ot', 'suggestions', 'feedback']
-      
       - name: INCENTIVES_OT_PARENT_TOPICS
         description: "Open-ended text feedback explaining why patron selected their rating for incentives parent topics. Contains actual text responses, not numeric codes."
         expr: INCENTIVES_OT_PARENT_TOPICS
@@ -819,10 +948,16 @@ tables:
         synonyms: ['non game ent feedback', 'non game ent feedback clean']
       
       - name: OVERALL_NUMRAT_OT
-        description:  "Fan's detailed explanation of their overall game day experience and satisfaction rating. Analyzed for themes including food quality, staff service, parking, seating, entertainment, facilities, pricing, and game atmosphere."
+        description:  "PRIMARY QUALITATIVE FEEDBACK FIELD - Fan's detailed open-ended explanation of their 
+          overall game day experience. This is the MOST IMPORTANT feedback field in the dataset.
+          Use this field FIRST when users ask about qualitative feedback, fan comments, 
+          what fans are saying, or detailed feedback. Contains rich text covering all aspects 
+          of the fan experience including food, parking, staff, seating, entertainment, 
+          facilities, pricing, and atmosphere. Apply AI_CLASSIFY with the category taxonomy 
+          to segment feedback by topic. Apply AI_SENTIMENT for sentiment analysis."
         expr: OVERALL_NUMRAT_OT
         data_type: varchar
-        synonyms: ["feedback", "comments", "why rated", "explanation", "fan comments", "open ended feedback"]
+        synonyms: ["Qualitative feedback", "General qualiative feedback"]
       
       - name: OVERALL_NUMRAT_OT_PARENT_TOPICS
         description: "Pre-classified sub-topic categories for overall feedback"
@@ -938,15 +1073,7 @@ tables:
         expr: PREVIOUS_PURCHASE_DESC
         data_type: varchar
         synonyms: ['previous purchase text', 'previous purchase', 'previous purchase description', 'previous purchase desc']
-      
-      - name: PURCHASE_INTENT_DESC
-        description: "Text description for purchase intent indicating likelihood of buying tickets again. Contains human-readable descriptions (Highly likely, Somewhat likely, Neither likely nor unlikely, Somewhat unlikely, Highly unlikely). Use this for text analysis. Values of 'Highly likely' and 'Somewhat likely' indicate fans are likely to purchase again."
-        expr: PURCHASE_INTENT_DESC
-        data_type: varchar
-        synonyms: ['purchase intent description', 'purchase intent desc', 'likelihood to repurchase', 'likely to buy tickets again', 'repurchase likelihood', 'will buy tickets again', 'return likelihood']
-        sample_values: ['Highly likely', 'Somewhat likely', 'Neither likely nor unlikely', 'Somewhat unlikely', 'Highly unlikely']
-        is_enum: true
-      
+            
       - name: PURCHASE_INTENT_NEXT_DESC
         description: "Text description for purchase intent next. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: PURCHASE_INTENT_NEXT_DESC
@@ -3122,20 +3249,6 @@ tables:
         default_aggregation: max
         synonyms: ["max game date", "end date", "date range end"]
 
-      - name: LIKELY_TO_REPURCHASE_COUNT
-        description: "Number of fans likely to purchase again (Highly likely or Somewhat likely)"
-        expr: SUM(CASE WHEN PURCHASE_INTENT_DESC IN ('Highly likely','Somewhat likely') THEN 1 ELSE 0 END)
-        data_type: number
-        default_aggregation: sum
-        synonyms: ["repurchase likely count", "likely to buy again count", "return likelihood count"]
-
-      - name: LIKELY_TO_REPURCHASE_PCT
-        description: "Percentage of fans likely to purchase again (Highly likely or Somewhat likely)"
-        expr: ROUND(100.0 * SUM(CASE WHEN PURCHASE_INTENT_DESC IN ('Highly likely','Somewhat likely') THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 2)
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["repurchase likely percentage", "likely to buy again %", "return likelihood %"]
-
       - name: MOBILE_ORDER_CONSID
         description: "INTERNAL - Numeric code for mobile order consideration. Use MOBILE_ORDER_CONSID_DESC instead."
         expr: MOBILE_ORDER_CONSID
@@ -3507,106 +3620,7 @@ tables:
         default_aggregation: avg
         access_modifier: private_access
         synonyms: ["purchase intent next"]
-      
-      - name: REAL_CONCESS_NUMRAT
-        description: "INTERNAL - Data quality field. Use CONCESS_NUMRAT instead."
-        expr: REAL_CONCESS_NUMRAT
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["real concess numrat"]
-      
-      - name: REAL_OVERALL_NUMRAT
-        access_modifier: private_access
-        description: "Numeric data for real overall numrat"
-        expr: REAL_OVERALL_NUMRAT
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["real overall numrat"]
-      
-      - name: REAL_PARKING_NUMRAT
-        description: "Numeric data for real parking numrat"
-        expr: REAL_PARKING_NUMRAT
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["real parking numrat"]
-      
-      - name: REAL_SEATVIEW_NUMRAT
-        description: "Numeric data for real seatview numrat"
-        expr: REAL_SEATVIEW_NUMRAT
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["real seatview numrat"]
-      
-      - name: REAL_STAFF_NUMRAT
-        access_modifier: private_access  
-        description: "Numeric data for real staff numrat"
-        expr: REAL_STAFF_NUMRAT
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["real staff numrat"]
-      
-      - name: REAL_STAFF_RAT_2024_ACCESSIBILITY_SUPPORT
-        description: "Numeric data for real staff rat 2024 accessibility support"
-        expr: REAL_STAFF_RAT_2024_ACCESSIBILITY_SUPPORT
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["real staff rat 2024 accessibility support"]
-      
-      - name: REAL_STAFF_RAT_2024_PREMIUM_ATTENDANTS
-        description: "Numeric data for real staff rat 2024 premium attendants"
-        expr: REAL_STAFF_RAT_2024_PREMIUM_ATTENDANTS
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["real staff rat 2024 premium attendants"]
-      
-      - name: REAL_STAFF_RAT_FAN_HOST
-        description: "Numeric data for real staff rat fan host"
-        expr: REAL_STAFF_RAT_FAN_HOST
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["real staff rat fan host"]
-      
-      - name: REAL_STAFF_RAT_FAN_HOST_SCANNER
-        description: "Numeric data for real staff rat fan host scanner"
-        expr: REAL_STAFF_RAT_FAN_HOST_SCANNER
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["real staff rat fan host scanner"]
-      
-      - name: REAL_STAFF_RAT_FB_STAFF
-        description: "Numeric data for real staff rat fb staff"
-        expr: REAL_STAFF_RAT_FB_STAFF
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["real staff rat fb staff"]
-      
-      - name: REAL_STAFF_RAT_PARKING
-        description: "Numeric data for real staff rat parking"
-        expr: REAL_STAFF_RAT_PARKING
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["real staff rat parking"]
-      
-      - name: REAL_STAFF_RAT_RETAIL_STAFF
-        description: "Numeric data for real staff rat retail staff"
-        expr: REAL_STAFF_RAT_RETAIL_STAFF
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["real staff rat retail staff"]
-      
-      - name: REAL_STAFF_RAT_SECURITY
-        description: "Numeric data for real staff rat security"
-        expr: REAL_STAFF_RAT_SECURITY
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["real staff rat security"]
-      
-      - name: REAL_STAFF_RAT_TECH_TEAM
-        description: "Numeric data for real staff rat tech team"
-        expr: REAL_STAFF_RAT_TECH_TEAM
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["real staff rat tech team"]
+  
       
       - name: RECEIVED_COMMERCIAL_EMAIL
         description: "If '1', respondent received survey email with commercial offering"
@@ -4470,83 +4484,6 @@ tables:
         default_aggregation: avg
         synonyms: ["tb addon 7"]
       
-      - name: TB_ADDON_8_1
-        description: "Tickets / seats"
-        expr: TB_ADDON_8_1
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 8 1"]
-      
-      - name: TB_ADDON_8_10
-        description: "Other fan's behavior"
-        expr: TB_ADDON_8_10
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 8 10"]
-      
-      - name: TB_ADDON_8_11
-        description: "Other"
-        expr: TB_ADDON_8_11
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 8 11"]
-      
-      - name: TB_ADDON_8_2
-        description: "Staff / Service"
-        expr: TB_ADDON_8_2
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 8 2"]
-      
-      - name: TB_ADDON_8_3
-        description: "Entertainment"
-        expr: TB_ADDON_8_3
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 8 3"]
-      
-      - name: TB_ADDON_8_4
-        description: "Concessions / food & beverage"
-        expr: TB_ADDON_8_4
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 8 4"]
-      
-      - name: TB_ADDON_8_5
-        description: "Cleanliness"
-        expr: TB_ADDON_8_5
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 8 5"]
-      
-      - name: TB_ADDON_8_6
-        description: "Parking"
-        expr: TB_ADDON_8_6
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 8 6"]
-      
-      - name: TB_ADDON_8_7
-        description: "Retail / Merchandise"
-        expr: TB_ADDON_8_7
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 8 7"]
-      
-      - name: TB_ADDON_8_8
-        description: "Safety & Security"
-        expr: TB_ADDON_8_8
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 8 8"]
-      
-      - name: TB_ADDON_8_9
-        description: "App"
-        expr: TB_ADDON_8_9
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 8 9"]
-      
       - name: TB_ADDON_9
         description: "1 - 10 scale on likeliness to recommend attending a Rays game to a fan"
         expr: TB_ADDON_9
@@ -4713,7 +4650,7 @@ tables:
         synonyms: ["walk out grid timeframe"]
   
   - name: overall_feedback_sentence_level
-    description: "PRIMARY: Sentence-by-sentence breakdown of fan feedback with individual sentiment and topic classification for each sentence. Use this as the default for detailed feedback analysis. Each response can have multiple sentences with different sentiments and topics. Ideal for understanding mixed feedback like 'food was great but parking was terrible'."
+    description: "PRIMARY TABLE for analyzing fan feedback. Use this table by default for all feedback analysis questions. Each row represents one sentence from fan feedback, with individual sentiment and topic classification. Perfect for understanding mixed feedback (e.g., 'food was great but parking terrible'). Covers all seasons from 2023 forward."
     base_table:
       database: TBRDP_DW_DEV
       schema: IM_RPT
@@ -4766,7 +4703,7 @@ tables:
         description: "Topic category for this specific sentence (Food & Beverage Quality, Staff & Service, Parking & Transportation, Seating & Views, Entertainment & Atmosphere, Cleanliness & Facilities, Pricing & Value, Game Experience, Safety & Security, General Positive, Other)"
         expr: ai_category
         data_type: varchar
-        synonyms: ['sentence topic', 'sentence category', 'topic', 'category', 'subject']
+        synonyms: ['topic', 'category', 'feedback', 'subject', 'sentence topic', 'sentence category', 'topic', 'category', 'subject']
       
       - name: detailed_category
         description: "Combined topic and sentiment for this sentence (e.g., 'Food & Beverage Quality - Positive')"
@@ -4950,7 +4887,8 @@ tables:
           - 'feedback category'
           - 'topic'
           - 'category'
-          - 'issue category'
+          - 'subject'
+          - 'feedback area'
           - 'complaint category'
       
       - name: sentiment_category
