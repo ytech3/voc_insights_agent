@@ -2,369 +2,465 @@
 
 ## 📊 Overview
 
-The **VOC (Voice of Customer) Insights Agent** is an AI-powered analytics platform built on Snowflake Cortex AI that transforms fan feedback from post-game surveys into actionable business intelligence. This system enables 24/7 natural language querying of fan sentiment, satisfaction metrics, and revenue insights.
+The **VOC (Voice of Customer) Insights Agent** is an AI-powered analytics platform built on Snowflake Cortex AI that transforms post-game fan survey data into actionable business intelligence. This system enables Tampa Bay Rays employees to query fan sentiment, satisfaction metrics, and experience insights using natural language — 24/7.
 
-## 🎯 Key Features
+### Key Capabilities
 
-- **AI-Powered Classification**: Automatically categorizes feedback into topics (Food & Beverage, Parking, Entertainment, etc.)
-- **Sentiment Analysis**: Measures emotional tone of feedback (-1 to 1 scale)
-- **NPS Segmentation**: Automatically segments fans into Promoters, Passives, and Detractors
-- **Revenue Insights**: Analyzes ticket prices, concession purchases, and merchandise sales by segment
-- **Semantic Search**: Natural language search across all fan feedback
-- **Monthly Trend Analysis**: AI-generated summaries of top complaints and sentiment trends
-- **Buyer Type Analysis**: Compares satisfaction and revenue across Single Game, Season Ticket Holders, Groups, etc.
-- **Cost Monitoring**: Tracks Snowflake Cortex AI usage and costs
+| Feature | Description |
+|---------|-------------|
+| **Natural Language Queries** | Ask questions in plain English via Cortex Analyst |
+| **AI-Powered Classification** | Automatically categorizes feedback into 21 topic categories |
+| **Sentiment Analysis** | Measures emotional tone (-1 to +1 scale) |
+| **Sentence-Level Analysis** | Breaks down multi-topic feedback into individual insights |
+| **NPS Segmentation** | Segments fans into Promoters, Passives, and Detractors |
+| **Executive Summaries** | AI-generated summaries of positive and negative feedback |
+| **Cost Monitoring** | Tracks Snowflake Cortex AI usage and credits |
+
+---
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Data Sources                         │
-│  Qualtrics Post-Game Survey → Snowflake (Fivetran)    │
-└─────────────────────────────────────────────────────────┘
-                         ↓
-┌─────────────────────────────────────────────────────────┐
-│              Base View (Raw Survey Data)                │
-│  V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI    │
-└─────────────────────────────────────────────────────────┘
-                         ↓
-┌─────────────────────────────────────────────────────────┐
-│          Enhanced View (AI Enrichment Layer)            │
-│              V_VOC_ENHANCED_AI                          │
-│  • AI Classification  • Sentiment Analysis              │
-│  • NPS Segmentation   • Revenue Indicators              │
-└─────────────────────────────────────────────────────────┘
-                         ↓
-┌─────────────────────────────────────────────────────────┐
-│              Analytical Views & Functions               │
-│  • V_VOC_MONTHLY_INSIGHTS                               │
-│  • V_VOC_BUYER_TYPE_INSIGHTS                            │
-│  • VOC_QUICK_STATS()                                    │
-│  • classify_feedback_v2()                               │
-└─────────────────────────────────────────────────────────┘
-                         ↓
-┌─────────────────────────────────────────────────────────┐
-│            Cortex Search Service                        │
-│         VOC_FEEDBACK_SEARCH                             │
-│  (Semantic search across all feedback)                  │
-└─────────────────────────────────────────────────────────┘
-                         ↓
-┌─────────────────────────────────────────────────────────┐
-│          Natural Language Interface                     │
-│  Cortex Analyst + Semantic Model (voc_insights)        │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                         DATA SOURCES                                │
+│         Qualtrics Post-Game Survey → Fivetran → Snowflake          │
+│                    (~50,000 responses/season)                       │
+└─────────────────────────────────────────────────────────────────────┘
+                                   ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│                    BASE TABLE (647 columns)                         │
+│      V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI            │
+│   • Survey responses  • Satisfaction ratings  • Demographics        │
+│   • Open-text feedback  • Behavioral data  • Revenue indicators     │
+└─────────────────────────────────────────────────────────────────────┘
+                                   ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│                    AI-ENRICHED VIEWS                                │
+├─────────────────────────────────────────────────────────────────────┤
+│  V_OVERALL_FEEDBACK_ANALYSIS          Response-level AI analysis    │
+│  V_OVERALL_FEEDBACK_SENTENCE_LEVEL    Sentence-level breakdown      │
+│  V_QUALITATIVE_FEEDBACK_ALL           All open-text fields unified  │
+│  V_QUALITATIVE_FEEDBACK_SENTENCE_LEVEL Sentence-level (all fields)  │
+│  V_MERCH_NO_ANALYSIS_SIMPLE           Merchandise non-purchase      │
+│  V_CATEGORY_INSIGHTS                  AI_AGG category summaries     │
+│  V_EXECUTIVE_SUMMARY                  Leadership-ready summaries    │
+└─────────────────────────────────────────────────────────────────────┘
+                                   ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│                 CORTEX ANALYST + SEMANTIC MODEL                     │
+│              tampa_bay_rays_voc_complete.yaml                       │
+│     Natural language → SQL generation → Insights delivery           │
+└─────────────────────────────────────────────────────────────────────┘
+                                   ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│                    END USER INTERFACES                              │
+│     Snowflake Intelligence  •  Microsoft Teams (future)            │
+└─────────────────────────────────────────────────────────────────────┘
 ```
+
+---
 
 ## 📁 Repository Structure
 
 ```
 voc-insights-agent/
-├── VOC_INSIGHTS_AGENT_COMPLETE.sql    # Main deployment script
-├── voc_semantic_model.yaml            # Cortex Analyst semantic model
-├── README.md                           # This file
-├── docs/
-│   ├── DEPLOYMENT.md                  # Deployment instructions
-│   ├── USAGE_EXAMPLES.md              # Query examples
-│   └── ARCHITECTURE.md                # Technical architecture
-└── examples/
-    └── sample_queries.sql             # Common query patterns
+├── VOC_INSIGHTS_AGENT_COMPLETE.sql     # Main deployment script (all views)
+├── tampa_bay_rays_voc_complete.yaml    # Cortex Analyst semantic model
+├── README.md                            # This file
+├── data/
+│   ├── VOC_Meta_Updated_3.xlsx         # Survey metadata reference
+│   ├── 2023_VOC_Results_Sample.xlsx    # Sample data - 2023
+│   ├── 2024_VOC_Results_Sample.xlsx    # Sample data - 2024
+│   └── 2025_VOC_Results_Sample.xlsx    # Sample data - 2025
+└── docs/
+    └── category_taxonomy.md            # Category definitions
 ```
 
-## 🚀 Quick Start
+---
+
+## 🗂️ Category Taxonomy (21 Categories)
+
+All AI classification is aligned with this taxonomy across the YAML semantic model and SQL views:
+
+| Parent Category | Child Categories |
+|-----------------|------------------|
+| **PRE-ARRIVAL & ARRIVAL** | Parking & Arrival |
+| **ENTRY & NAVIGATION** | Gate Entry & Security, Wayfinding & Accessibility |
+| **IN-SEAT EXPERIENCE** | Seating & Venue Comfort, Crowd & Atmosphere |
+| **CONCESSIONS & AMENITIES** | Food & Beverage Quality, Concession Service & Speed, Merchandise & Team Store |
+| **ENTERTAINMENT & ENGAGEMENT** | Game Entertainment & Presentation, Promotions & Special Events, Team Performance & Game Quality |
+| **SERVICE & OPERATIONS** | Staff Interactions & Service, Facilities & Cleanliness, Weather, Technology & Digital Experience |
+| **VALUE & OVERALL** | Pricing & Value Perception, Overall Experience & Loyalty, Ticketing & Purchase Experience |
+| **EGRESS & DEPARTURE** | Egress, stadium departure |
+| **OTHER** | Other |
+
+---
+
+## 🗄️ Database Objects
+
+### Environment
+
+```sql
+USE ROLE TBRDP_DW_PROD_CORTEX_USER;
+USE WAREHOUSE TBRDP_DW_CORTEX_XS_WH;
+USE DATABASE TBRDP_DW_DEV;
+USE SCHEMA IM_RPT;
+```
+
+### Views Created
+
+| View Name | Purpose | AI Functions Used |
+|-----------|---------|-------------------|
+| `V_OVERALL_FEEDBACK_ANALYSIS` | Response-level feedback with AI classification | AI_CLASSIFY, AI_SENTIMENT |
+| `V_OVERALL_FEEDBACK_SENTENCE_LEVEL` | Sentence-by-sentence breakdown of OVERALL_NUMRAT_OT | AI_COMPLETE (single call) |
+| `V_QUALITATIVE_FEEDBACK_ALL` | Unified view of all 13 open-text fields | AI_CLASSIFY, AI_SENTIMENT |
+| `V_QUALITATIVE_FEEDBACK_SENTENCE_LEVEL` | Sentence-level analysis of all open-text fields | AI_COMPLETE (single call) |
+| `V_MERCH_NO_ANALYSIS_SIMPLE` | Merchandise non-purchase reason analysis | AI_CLASSIFY, AI_SENTIMENT |
+| `V_CATEGORY_INSIGHTS` | AI-generated insights by category (AI_AGG) | AI_AGG |
+| `V_EXECUTIVE_SUMMARY` | Leadership summaries by sentiment | AI_SUMMARIZE_AGG |
+| `V_CORTEX_AI_COSTS` | Daily cost monitoring (last 30 days) | — |
+| `V_CORTEX_QUERY_COSTS` | Query-level cost tracking (last 7 days) | — |
+
+### Qualitative Feedback Fields
+
+These open-text fields are analyzed in `V_QUALITATIVE_FEEDBACK_ALL` and `V_QUALITATIVE_FEEDBACK_SENTENCE_LEVEL`:
+
+| Field | Description |
+|-------|-------------|
+| `OVERALL_NUMRAT_OT` | Primary overall experience feedback |
+| `TB_ADDON_8_1` | Tickets/Seats issues |
+| `TB_ADDON_8_2` | Staff/Service issues |
+| `TB_ADDON_8_3` | Entertainment issues |
+| `TB_ADDON_8_4` | Concessions/Food issues |
+| `TB_ADDON_8_5` | Cleanliness issues |
+| `TB_ADDON_8_6` | Parking issues |
+| `TB_ADDON_8_7` | Retail/Merchandise issues |
+| `TB_ADDON_8_8` | Safety/Security issues |
+| `TB_ADDON_8_9` | App issues |
+| `TB_ADDON_8_10` | Other fan behavior issues |
+| `TB_ADDON_8_11` | Other miscellaneous issues |
+| `INCENTIVES_OT` | Ticket purchase decision factors |
+
+---
+
+## ⚡ Snowflake Cortex AI Functions
+
+| Function | Purpose | Used In |
+|----------|---------|---------|
+| `AI_CLASSIFY` | Categorize text into predefined labels | All analysis views |
+| `AI_SENTIMENT` | Extract sentiment score (-1 to +1) | All analysis views |
+| `AI_COMPLETE` | Generate structured JSON output (sentence splitting + classification) | Sentence-level views |
+| `AI_AGG` | Aggregate insights across multiple rows | V_CATEGORY_INSIGHTS |
+| `AI_SUMMARIZE_AGG` | Generate summaries across rows | V_EXECUTIVE_SUMMARY |
+
+### Model Used
+
+```
+snowflake-llama3.3-70b
+```
+
+This model provides:
+- **75% cost reduction** via SwiftKV optimization
+- **128K context window**
+- High accuracy for classification and summarization tasks
+
+---
+
+## 🚀 Deployment
 
 ### Prerequisites
 
 - Snowflake account with Cortex AI enabled
-- Role: `TBRDP_DW_PROD_CORTEX_USER`
+- Role: `TBRDP_DW_PROD_CORTEX_USER` (or `ACCOUNTADMIN` for initial setup)
 - Warehouse: `TBRDP_DW_CORTEX_XS_WH`
-- Base view: `V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI`
+- Access to base view: `V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI`
 
-### Deployment
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/tampabayrays/voc-insights-agent.git
-   cd voc-insights-agent
-   ```
-
-2. **Run the deployment script**
-   ```sql
-   -- In Snowflake worksheet:
-   -- Copy and paste contents of VOC_INSIGHTS_AGENT_COMPLETE.sql
-   -- Run the entire script
-   ```
-
-3. **Upload semantic model**
-   ```sql
-   PUT file://voc_semantic_model.yaml 
-   @TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS
-   AUTO_COMPRESS=FALSE
-   OVERWRITE=TRUE;
-   ```
-
-4. **Verify deployment**
-   ```sql
-   -- Test quick stats
-   SELECT * FROM TABLE(TBRDP_DW_DEV.IM_RPT.VOC_QUICK_STATS(2024));
-   
-   -- Test search service
-   SELECT * FROM TABLE(VOC_FEEDBACK_SEARCH!SEARCH('parking'));
-   ```
-
-## 📊 Core Components
-
-### 1. Enhanced View (V_VOC_ENHANCED_AI)
-
-The foundation view that enriches raw survey data with AI insights:
+### Step 1: Run SQL Deployment Script
 
 ```sql
-SELECT * FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
-WHERE game_date_clean >= '2024-01-01'
-LIMIT 10;
+-- In Snowflake worksheet, run:
+-- Copy and paste contents of VOC_INSIGHTS_AGENT_COMPLETE.sql
+-- Execute the entire script
 ```
 
-**Added Columns:**
-- `primary_topic` - AI-classified feedback category
-- `sentiment_score` - Sentiment from -1 (negative) to 1 (positive)
-- `nps_segment` - Promoter/Passive/Detractor
-- `has_children` - Boolean flag for family attendance
-- `game_month`, `game_day_of_week`, etc. - Time dimensions
-
-### 2. Monthly Insights View
-
-Aggregated metrics with AI-generated summaries:
+### Step 2: Upload Semantic Model
 
 ```sql
-SELECT 
-    month,
-    total_responses,
-    avg_satisfaction,
-    promoter_pct,
-    top_complaints_analysis,
-    executive_summary
-FROM TBRDP_DW_DEV.IM_RPT.V_VOC_MONTHLY_INSIGHTS
-ORDER BY month DESC;
+PUT file://tampa_bay_rays_voc_complete.yaml 
+    @TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS
+    AUTO_COMPRESS=FALSE
+    OVERWRITE=TRUE;
+
+-- Refresh directory
+ALTER STAGE TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS REFRESH;
+
+-- Verify upload
+LIST @TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS;
 ```
 
-### 3. Buyer Type Analysis
-
-Compare segments to identify revenue opportunities:
+### Step 3: Verify Deployment
 
 ```sql
-SELECT * FROM TBRDP_DW_DEV.IM_RPT.V_VOC_BUYER_TYPE_INSIGHTS;
-```
-
-### 4. Quick Stats Function
-
-Retrieve key metrics for any year:
-
-```sql
-SELECT * FROM TABLE(TBRDP_DW_DEV.IM_RPT.VOC_QUICK_STATS(2024));
-```
-
-### 5. Classification Functions
-
-Classify individual feedback:
-
-```sql
--- Single label
-SELECT TBRDP_DW_DEV.IM_RPT.classify_feedback_v2(
-    'The food was cold and overpriced'
-);
-
--- Multi-label (up to 3 categories)
-SELECT TBRDP_DW_DEV.IM_RPT.classify_feedback_multilabel(
-    'Great seats but parking was terrible and expensive'
-);
-```
-
-### 6. Cortex Search Service
-
-Semantic search across all feedback:
-
-```sql
-SELECT * 
-FROM TABLE(VOC_FEEDBACK_SEARCH!SEARCH(
-    'complaints about temperature and heat',
-    LIMIT => 20
-));
-```
-
-## 📈 Usage Examples
-
-### Example 1: Monthly NPS Trends
-```sql
-SELECT 
-    month,
-    total_responses,
-    ROUND(avg_satisfaction, 2) as avg_satisfaction,
-    ROUND(promoter_pct, 1) as promoter_pct,
-    ROUND(detractor_pct, 1) as detractor_pct,
-    ROUND((promoter_pct - detractor_pct), 1) as nps
-FROM TBRDP_DW_DEV.IM_RPT.V_VOC_MONTHLY_INSIGHTS
-WHERE month >= '2024-01-01'
-ORDER BY month;
-```
-
-### Example 2: Revenue by Satisfaction Segment
-```sql
-SELECT 
-    nps_segment,
-    COUNT(*) as responses,
-    ROUND(AVG(ticket_price_clean), 2) as avg_ticket_price,
-    AVG(CASE WHEN CONCESS_SCREENER_DESC = 'Yes' THEN 1 ELSE 0 END) * 100 as concession_rate
-FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
-WHERE YEAR(game_date_clean) = 2024
-GROUP BY nps_segment
-ORDER BY 
-    CASE nps_segment 
-        WHEN 'Promoter' THEN 1 
-        WHEN 'Passive' THEN 2 
-        WHEN 'Detractor' THEN 3 
-    END;
-```
-
-### Example 3: Top Topics by Month
-```sql
-SELECT 
-    DATE_TRUNC('month', game_date_clean) as month,
-    primary_topic,
-    COUNT(*) as mention_count,
-    ROUND(AVG(OVERALL_NUMRAT), 2) as avg_satisfaction,
-    ROUND(AVG(sentiment_score), 3) as avg_sentiment
-FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
-WHERE YEAR(game_date_clean) = 2024
+-- Test overall feedback analysis
+SELECT ai_category, sentiment_category, COUNT(*) 
+FROM TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_ANALYSIS
+WHERE season = 2025
 GROUP BY 1, 2
-ORDER BY 1 DESC, 3 DESC;
+ORDER BY 3 DESC
+LIMIT 10;
+
+-- Test sentence-level analysis
+SELECT * FROM TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_SENTENCE_LEVEL
+WHERE season = 2025
+LIMIT 5;
+
+-- Test executive summary
+SELECT * FROM TBRDP_DW_DEV.IM_RPT.V_EXECUTIVE_SUMMARY;
 ```
 
-### Example 4: Family vs Adult-Only Comparison
+---
+
+## 📊 Usage Examples
+
+### Query Overall Feedback by Category
+
 ```sql
 SELECT 
-    CASE WHEN has_children THEN 'Families' ELSE 'Adults Only' END as group_type,
-    COUNT(*) as responses,
-    ROUND(AVG(OVERALL_NUMRAT), 2) as avg_satisfaction,
-    ROUND(AVG(ticket_price_clean), 2) as avg_ticket_price,
-    AVG(CASE WHEN CONCESS_SCREENER_DESC = 'Yes' THEN 1 ELSE 0 END) * 100 as concession_rate,
-    AVG(CASE WHEN MERCH_SCREENER_DESC = 'Yes' THEN 1 ELSE 0 END) * 100 as merch_rate
-FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
-WHERE YEAR(game_date_clean) = 2024
-GROUP BY 1;
+  ai_category,
+  parent_category,
+  sentiment_category,
+  COUNT(*) AS feedback_count,
+  ROUND(AVG(sentiment_score), 3) AS avg_sentiment
+FROM TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_ANALYSIS
+WHERE season = 2025
+GROUP BY 1, 2, 3
+ORDER BY feedback_count DESC;
 ```
 
-## 💰 Cost Management
-
-Monitor Cortex AI usage and costs:
+### Get Sentence-Level Insights for Specific Category
 
 ```sql
--- Daily function usage
-SELECT * FROM TBRDP_DW_DEV.IM_RPT.V_CORTEX_FUNCTION_COSTS
-WHERE usage_date >= DATEADD(day, -7, CURRENT_DATE())
-ORDER BY usage_date DESC, total_calls DESC;
-
--- Query-level cost tracking
 SELECT 
-    DATE_TRUNC('day', start_time) as usage_day,
-    COUNT(*) as total_queries,
-    SUM(credits_used) as total_credits,
-    ROUND(AVG(elapsed_seconds), 2) as avg_seconds
-FROM TBRDP_DW_DEV.IM_RPT.V_CORTEX_COST_MONITORING
-WHERE start_time >= DATEADD(day, -30, CURRENT_DATE())
+  sentence_text,
+  sentiment_category,
+  game_date
+FROM TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_SENTENCE_LEVEL
+WHERE ai_category = 'Food & Beverage Quality'
+  AND sentiment_category = 'Negative'
+  AND season = 2025
+ORDER BY game_date DESC
+LIMIT 20;
+```
+
+### View Category Insights with AI Summaries
+
+```sql
+SELECT 
+  ai_category,
+  feedback_count,
+  positive_pct,
+  negative_pct,
+  category_insights
+FROM TBRDP_DW_DEV.IM_RPT.V_CATEGORY_INSIGHTS
+WHERE season = 2025
+ORDER BY feedback_count DESC;
+```
+
+### Get Executive Summary for Leadership
+
+```sql
+SELECT 
+  parent_category,
+  sentiment_category,
+  feedback_count,
+  executive_summary
+FROM TBRDP_DW_DEV.IM_RPT.V_EXECUTIVE_SUMMARY
+ORDER BY feedback_count DESC;
+```
+
+### Analyze All Qualitative Feedback Sources
+
+```sql
+SELECT 
+  feedback_source,
+  COUNT(*) AS total_feedback,
+  COUNT(CASE WHEN sentiment = 'Negative' THEN 1 END) AS negative_count,
+  ROUND(100.0 * COUNT(CASE WHEN sentiment = 'Negative' THEN 1 END) / COUNT(*), 1) AS negative_pct
+FROM TBRDP_DW_DEV.IM_RPT.V_QUALITATIVE_FEEDBACK_ALL
+WHERE season = 2025
 GROUP BY 1
-ORDER BY 1 DESC;
+ORDER BY total_feedback DESC;
 ```
 
-## 🛠️ Maintenance
+### Monitor Cortex AI Costs
 
-### Refresh Search Service
 ```sql
-ALTER CORTEX SEARCH SERVICE VOC_FEEDBACK_SEARCH REFRESH;
+-- Daily costs by function
+SELECT * FROM TBRDP_DW_DEV.IM_RPT.V_CORTEX_AI_COSTS
+WHERE usage_date >= CURRENT_DATE() - 7
+ORDER BY usage_date DESC;
+
+-- Top expensive queries
+SELECT * FROM TBRDP_DW_DEV.IM_RPT.V_CORTEX_QUERY_COSTS
+LIMIT 20;
 ```
 
-### Update Semantic Model
-```sql
--- After editing voc_semantic_model.yaml:
-PUT file://voc_semantic_model.yaml 
-@TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS
-OVERWRITE=TRUE;
-```
+---
 
-### Monitor Data Quality
-```sql
-SELECT 
-    DATE_TRUNC('week', game_date_clean) as week,
-    COUNT(*) as total_responses,
-    COUNT(OVERALL_NUMRAT) as has_rating,
-    COUNT(OVERALL_NUMRAT_OT) as has_text_feedback,
-    COUNT(CASE WHEN LENGTH(OVERALL_NUMRAT_OT) > 50 THEN 1 END) as substantive_feedback
-FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
-WHERE game_date_clean >= DATEADD(month, -3, CURRENT_DATE())
-GROUP BY 1
-ORDER BY 1 DESC;
-```
-
-## 📚 Key Metrics Definitions
+## 📈 Key Metrics Definitions
 
 | Metric | Definition | Range |
-|--------|-----------|-------|
+|--------|------------|-------|
 | **Overall Satisfaction** | Fan rating of overall experience | 1-10 scale |
 | **NPS (Net Promoter Score)** | % Promoters (9-10) - % Detractors (0-6) | -100 to +100 |
 | **Sentiment Score** | AI-generated emotional tone | -1 (negative) to +1 (positive) |
-| **Concession Purchase Rate** | % of fans who purchased F&B | 0-100% |
-| **Family Attendance Rate** | % of groups with children | 0-100% |
+| **Promoter** | Satisfaction rating 9-10 | — |
+| **Passive** | Satisfaction rating 7-8 | — |
+| **Detractor** | Satisfaction rating 0-6 | — |
+
+---
+
+## 💰 Cost Optimization
+
+The deployment includes several cost optimizations:
+
+| Optimization | Impact |
+|--------------|--------|
+| **Single AI call per feedback** | Reduced from 3 calls to 1 in sentence-level views |
+| **snowflake-llama3.3-70b model** | 75% cost reduction via SwiftKV |
+| **Direct base table access** | Avoids nested view AI call multiplication |
+| **Cost monitoring views** | Visibility into daily and query-level spend |
+
+### Recommended Warehouse Size
+
+```
+MEDIUM or smaller
+```
+
+Larger warehouses do not improve Cortex AI performance but increase costs.
+
+---
 
 ## 🔒 Security & Permissions
 
-Required grants:
+### Required Grants
+
 ```sql
+-- Warehouse access
 GRANT USAGE ON WAREHOUSE TBRDP_DW_CORTEX_XS_WH TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+
+-- Database and schema access
 GRANT USAGE ON DATABASE TBRDP_DW_DEV TO ROLE TBRDP_DW_PROD_CORTEX_USER;
 GRANT USAGE ON SCHEMA TBRDP_DW_DEV.IM_RPT TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+
+-- View access
 GRANT SELECT ON ALL VIEWS IN SCHEMA TBRDP_DW_DEV.IM_RPT TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+
+-- Semantic model stage access
 GRANT READ ON STAGE TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS TO ROLE TBRDP_DW_PROD_CORTEX_USER;
+
+-- Cortex AI functions
+GRANT DATABASE ROLE SNOWFLAKE.CORTEX_USER TO ROLE TBRDP_DW_PROD_CORTEX_USER;
 ```
+
+---
 
 ## 🐛 Troubleshooting
 
-### Issue: Search service not returning results
-```sql
--- Check service status
-SHOW CORTEX SEARCH SERVICES;
+### Issue: View returns no results
 
--- Refresh service
-ALTER CORTEX SEARCH SERVICE VOC_FEEDBACK_SEARCH REFRESH;
+```sql
+-- Check base table has data for season
+SELECT COUNT(*), season 
+FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+WHERE season BETWEEN 2023 AND 2025
+GROUP BY season;
+
+-- Check feedback field is populated
+SELECT COUNT(*) 
+FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+WHERE OVERALL_NUMRAT_OT IS NOT NULL 
+  AND LENGTH(TRIM(OVERALL_NUMRAT_OT)) > 10;
 ```
 
-### Issue: AI functions returning errors
+### Issue: AI_COMPLETE returns NULL
+
 ```sql
--- Verify Cortex AI is enabled
+-- Test AI function directly
+SELECT AI_COMPLETE(
+  'snowflake-llama3.3-70b',
+  'Return only: ["test"]',
+  {'temperature': 0.1, 'max_tokens': 100}
+);
+```
+
+### Issue: Model not available
+
+```sql
+-- Check available models in your region
 SHOW PARAMETERS LIKE 'CORTEX%' IN ACCOUNT;
 
--- Check for null/invalid input
-SELECT COUNT(*) 
-FROM TBRDP_DW_DEV.IM_RPT.V_VOC_ENHANCED_AI
-WHERE OVERALL_NUMRAT_OT IS NULL 
-   OR LENGTH(OVERALL_NUMRAT_OT) < 10;
+-- Alternative model if snowflake-llama3.3-70b unavailable
+-- Replace with: 'llama3.1-70b' or 'mistral-large2'
 ```
+
+### Issue: Cost monitoring views fail
+
+```sql
+-- These require ACCOUNTADMIN or specific grants to ACCOUNT_USAGE
+USE ROLE ACCOUNTADMIN;
+SELECT * FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_FUNCTIONS_USAGE_HISTORY LIMIT 1;
+```
+
+---
+
+## 🗓️ Maintenance
+
+### Recommended Tasks
+
+| Task | Frequency | Command |
+|------|-----------|---------|
+| Review cost monitoring | Weekly | `SELECT * FROM V_CORTEX_AI_COSTS` |
+| Validate category distribution | Monthly | See verification queries in SQL script |
+| Update season filter | Annually | Modify `BETWEEN 2023 AND 2025` as needed |
+| Refresh semantic model | As needed | Re-upload YAML to stage |
+
+---
+
+## 🔮 Future Enhancements
+
+- [ ] Microsoft Teams integration via Azure Bot Service
+- [ ] Real-time streaming analysis for in-game feedback
+- [ ] Predictive models for fan churn risk
+- [ ] Multi-modal analysis (photos from fan submissions)
+- [ ] Automated alerting for negative sentiment spikes
+
+---
 
 ## 📞 Support
 
-For questions or issues:
-- **Data Team**: Contact Tampa Bay Rays Analytics
-- **Snowflake Support**: [Snowflake Cortex AI Documentation](https://docs.snowflake.com/en/user-guide/snowflake-cortex)
+| Contact | Purpose |
+|---------|---------|
+| Tampa Bay Rays Analytics Team | Internal questions |
+| [Snowflake Cortex AI Documentation](https://docs.snowflake.com/en/user-guide/snowflake-cortex/aisql) | Technical reference |
+| [Snowflake Support](https://community.snowflake.com/) | Platform issues |
+
+---
 
 ## 📄 License
 
 © 2025 Tampa Bay Rays Baseball, LLC. All rights reserved.
 
+---
+
 ## 🙏 Acknowledgments
 
 - Built with [Snowflake Cortex AI](https://www.snowflake.com/en/data-cloud/cortex/)
-- Survey data collected via Qualtrics
-- Data integration powered by Fivetran
+- Survey data collected via [Qualtrics](https://www.qualtrics.com/)
+- Data integration powered by [Fivetran](https://www.fivetran.com/)
 
 ---
 
-**Last Updated**: November 4, 2025  
-**Version**: 1.0  
-**Maintained by**: Tampa Bay Rays Data & Analytics Team
+**Last Updated**: December 2025  
+**Version**: 2.0  
+**Maintained by**: Tampa Bay Rays Strategy & Analytics Team
