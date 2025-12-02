@@ -174,73 +174,73 @@ tables:
         description: "QUALITATIVE FEEDBACK - TICKETS/SEATS: Open text feedback where fans describe issues with their tickets or seats in their own words. Use when users ask about 'qualitative feedback on tickets'. This is NOT a rating - it contains actual written fan responses."
         expr: TB_ADDON_8_1
         data_type: varchar
-        synonyms: ["tb addon 8 1','qualitative feedback tickets seats"]
+        synonyms: ["tb addon 8 1","qualitative feedback tickets seats"]
 
       - name: TB_ADDON_8_2
         description: "QUALITATIVE FEEDBACK - STAFF/SERVICE: Open text feedback where fans describe issues with staff and service in their own words. Use when users ask about 'qualitative feedback on staff', 'qualitative feedback on service'. This is NOT a rating - it contains actual written fan responses."
         expr: TB_ADDON_8_2
         data_type: varchar
-        synonyms: ["tb addon 8_2', Qualitative Feedback - Staff/Service"]
+        synonyms: ["tb addon 8_2", "Qualitative Feedback - Staff/Service"]
 
       - name: TB_ADDON_8_3
         description: "QUALITATIVE FEEDBACK - ENTERTAINMENT: Open text feedback where fans describe issues with entertainment in their own words. Use when users ask about 'qualitative feedback on entertainment'. This is NOT a rating - it contains actual written fan responses."
         expr: TB_ADDON_8_3
         data_type: varchar
-        synonyms: ["tb addon 8_3', 'Quantiative feedback - entertainment'"]
+        synonyms: ["tb addon 8_3", "Quantiative feedback - entertainment"]
       
       - name: TB_ADDON_8_4
         description: "QUALITATIVE FEEDBACK - CONCESSIONS/FOOD/BEVERAGE: Open text feedback where fans describe issues with food and beverages in their own words. Use when users ask about 'qualitative feedback on food'. This is NOT a rating - it contains actual written fan responses."
         expr: TB_ADDON_8_4
         data_type: varchar
-        synonyms: ["tb addon 8_4','Qualitative Feedback - Concessions/Food/Beverage'"]
+        synonyms: ["tb addon 8_4","Qualitative Feedback - Concessions/Food/Beverage"]
       
       - name: TB_ADDON_8_5
         description: "QUALITATIVE FEEDBACK - CLEANLINESS: Open text feedback where fans describe issues with cleanliness in their own words. Use when users ask about 'qualitative feedback on cleanliness'.This is NOT a rating - it contains actual written fan responses."
         expr: TB_ADDON_8_5
         data_type: varchar
-        synonyms: ["tb addon TB_ADDON_8_5','Qualitative Feedback - Cleanliness'"]
+        synonyms: ["tb addon TB_ADDON_8_5","Qualitative Feedback - Cleanliness"]
       
       - name: TB_ADDON_8_6
         description: "QUALITATIVE FEEDBACK - PARKING: Open text feedback where fans describe issues with parking in their own words. Use when users ask about 'qualitative feedback on parking; This is NOT a rating - it contains actual written fan responses." 
         expr: TB_ADDON_8_6
         data_type: varchar
-        synonyms: ["tb addon 8_6,'Qualitative Feedback - Parking'"]
+        synonyms: ["tb addon 8_6", "Qualitative Feedback - Parking"]
       
       - name: TB_ADDON_8_7
         description: "QUALITATIVE FEEDBACK - RETAIL/MERCHANDISE: Open text feedback where fans describe issues with retail and merchandise in their own words. Use when users ask about 'qualitative feedback on merchandise', 'qualitative feedback on team store'. This is NOT a rating - it contains actual written fan responses."
         expr: TB_ADDON_8_7
         data_type: varchar
-        synonyms: ["tb addon 8_7,'Qualitative Feedback - Retail/Merchandise'"]
+        synonyms: ["tb addon 8_7", "Qualitative Feedback - Retail/Merchandise"]
       
       - name: TB_ADDON_8_8
         description: "QUALITATIVE FEEDBACK - SAFETY/SECURITY: Open text feedback where fans describe issues with safety and security in their own words. Use when users ask about 'qualitative feedback on security', 'qualitative feedback on safety'. This is NOT a rating - it contains actual written fan responses."
         expr: TB_ADDON_8_8
         data_type: varchar
-        synonyms: ["tb addon 8_8,'Qualitative Feedback - Safety/Security'"]
+        synonyms: ["tb addon 8_8", "Qualitative Feedback - Safety/Security"]
       
       - name: TB_ADDON_8_9
         description: "QUALITATIVE FEEDBACK - APP: Open text feedback where fans describe issues with the mobile app in their own words. Use when users ask about 'qualitative feedback on app', 'qualitative feedback on mobile', This is NOT a rating - it contains actual written fan responses."
         expr: TB_ADDON_8_9
         data_type: varchar
-        synonyms: ["tb addon 8_9,'Qualitative Feedback - App'"]
+        synonyms: ["tb addon 8_9", "Qualitative Feedback - App"]
 
       - name: TB_ADDON_8_10
         description: "QUALITATIVE FEEDBACK - OTHER FAN BEHAVIOR: Open text feedback where fans describe issues with other fans' behavior in their own words. Use when users ask about 'qualitative feedback on fan behavior'. This is NOT a rating - it contains actual written fan responses."
         expr: TB_ADDON_8_10
         data_type: varchar
-        synonyms: ["tb addon 8_10', 'Qualitative Feedback - Other Fan Behavior'"]
+        synonyms: ["tb addon 8_10", "Qualitative Feedback - Other Fan Behavior"]
       
       - name: TB_ADDON_8_11
         description: "QUALITATIVE FEEDBACK - OTHER ISSUES: Open text feedback where fans describe other issues not covered by specific categories. Use when users ask about 'qualitative feedback on other miscellaneous'. This is NOT a rating - it contains actual written fan responses."
         expr: TB_ADDON_8_11
         data_type: varchar
-        synonyms: ["tb addon 8_11,'Qualitative Feedback - Other Issues or miscellaneous'"]
+        synonyms: ["tb addon 8_11", "Qualitative Feedback - Other Issues or miscellaneous"]
 
       - name: INCENTIVES_OT
         description: "QUALITATIVE FEEDBACK - TICKET PURCHASE DECISIONS: Open text feedback explaining factors that influence ticket purchasing decisions. Use when users ask about 'qualitative feedback on purchasing'. This is NOT a rating - it contains actual written fan responses."
         expr: INCENTIVES_OT
         data_type: varchar
-        synonyms: ['incentives_ot','qualitative feedback on purchasing','qualitative feedback on ticket purchase decisions feedback','qualitative feedback on ticket purchasing factors']
+        synonyms: ["incentives_ot","qualitative feedback on purchasing", "qualitative feedback on ticket purchase decisions feedback", "qualitative feedback on ticket purchasing factors"]
 
       - name: parking_lot_name
         expr: TB_ADDON_12
