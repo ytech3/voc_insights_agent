@@ -13,8 +13,6 @@
 --   • Unified qualitative view + sentence-level qualitative view (2023–2025)
 --   • Cost monitoring + query-level cost tracking
 -- =====================================================
-
--- =====================================================
 -- ENVIRONMENT SETUP
 -- =====================================================
 USE ROLE ACCOUNTADMIN;
@@ -61,7 +59,6 @@ USE WAREHOUSE TBRDP_DW_CORTEX_XS_WH;
 --
 -- OTHER:
 --   "Other"
-
 
 -- =====================================================
 -- 2) OVERALL FEEDBACK ANALYSIS VIEW
@@ -622,7 +619,7 @@ COMMENT ON VIEW TBRDP_DW_DEV.IM_RPT.V_QUALITATIVE_FEEDBACK_ALL IS
 -- =====================================================
 
 CREATE OR REPLACE VIEW TBRDP_DW_DEV.IM_RPT.V_QUALITATIVE_FEEDBACK_SENTENCE_LEVEL AS
-- Step 1: Gather all qualitative feedback directly from base table
+-- Step 1: Gather all qualitative feedback directly from base table
 WITH raw_feedback AS (
   -- Overall Experience (PRIMARY)
   SELECT
