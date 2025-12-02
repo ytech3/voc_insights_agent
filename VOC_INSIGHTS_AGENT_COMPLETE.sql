@@ -904,48 +904,62 @@ Categories aligned with YAML taxonomy (21 categories incl. "stadium departure").
 -- =====================================================
 -- 8) CORTEX AI COST MONITORING VIEW
 -- =====================================================
-
 CREATE OR REPLACE VIEW TBRDP_DW_DEV.IM_RPT.V_CORTEX_AI_COSTS AS
 SELECT
-  DATE_TRUNC('day', START_TIME) AS usage_date,
+  DATE_TRUNC('day', USAGE_TIME)              AS usage_date,
   FUNCTION_NAME,
   MODEL_NAME,
-  COUNT(*) AS total_calls,
-  SUM(INPUT_TOKENS) AS total_input_tokens,
-  SUM(OUTPUT_TOKENS) AS total_output_tokens,
-  SUM(TOTAL_CREDITS) AS total_credits,
-  ROUND(SUM(TOTAL_CREDITS) * 3, 2) AS estimated_cost_usd  -- adjust multiplier to your contract
-FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_FUNCTIONS_USAGE_HISTORY
-WHERE START_TIME >= DATEADD(day, -30, CURRENT_DATE())
+  COUNT(DISTINCT QUERY_ID)                  AS total_queries,
+  COUNT(*)                                  AS total_rows,          -- rows in AISQL usage view
+  SUM(TOKENS)                               AS total_tokens,
+  SUM(TOKEN_CREDITS)                        AS total_credits,
+  -- Adjust multiplier to your contract rate per credit
+  ROUND(SUM(TOKEN_CREDITS) * 3, 2)          AS estimated_cost_usd
+FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AISQL_USAGE_HISTORY
+WHERE USAGE_TIME >= DATEADD(day, -30, CURRENT_TIMESTAMP())
 GROUP BY 1, 2, 3
 ORDER BY usage_date DESC, total_credits DESC;
 
 COMMENT ON VIEW TBRDP_DW_DEV.IM_RPT.V_CORTEX_AI_COSTS IS 
-'Cortex AI cost monitoring view by day/function/model (last 30 days).';
-
+'Cortex AI SQL cost monitoring view using CORTEX_AISQL_USAGE_HISTORY.
+Aggregated daily by function and model. Includes tokens and credits.
+AISQL usage is available from Nov 17, 2025 onward.';
 
 -- =====================================================
 -- 9) QUERY-LEVEL COST TRACKING
 -- =====================================================
 
 CREATE OR REPLACE VIEW TBRDP_DW_DEV.IM_RPT.V_CORTEX_QUERY_COSTS AS
+WITH ai_usage AS (
+  SELECT
+    QUERY_ID,
+    MODEL_NAME,
+    -- AISQL view is already hourly aggregated; we keep that as query_hour
+    DATE_TRUNC('hour', USAGE_TIME) AS query_hour,
+    SUM(TOKENS)        AS tokens,
+    SUM(TOKEN_CREDITS) AS credits_used
+  FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AISQL_USAGE_HISTORY
+  WHERE USAGE_TIME >= DATEADD(day, -7, CURRENT_TIMESTAMP())
+  GROUP BY QUERY_ID, MODEL_NAME, DATE_TRUNC('hour', USAGE_TIME)
+)
 SELECT
-  QUERY_ID,
-  DATE_TRUNC('hour', START_TIME) AS query_hour,
-  MODEL_NAME,
-  SUM(INPUT_TOKENS) AS input_tokens,
-  SUM(OUTPUT_TOKENS) AS output_tokens,
-  SUM(TOTAL_CREDITS) AS credits_used
-FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_FUNCTIONS_QUERY_USAGE_HISTORY
-WHERE START_TIME >= DATEADD(day, -7, CURRENT_DATE())
-GROUP BY 1, 2, 3
-ORDER BY credits_used DESC
+  a.QUERY_ID,
+  a.query_hour,
+  a.MODEL_NAME,
+  a.tokens           AS input_tokens,    -- total tokens for this query+model
+  a.credits_used,
+  q.USER_NAME,
+  q.WAREHOUSE_NAME,
+  q.QUERY_TEXT
+FROM ai_usage a
+LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY q
+  ON a.QUERY_ID = q.QUERY_ID
+ORDER BY a.credits_used DESC
 LIMIT 100;
 
 COMMENT ON VIEW TBRDP_DW_DEV.IM_RPT.V_CORTEX_QUERY_COSTS IS 
-'Top 100 most expensive Cortex AI queries in the last 7 days.';
-
-
+'Top 100 most expensive Cortex AISQL queries in the last 7 days.
+Uses CORTEX_AISQL_USAGE_HISTORY joined to QUERY_HISTORY for context.';
 -- =====================================================
 -- VERIFICATION QUERIES (OPTIONAL)
 -- =====================================================
