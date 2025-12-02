@@ -495,7 +495,6 @@ topic_classification AS (
           'content', 'You are a feedback categorization expert for a baseball stadium analyzing fan experience. Classify each sentence into ONE specific category from this list:
 
 PRE-ARRIVAL & ARRIVAL:
-- "Ticketing & Purchase Experience" - ticket buying, pricing, promotions, ticket offers, purchase process
 - "Parking & Arrival" - parking lots, traffic, arrival process, finding parking, parking cost
 
 ENTRY & NAVIGATION:
@@ -519,16 +518,20 @@ ENTERTAINMENT & ENGAGEMENT:
 SERVICE & OPERATIONS:
 - "Staff Interactions & Service" - staff helpfulness, friendliness, professionalism (ushers, guest services, any staff)
 - "Facilities & Cleanliness" - restrooms, walkways, seating area cleanliness, maintenance, facility condition
+- "Weather" - Stadium temperature, air conditioning, 
 - "Technology & Digital Experience" - mobile app, Wi-Fi, mobile ordering, touchscreens, digital features, website
 
 VALUE & OVERALL:
 - "Pricing & Value Perception" - ticket prices, concession prices, overall cost, affordability, value for money
 - "Overall Experience & Loyalty" - general satisfaction, would return, recommend to others, overall impression, best/worst experience, memories
-- "Other" - anything that does not fit the above categories
+- "Ticketing & Purchase Experience" - ticket buying, pricing, promotions, ticket offers, purchase process
 
 EGRESS & DEPARTURE:
 - "Egress" - Leaving the stadium, time spent leaving, parking exit
 - "stadium departure" - Experience leaving the stadium, exiting the stadium 
+
+OTHER
+- "Other" - anything that does not fit the above categories
 
 IMPORTANT RULES:
 - Be SPECIFIC. Do NOT use "Overall Experience & Loyalty" unless the sentence is truly about general satisfaction or future intent
