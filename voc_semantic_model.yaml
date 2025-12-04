@@ -2,6 +2,25 @@ name: tampa_bay_rays_voc_complete
 description:  "Semantic model for Voice of Customer post-attendance survey data, enabling natural language queries about fan experience, satisfaction ratings, and attendance patterns."
 
 custom_instructions: |
+  SATISFACTION RATING SCALES - PAY ATTENTION TO EACH FIELD'S SCALE:
+  Not all satisfaction ratings use the same scale. Always check the field description for the correct scale.
+  
+  1-5 SCALE fields (where 1=worst, 5=best):
+  - TB_ADDON_4_1 (Parking staff)
+  - TB_ADDON_4_3 (Fan Host Usher)
+  - TB_ADDON_4_5 (Concessions staff)
+  - TB_ADDON_4_6 (Retail staff)
+  - All TB_ADDON_4_* staff rating fields
+  
+  1-10 SCALE fields:
+  - OVERALL_NUMRAT (Overall satisfaction)
+  - CONCESS_NUMRAT (Concession satisfaction)
+  - SEATVIEW_NUMRAT (Seat view rating)
+  
+  0-100 SCALE fields (normalize by dividing by 10):
+  - ENTERTAIN_NUMRAT (Entertainment - divide by 10 for 1-10 scale)
+  - MERCH_NUMRAT (Merchandise - divide by 10 for 1-10 scale)
+  - STAFF_NUMRAT (Staff - divide by 10 for 1-10 scale)
   QUERY ROUTING RULES - FOLLOW THESE STRICTLY:
   
   QUALITATIVE FEEDBACK QUERIES:
@@ -20,6 +39,7 @@ custom_instructions: |
   - TB_ADDON_8_9: Open text about app issues
   - TB_ADDON_8_10: Open text about other fan behavior issues
   - TB_ADDON_8_11: Open text about other issues not mentioned
+  - TB_ADDON_5: Opent text about Tropicana Field staff members 
   
   For qualitative queries, use AI_CLASSIFY or AI_SENTIMENT on these text fields.
   For topic-specific qualitative queries (e.g., "what are qualitative feedback about parking"), 
@@ -64,6 +84,48 @@ custom_instructions: |
 
   OTHER
   - "Other" - anything that does not fit the above categories
+
+  PERCENTAGE CALCULATION RULES FOR CATEGORICAL/ENUM FIELDS:
+  - When calculating percentages for categorical fields (agreement scales, satisfaction levels, yes/no questions):
+    
+  - CORRECT PATTERN - Use CASE WHEN inside aggregation:
+     ROUND(100.0 * SUM(CASE WHEN field IN ('Value1', 'Value2') THEN 1 ELSE 0 END) 
+        / NULLIF(COUNT(CASE WHEN field IS NOT NULL THEN 1 END), 0), 2)
+    
+  - WRONG PATTERN - Never filter in WHERE clause then calculate percentage:
+      WHERE field = 'Value1' ... COUNT(*) / COUNT(field)
+      This produces 100% because the denominator only includes filtered rows.
+    
+  - The denominator must ALWAYS be the total population being analyzed, not the filtered subset.
+    
+  - For questions like "what percentage strongly agree":
+      SUM(CASE WHEN field = 'Strongly agree' THEN 1 ELSE 0 END) / NULLIF(COUNT(field), 0) * 100
+    
+  - For questions like "what percentage agree" (combining categories):
+      SUM(CASE WHEN field IN ('Strongly agree', 'Somewhat agree') THEN 1 ELSE 0 END) / NULLIF(COUNT(field), 0) * 100
+
+  - CATEGORICAL SATISFACTION FIELDS (is_enum: true):
+    When a field has sample_values like 'Highly Satisfied', 'Somewhat Satisfied', 'Somewhat dissatisfied', 'Highly dissatisfied':
+  
+  - NEVER convert these to numeric scales or compute numeric averages
+  - ALWAYS return percentage distributions showing what percent selected each option
+  - Correct output format:
+      Highly Satisfied: 25%
+      Somewhat Satisfied: 45%
+      Somewhat dissatisfied: 20%
+      Highly dissatisfied: 10%
+  
+  - Correct SQL pattern:
+      SELECT 
+        field_name,
+        COUNT(*) AS responses,
+        ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER(), 2) AS percentage
+      FROM table
+      WHERE field_name IS NOT NULL
+      GROUP BY field_name
+      ORDER BY percentage DESC
+  
+  - WRONG: Converting 'Highly Satisfied' to 10, 'Somewhat Satisfied' to 7.5, etc.
 
 tables:
   - name: voc_survey_responses
@@ -115,13 +177,17 @@ tables:
         expr: BRANDHEALTH_GRID_EXCITING_DESC
         data_type: varchar
         synonyms: ['brandhealth grid exciting text', 'brandhealth grid exciting desc', 'brandhealth grid exciting description', 'brandhealth grid exciting']
+        sample_values: ["Strongly agree", "Somewhat agree", "Somewhat disagree", "Strongly disagree"]
+        is_enum: true
       
       - name: BRANDHEALTH_GRID_FAMFRIENDLY_DESC
-        description: "Text description for brandhealth grid famfriendly. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "To what extent do you agree or disagree with the following statements about the Rays? - Rays games are family-friendly"
         expr: BRANDHEALTH_GRID_FAMFRIENDLY_DESC
         data_type: varchar
         synonyms: ['brandhealth grid famfriendly', 'brandhealth grid famfriendly text', 'brandhealth grid famfriendly desc', 'brandhealth grid famfriendly description']
-      
+        sample_values: ["Strongly agree", "Somewhat agree", "Somewhat disagree", "Strongly disagree"]
+        is_enum: true 
+
       - name: BRANDHEALTH_GRID_POSINFLUENCE_DESC
         description: "Text description for brandhealth grid posinfluence. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: BRANDHEALTH_GRID_POSINFLUENCE_DESC
@@ -153,11 +219,13 @@ tables:
         synonyms: ['brandhealth grid trendy text', 'brandhealth grid trendy', 'brandhealth grid trendy description', 'brandhealth grid trendy desc']
       
       - name: BRANDHEALTH_GRID_WELCOME_DESC
-        description: "Text description for brandhealth grid welcome. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Text description for brandhealth grid welcome. Contains human-readable descriptions, not numeric codes. To what extent do you agree or disagree with the following statement? - I feel welcome at Rays games"
         expr: BRANDHEALTH_GRID_WELCOME_DESC
         data_type: varchar
         synonyms: ['brandhealth grid welcome', 'brandhealth grid welcome desc', 'brandhealth grid welcome text', 'brandhealth grid welcome description']
-      
+        sample_values: ["Strongly agree", "Somewhat agree", "Somewhat disagree", "Strongly disagree"]
+        is_enum: true 
+
       - name: CIH_ID_DESC
         description: "Text description for cih id. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: CIH_ID_DESC
@@ -291,6 +359,7 @@ tables:
         expr: CONCESS_INTENT_DESC
         data_type: varchar
         synonyms: ['concess intent text', 'concess intent desc', 'concess intent', 'concess intent description']
+        sample_values: ["Yes", "No"]
       
       - name: CONCESS_INTENT_NO_DESC
         description: "Text description for concess intent no. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
@@ -521,7 +590,7 @@ tables:
         synonyms: ['concess qual reason sausage text', 'concess qual reason sausage desc', 'concess qual reason sausage description', 'concess qual reason sausage']
       
       - name: CONCESS_SCREENER_DESC
-        description: "Text description indicating whether fan purchased concessions. Contains human-readable values (Yes, I did or No, I did not). Use this to filter for concession purchasers."
+        description: "Did you purchase food and/or beverages at Tropicana Field? Text description indicating whether fan purchased concessions. Contains human-readable values (Yes, I did or No, I did not). Use this to filter for concession purchasers."
         expr: CONCESS_SCREENER_DESC
         data_type: varchar
         synonyms: ['concess screener desc', 'purchased concessions', 'bought food', 'concession buyer']
@@ -532,7 +601,7 @@ tables:
         description: "Text description for amount spent on concessions per person. Contains human-readable spending ranges (More than $50, Between $31 and $40, Between $21 and $30, Less than $20). Use this for grouping and filtering spending analysis. For calculating average or total spend, use the numeric CONCESS_SPEND field instead."
         expr: CONCESS_SPEND_DESC
         data_type: varchar
-        synonyms: ['concess spend desc', 'concess spend', 'concess spend text', 'concess spend description', 'spending range', 'how much spent', 'concession spending category']
+        synonyms: ['In total, about how much did you spend per person for food and/or beverages?', 'Concess spend desc', 'concess spend', 'concess spend text', 'concess spend description', 'spending range', 'how much spent', 'concession spending category']
         sample_values: ['More than $50','Between $41 and $50', 'Between $31 and $40', 'Between $21 and $30', 'Less than $20']
         is_enum: true
       
@@ -540,7 +609,7 @@ tables:
         description: "Text description comparing actual spending to expected spending on concessions. Contains human-readable comparison values (Much more than I expected, Slightly more than I expected, About what I expected, Slightly less than I expected, Less than I expected). Use this to analyze whether fans felt spending met expectations."
         expr: CONCESS_SPEND_EXPECT_DESC
         data_type: varchar
-        synonyms: ['concess spend expect desc', 'concess spend expect description', 'concess spend expect', 'concess spend expect text', 'spending expectations', 'expected vs actual', 'spending surprise']
+        synonyms: ['How did what you spent at concessions compare to what you expected to spend per person for food and/or beverages?']
         sample_values: ['Much more than what I expected', 'Slightly more than what I expected', 'About what I expected', 'Slightly less than what I expected', 'Much less than what I expected']
         is_enum: true
       
@@ -591,22 +660,28 @@ tables:
         is_enum: true
       
       - name: ENTERTAIN_GRID_GAMES_DESC
-        description: "Text description for entertain grid games. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Please rate your satisfaction with the following - In-between inning games and entertainment. Text description for entertain grid games. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: ENTERTAIN_GRID_GAMES_DESC
         data_type: varchar
         synonyms: ['entertain grid games desc', 'entertain grid games text', 'entertain grid games', 'entertain grid games description']
-      
+        sample_values: ['Highly Satisfied', 'Somewhat Satisfied','Somewhat dissatisfied', 'Highly dissatisfied']  
+        is_enum: true
+
       - name: ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC
-        description: "Text description for entertain grid kids activities. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Please rate your satisfaction with the following - Kids entertainment / activities. Text description for entertain grid kids activities. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC
         data_type: varchar
         synonyms: ['entertain grid kids activities description', 'entertain grid kids activities text', 'entertain grid kids activities', 'entertain grid kids activities desc']
-      
+        sample_values: ['Highly Satisfied', 'Somewhat Satisfied','Somewhat dissatisfied', 'Highly dissatisfied']
+        is_enum: true
+
       - name: ENTERTAIN_GRID_MUSIC_DESC
         description: "Text description for entertain grid music. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: ENTERTAIN_GRID_MUSIC_DESC
         data_type: varchar
         synonyms: ['entertain grid music desc', 'entertain grid music text', 'entertain grid music description', 'entertain grid music']
+        sample_values: ['Highly Satisfied', 'Somewhat Satisfied','Somewhat dissatisfied', 'Highly dissatisfied'] 
+        is_enum: true
       
       - name: ENTERTAIN_GRID_PLAYER_CONTENT_DESC
         description: "Text description for entertain grid player content. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
@@ -615,17 +690,21 @@ tables:
         synonyms: ['entertain grid player content text', 'entertain grid player content', 'entertain grid player content desc', 'entertain grid player content description']
       
       - name: ENTERTAIN_GRID_PREGAME_CONTENT_DESC
-        description: "Text description for entertain grid pregame content. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Please rate your satisfaction with the following - Pregame content / lineups. Text description for entertain grid pregame content. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: ENTERTAIN_GRID_PREGAME_CONTENT_DESC
         data_type: varchar
-        synonyms: ['entertain grid pregame content', 'entertain grid pregame content desc', 'entertain grid pregame content text', 'entertain grid pregame content description']
-      
+        synonyms: ['Pregame content / lineups', 'entertain grid pregame content', 'entertain grid pregame content desc', 'entertain grid pregame content text', 'entertain grid pregame content description']
+        sample_values: ['Highly Satisfied', 'Somewhat Satisfied','Somewhat dissatisfied', 'Highly dissatisfied']  
+        is_enum: true 
+
       - name: ENTERTAIN_GRID_SCOREBOARD_DESC
-        description: "Text description for entertain grid scoreboard. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Please rate your satisfaction with the following - Scoreboard stats / information / replays. Text description for entertain grid scoreboard. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: ENTERTAIN_GRID_SCOREBOARD_DESC
         data_type: varchar
         synonyms: ['entertain grid scoreboard desc', 'entertain grid scoreboard description', 'entertain grid scoreboard text', 'entertain grid scoreboard']
-      
+        sample_values: ['Highly Satisfied', 'Somewhat Satisfied','Somewhat dissatisfied', 'Highly dissatisfied']  
+        is_enum: true
+
       - name: ENTERTAIN_GRID_THEME_DESC
         description: "Text description for entertain grid theme. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: ENTERTAIN_GRID_THEME_DESC
@@ -645,17 +724,13 @@ tables:
         synonyms: ['fb sat premium add feedback', 'fb sat premium add feedback clean']
       
       - name: GAMES_PREV_SEASON_DESC
-        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use GAMES_PREV_SEASON_DESC_CLEAN instead which filters codes automatically."
+        description: "Contains mixed data with numeric codes. How many Rays games did you attend in 2023?" 
         expr: GAMES_PREV_SEASON_DESC
         data_type: varchar
         synonyms: ["games prev season desc deprecated"]
-      
-      - name: GAMES_PREV_SEASON_DESC_CLEAN
-        description: "Games Prev Season Desc - numeric codes filtered. Use for analysis."
-        expr: CASE WHEN REGEXP_LIKE(GAMES_PREV_SEASON_DESC, '^[0-9]+$') THEN NULL ELSE GAMES_PREV_SEASON_DESC END
-        data_type: varchar
-        synonyms: ['games prev season desc', 'games prev season desc clean']
-      
+        sample_values: ["I did not attend any games", "Between 2 and 5 games", "Between 6 and 10 games", "Between 11 and 15 games", "Between 16 and 20 games"]
+        is_enum: true
+
       - name: GENDER_ID_DESC
         description: "Text description for gender id. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: GENDER_ID_DESC
@@ -663,17 +738,21 @@ tables:
         synonyms: ['gender id', 'gender id text', 'gender id description', 'gender id desc']
       
       - name: GE_TIME_DESC
-        description: "Text description for ge time. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "How long it took fans to get through security with Go Ahead Entry Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: GE_TIME_DESC
         data_type: varchar
-        synonyms: ['ge time text', 'ge time desc', 'ge time', 'ge time description']
-      
+        synonyms: ['go ahead entry speed', 'gae entry']
+        sample_values: ["Less than 5 minutes", "Between 5 and 15 minutes", "Between 16 and 30 minutes", "More than 30 minutes"]
+        is_enum: true
+
       - name: GE_TIME_EXPECT_DESC
-        description: "Text description for ge time expect. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Text description for go ahead entry time expected vs reality. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: GE_TIME_EXPECT_DESC
         data_type: varchar
-        synonyms: ['ge time expect desc', 'ge time expect', 'ge time expect description', 'ge time expect text']
-      
+        synonyms: ['go ahead entry time experience', 'was go ahead entry a time saver', 'go ahead entry time comparison']
+        sample_values: ["More than I expected", "About what I expected", "Less than I expected"]
+        is_enum: true
+
       - name: GIVEAWAY_ARRIVAL_DESC
         description: "Text description for giveaway arrival. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: GIVEAWAY_ARRIVAL_DESC
@@ -692,12 +771,15 @@ tables:
         expr: GIVEAWAY_RECEIVE_DESC
         data_type: varchar
         synonyms: ['giveaway receive', 'giveaway receive description', 'giveaway receive text', 'giveaway receive desc']
+        sample_values: ["Yes", "No"]
+        is_enum: true 
       
       - name: GIVEAWAY_SAT_DESC
-        description: "Text description for giveaway sat. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "How satisfied were you with the giveaway item? Text description for giveaway satisfaction. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: GIVEAWAY_SAT_DESC
         data_type: varchar
-        synonyms: ['giveaway sat', 'giveaway sat text', 'giveaway sat desc', 'giveaway sat description']
+        sample_values: ['Highly Satisfied', 'Somewhat Satisfied','Somewhat dissatisfied', 'Highly dissatisfied']
+        is_enum: true
       
       - name: GMS_SERVICE_RECOVERY_OTHER
         description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use GMS_SERVICE_RECOVERY_OTHER_CLEAN instead which filters codes automatically."
@@ -733,8 +815,9 @@ tables:
         description: "Text description for group size. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: GROUP_SIZE_DESC
         data_type: varchar
-        synonyms: ['group size desc', 'group size', 'group size description', 'group size text']
-      
+        sample_values: ["1 person", "2 people", "3 people", "4 people", "5 people", "6 or more people"]
+        is_enum: true
+
       - name: HHI_ID_DESC
         description: "Text description for hhi id. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: HHI_ID_DESC
@@ -772,34 +855,42 @@ tables:
         synonyms: ['incentives rank 3 text', 'incentives rank 3 description', 'incentives rank 3 desc', 'incentives rank 3']
       
       - name: MERCH_GRID_CUSTSERV_DESC
-        description: "Text description for merch grid custserv. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Please rate your overall satisfaction with each of the following when purchasing merchandise - Customer service. Text description for merch grid custserv. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: MERCH_GRID_CUSTSERV_DESC
         data_type: varchar
         synonyms: ['merch grid custserv text', 'merch grid custserv description', 'merch grid custserv desc', 'merch grid custserv']
+        sample_values: ['Highly Satisfied', 'Somewhat Satisfied','Somewhat dissatisfied', 'Highly dissatisfied']
+        is_enum: true 
       
       - name: MERCH_GRID_MERCHQUALITY_DESC
-        description: "Text description for merch grid merchquality. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Please rate your overall satisfaction with each of the following when purchasing merchandise. Text description for merch grid merchquality. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: MERCH_GRID_MERCHQUALITY_DESC
         data_type: varchar
         synonyms: ['merch grid merchquality desc', 'merch grid merchquality description', 'merch grid merchquality text', 'merch grid merchquality']
+        sample_values: ['Highly Satisfied', 'Somewhat Satisfied','Somewhat dissatisfied', 'Highly dissatisfied']
+        is_enum: true
       
       - name: MERCH_GRID_PRICE_DESC
-        description: "Text description for merch grid price. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Please rate your overall satisfaction with each of the following when purchasing merchandise - Pricing. Text description for merch grid price. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: MERCH_GRID_PRICE_DESC
         data_type: varchar
         synonyms: ['merch grid price description', 'merch grid price desc', 'merch grid price text', 'merch grid price']
+        sample_values: ['Highly Satisfied', 'Somewhat Satisfied','Somewhat dissatisfied', 'Highly dissatisfied']
+        is_enum: true
       
       - name: MERCH_GRID_SELECTION_DESC
-        description: "Text description for merch grid selection. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Please rate your overall satisfaction with each of the following when purchasing merchandise - Selection. Text description for merch grid selection. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: MERCH_GRID_SELECTION_DESC
         data_type: varchar
         synonyms: ['merch grid selection desc', 'merch grid selection description', 'merch grid selection', 'merch grid selection text']
       
       - name: MERCH_GRID_WAIT_DESC
-        description: "Text description for merch grid wait. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Please rate your overall satisfaction with each of the following when purchasing merchandise - Wait times. Text description for merch grid wait. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: MERCH_GRID_WAIT_DESC
         data_type: varchar
         synonyms: ['merch grid wait desc', 'merch grid wait', 'merch grid wait text', 'merch grid wait description']
+        sample_values: ['Highly Satisfied', 'Somewhat Satisfied','Somewhat dissatisfied', 'Highly dissatisfied']
+        is_enum: true
       
       - name: MERCH_INTENT_DESC
         description: "Text description for merch intent. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
@@ -808,11 +899,13 @@ tables:
         sample_values: ["Yes", "No"]
        
       - name: MERCH_NO_DESC
-        description: "Text description for merch no. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Which of the following best describes why you did not purchase merchandise? Text description for merch no. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: MERCH_NO_DESC
         data_type: varchar
         synonyms: ['Customer service was poor', 'Merchandise selection was limited', 'Merchandise was too expensive', 'Other (please specify below)', 'The lines were too long', 'The merchandise store / stands were too far from my seat', 'There was no merchandise for my preferred player']
-      
+        sample_values: ["Customer service was poor", "Merchandise selection was limited", "Merchandise was too expensive", "Other (please specify below)", "The lines were too long", "The merchandise store / stands were too far from my seat", "There was no merchandise for my preferred player"]
+        is_enum: true
+
       - name: MERCH_NO_OTHERSPECIFY
         description: "Open-ended text feedback explaining why patron selected their rating for merch noherspecify. Contains actual text responses, not numeric codes."
         expr: MERCH_NO_OTHERSPECIFY
@@ -861,7 +954,9 @@ tables:
         expr: MOBILE_CONSID_REASON_DESC
         data_type: varchar
         synonyms: ['mobile consid reason', 'why not use mobile ordering', 'reasons for not ordering', 'barriers to mobile ordering', 'why fans did not place mobile orders', 'why not mobile order', 'mobile ordering barriers', 'reasons to not use mobile']
-      
+        sample_values: [I didn't know mobile ordering was available", "No, I didn't consider it", "Yes, I considered it"]
+        is_enum: true
+
       - name: MOBILE_CONSID_REASON_OTHERSPECIFY
         description: "Open-ended text feedback with additional details on why patron did NOT place a mobile order. Use alongside MOBILE_CONSID_REASON_DESC for detailed barrier analysis. Contains free-text responses."
         expr: MOBILE_CONSID_REASON_OTHERSPECIFY
@@ -875,17 +970,20 @@ tables:
         synonyms: ['mobile consid reason topics', 'mobile barrier topics']
       
       - name: MOBILE_ORDER_CONSID_DESC
-        description:  "⚠️ WARNING: This field shows if patron CONSIDERED mobile ordering - NOT if they actually used it! Values: 'Yes, I considered it', 'No, I did not consider it', 'I did not know mobile ordering was available'. Many fans consider mobile ordering but don't use it (17,796 considered vs only 809 actually used in 2024). ⚠️ DO NOT USE this field to identify mobile order users. Instead use USED_MOBILE_ORDERING = 'Yes' or CONCESS_ORDER_METHOD_MOBILE = 1 to identify fans who ACTUALLY placed mobile orders."
+        description:  "⚠️ WARNING: This field shows if patron CONSIDERED mobile ordering - NOT if they actually used it! Values: 'Yes, I considered it', 'No, I did not consider it', 'I did not know mobile ordering was available'. DO NOT USE this field to identify mobile order users. Instead use USED_MOBILE_ORDERING = 'Yes' or CONCESS_ORDER_METHOD_MOBILE = 1 to identify fans who ACTUALLY placed mobile orders."
         expr: MOBILE_ORDER_CONSID_DESC
         data_type: varchar
         synonyms: ['mobile order consideration', 'considered mobile ordering', 'mobile order consid text', 'mobile order consid']
+        sample_values: ["Yes, I considered it", "No, I didn't consider it", "I didn't know mobile ordering was available"]
+        is_enum: true
       
       - name: MOBILE_ORDER_EXP_FUTURE_DESC
-        description: "Would patron use mobile ordering again? Values: 'Yes' (93% of users) or 'No' (7% of users). ⚠️ CRITICAL FILTER REQUIREMENT: This field is ONLY valid for fans who ACTUALLY placed mobile orders. You MUST filter by USED_MOBILE_ORDERING = 'Yes' or CONCESS_ORDER_METHOD_MOBILE = 1 when using this field, otherwise results will be incorrect. When calculating percentage who would use mobile ordering again, the denominator must be actual mobile order users (CONCESS_ORDER_METHOD_MOBILE = 1), NOT fans who considered it (mobile_order_consid_desc)."
+        description: "Would patron use mobile ordering again? Values: 'Yes' (93% of users) or 'No' (7% of users). CRITICAL FILTER REQUIREMENT: This field is ONLY valid for fans who ACTUALLY placed mobile orders. You MUST filter by USED_MOBILE_ORDERING = 'Yes' or CONCESS_ORDER_METHOD_MOBILE = 1 when using this field, otherwise results will be incorrect. When calculating percentage who would use mobile ordering again, the denominator must be actual mobile order users (CONCESS_ORDER_METHOD_MOBILE = 1), NOT fans who considered it (mobile_order_consid_desc)."
         expr: MOBILE_ORDER_EXP_FUTURE_DESC
         data_type: varchar
         synonyms: ['mobile order future intent', 'would use mobile ordering again', 'mobile order exp future', 'future mobile order likelihood', 'use mobile ordering in future']
         sample_values: ['Yes', 'No']
+        is_enum: true
 
       - name: MOBILE_ORDER_EXP_TIME_DESC
         description: "Text description for mobile order exp time. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
@@ -991,16 +1089,18 @@ tables:
         synonyms: ['parent id desc', 'parent id text', 'parent id', 'parent id description']
       
       - name: PARKING_EXIT_EXPECT_DESC
-        description: "Text description for parking exit expect. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "How did your time leaving the parking time compare to the amount of time you expected it to take to exit the parking lot?*Text description for parking exit expect. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: PARKING_EXIT_EXPECT_DESC
         data_type: varchar
-        synonyms: ['parking exit expect', 'parking exit expect desc', 'parking exit expect description', 'parking exit expect text']
-      
+        synonyms: ['parking exit reality', 'parking exit expect desc', 'parking exit expected description', 'parking exit expect text']
+        sample_values: ["More than I expected", "About what I expected", "Less than I expected"]
+
       - name: PARKING_EXIT_TIME_DESC
-        description: "Text description for parking exit time. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "About how much time did it take you to exit the parking lot when leaving Tropicana Field? Text description for parking exit time. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: PARKING_EXIT_TIME_DESC
         data_type: varchar
         synonyms: ['parking exit time description', 'parking exit time text', 'parking exit time', 'parking exit time desc']
+        sample_values: ["Less than 5 minutes", "Between 5 and 15 minutes", "Between 16 and 30 minutes", "More than 30 minutes"]
       
       - name: PARKING_TIME_DESC
         description: "Text description for parking time. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
@@ -1039,10 +1139,11 @@ tables:
         synonyms: ['pa promo grid tix offer desc', 'pa promo grid tix offer text', 'pa promo grid tix offer description', 'pa promo grid tix offer']
       
       - name: PA_THEME_INTENT_DESC
-        description: "Text description for pa theme intent. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "If the Rays hadn't offered this promotion for this game, what would you have done?Text description for pa theme intent. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: PA_THEME_INTENT_DESC
         data_type: varchar
         synonyms: ['pa theme intent text', 'pa theme intent desc', 'pa theme intent description', 'pa theme intent']
+        sample_values: ["I still would have gone to this game","I would have chosen a game on another day", "I wouldn't have purchased / attended at this time"] 
       
       - name: PA_TIX_OFFER_INTENT_DESC
         description: "Text description for pa tix offer intent. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
@@ -1072,14 +1173,34 @@ tables:
         description: "Text description for previous purchase. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: PREVIOUS_PURCHASE_DESC
         data_type: varchar
-        synonyms: ['previous purchase text', 'previous purchase', 'previous purchase description', 'previous purchase desc']
+        synonyms: ["Have you purchased any other tickets for future Rays games?", "purchased tickets for future Rays games"]
+        sample_values: ["Yes", "No"]
+        is_enum: true
+  
+      - name: PURCHASE_INTENT_DESC
+        description: "Text description for purchase intent this season. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        expr: PURCHASE_INTENT_DESC
+        data_type: varchar
+        synonyms: ["Do you plan to purchase tickets for any other Rays game(s) THIS season?*"]
+        sample_values: ["Yes, I do", "No, I don't", "I'm not sure yet"]
+        is_enum: true 
             
       - name: PURCHASE_INTENT_NEXT_DESC
-        description: "Text description for purchase intent next. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Text description for purchase intent this season. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: PURCHASE_INTENT_NEXT_DESC
         data_type: varchar
-        synonyms: ['purchase intent next description', 'purchase intent next desc', 'purchase intent next text', 'purchase intent next']
-      
+        synonyms: ["How likely are you to purchase tickets for at least one Rays game NEXT season?"]
+        sample_values: ["Highly likely", "Highly unlikely", "Somewhat likely", "Somewhat unlikely"]
+        is_enum: true 
+
+      - name: SEATVIEW_VALUE
+        description: "How did your view of the game compare to the amount of money you spent on the ticket? Valuation of money spent on tickets vs view of the game"
+        expr: SEATVIEW_VALUE
+        data_type: varchar
+        synonyms: ["seatview value"]
+        sample_values: ["Fair value for the money I spent on the ticket", "Good value for the money I spent on the ticket", "Poor value for the money I spent on the ticket"]
+        is_enum: true
+
       - name: STAFF_GRID_ACCESSIBILITY_DESC
         description: "Text description for staff grid accessibility. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: STAFF_GRID_ACCESSIBILITY_DESC
@@ -1123,10 +1244,12 @@ tables:
         synonyms: ['staff grid usher text', 'staff grid usher', 'staff grid usher description', 'staff grid usher desc']
       
       - name: TEAM_AVIDITY_DESC
-        description: "Text description for team avidity. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "How much of a fan of the [Field-favorite_team_clean] are you? Text description for team avidity. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
         expr: TEAM_AVIDITY_DESC
         data_type: varchar
-        synonyms: ['team avidity description', 'team avidity text', 'team avidity desc', 'team avidity']
+        synonyms: ['Favorite team avidity description', 'Favorite team avidity text', 'Favorite team avidity desc', 'Favorite team avidity']
+        sample_values: ["1 occasional fan", "2", "3", "4", "5 passionate fan"]
+        is_enum: true
       
       - name: THEME_SAT_DESC
         description: "Text description for theme sat. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
@@ -1294,6 +1417,13 @@ tables:
         data_type: varchar
         synonyms: ['email']
       
+      - name: EXIT_STAGE_DESC
+        description: "Ticket attending patron first name"
+        expr: EXIT_STAGE_DESC
+        data_type: varchar
+        synonyms: ['Exit stadium', 'leave the game', 'exit the park', 'leaving the stadium', 'leaving the park']
+        sample_values: ['1st inning', '2nd inning', '3rd inning', '4th inning', '5th inning', '6th inning', '7th inning', '8th inning', '9th inning', 'After the game', 'Extra innings', "I don't remember"]
+     
       - name: FAVORITE_TEAM_CLEAN
         description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use FAVORITE_TEAM_CLEAN_V2 instead which filters codes automatically."
         expr: FAVORITE_TEAM_CLEAN
@@ -1594,6 +1724,42 @@ tables:
         data_type: varchar
         synonyms: ['system current flag']
       
+      - name: TB_ADDON_5
+        description: "Additional comments to share about any Tropicana Field staff members? Patron additional comments about Tropicana Field or  GMS field staff members"
+        expr: TB_ADDON_5
+        data_type: varchar
+        synonyms: ["Do you have any additional comments to share about any Tropicana Field staff members?", "tb addon 5"]
+
+      - name: TB_addon_9_NPS_GROUP
+        description: "How likely are you to recommend attending a Rays game to a friend or colleague?"
+        expr: TB_addon_9_NPS_GROUP
+        data_type: varchar
+        synonyms: ['Liklyhood to recommend attending a Rays game to a friend or colleague', 'nps score', 'nps group', 'net promoter score']
+        sample_values: ["Detractor", "Passive", "Promoter"]
+        is_enum: true
+      
+      - name: TB_ADDON_16
+        description: "Email address to be entered into raffle for completing the survey"
+        expr: TB_ADDON_16
+        data_type: varchar
+        synonyms: ["tb addon 16", "patron email address", "fan email"]
+      
+      - name: TB_ADDON_17
+        description: "CATEGORICAL TEXT FIELD - NOT A NUMERIC SCORE. This field contains text responses comparing Go Ahead Entry experience to traditional entry methods. Values are descriptive comparisons (Much better, Slightly better, About the same, Slightly worse, Much worse). Do NOT convert to numbers or use numeric filters. For analysis, GROUP BY this field and COUNT responses."   
+        expr: TB_ADDON_17
+        data_type: varchar
+        synonyms: ["tb addon 17", "Rating of go ahead entry experience"]
+        sample_values: ["Much better", "Much worse", "Slightly better", "Slightly worse", "About the same"]
+        is_enum: true
+      
+      - name: TB_ADDON_18_OTHERSPECIFY
+        description: "CATEGORICAL TEXT FIELD - NOT A NUMERIC SCORE. Text description for why patron did not use Go Ahead Entry. Contains human-readable responses explaining barriers to GAE adoption. Use this field when analyzing reasons fans chose not to use Go Ahead Entry. For analysis: GROUP BY this field and COUNT responses."
+        expr: TB_ADDON_18_OTHERSPECIFY
+        data_type: varchar 
+        synonyms: ["go ahead entry reason", "why not use GAE", "GAE barrier", "go ahead entry barrier", "reason did not use go ahead entry", "why fans chose not to use go ahead entry"]
+        sample_values: ["I do not feel comfortable using Go-Ahead Entry", "I do not feel that Go-Ahead Entry is necessary", "I was unaware of Go-Ahead Entry as an option", "Other (please specify below)"]  
+        is_enum: true
+
       - name: TEAM_FAVORITE
         description: "DEPRECATED - Contains mixed data with numeric codes like 87, 89. DO NOT USE for analysis. Use TEAM_FAVORITE_CLEAN instead which filters codes automatically."
         expr: TEAM_FAVORITE
@@ -1605,8 +1771,8 @@ tables:
         expr: CASE WHEN REGEXP_LIKE(TEAM_FAVORITE, '^[0-9]+$') THEN NULL ELSE TEAM_FAVORITE END
         data_type: varchar
         synonyms: ["favorite team", "preferred team", "fan of", "team preference", "favorite baseball team", "team favorite"]
-        sample_values: ["Tampa Bay Rays", "Rays", "New York Yankees", "Yankees", "Boston Red Sox", "Red Sox", "Atlanta Braves"]
-      
+        sample_values: ["Tampa Bay Rays", "New York Yankees", "Boston Red Sox", "Atlanta Braves", "Arizona Diamondbacks", "Baltimore Orioles", "Chicago Cubs", "Chicago White Sox", "Cincinnati Reds", "Cleveland Guardians", "Colorado Rockies", "Detroit Tigers", "Houston Astros", "Kansas City Royals", "Los Angeles Angels", "Los Angeles Dodgers", "Miami Marlins", "Milwaukee Brewers", "Minnesota Twins", "New York Mets", "Oakland Athletics", "Philadelphia Phillies", "Pittsburgh Pirates", "San Diego Padres", "San Francisco Giants", "Seattle Mariners", "St. Louis Cardinals", "Texas Rangers", "Toronto Blue Jays", "Washington Nationals"]
+        is_enum: true
       
       - name: TEAM_INTEREST
         description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use TEAM_INTEREST_CLEAN instead which filters codes automatically."
@@ -1788,7 +1954,7 @@ tables:
         expr: AGE
         data_type: number
         default_aggregation: avg
-        synonyms: ["age"]
+        synonyms: ["age", "Year born"]
       
       - name: ALCOHOL_PREV_PURCH
         description: "Numeric data for alcohol prev purch"
@@ -1796,14 +1962,6 @@ tables:
         data_type: number
         default_aggregation: avg
         synonyms: ["alcohol prev purch"]
-      
-      - name: ATTENDANCE_SCREENER
-        description: "NUMERIC CODE ONLY - For text analysis use ATTENDANCE_SCREENER_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: ATTENDANCE_SCREENER
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["attendance screener"]
       
       - name: ATTEND_KIDS_AGES_BET_13_17
         description: "Between 13 and 17 years old"
@@ -1839,14 +1997,7 @@ tables:
         data_type: number
         default_aggregation: avg
         synonyms: ["attend kids ages under 3"]
-      
-      - name: ATTEND_NUM_PLAN
-        description: "NUMERIC CODE ONLY - For text analysis use ATTEND_NUM_PLAN_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: ATTEND_NUM_PLAN
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["attend num plan"]
+    
       
       - name: ATTEND_WITH_CATEGORY_ADULT_KIDS
         description: "Adult children (18 and older)"
@@ -1960,132 +2111,12 @@ tables:
         default_aggregation: avg
         synonyms: ["average tix price"]
       
-      - name: BRANDHEALTH_GRID_ACCESSIBLE
-        description: "NUMERIC CODE ONLY - For text analysis use BRANDHEALTH_GRID_ACCESSIBLE_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: BRANDHEALTH_GRID_ACCESSIBLE
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["brandhealth grid accessible"]
-      
-      - name: BRANDHEALTH_GRID_CHAMPION
-        description: "NUMERIC CODE ONLY - For text analysis use BRANDHEALTH_GRID_CHAMPION_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: BRANDHEALTH_GRID_CHAMPION
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["brandhealth grid champion"]
-      
-      - name: BRANDHEALTH_GRID_DIVERSITY
-        description: "NUMERIC CODE ONLY - For text analysis use BRANDHEALTH_GRID_DIVERSITY_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: BRANDHEALTH_GRID_DIVERSITY
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["brandhealth grid diversity"]
-      
-      - name: BRANDHEALTH_GRID_EMOTIONAL
-        description: "NUMERIC CODE ONLY - For text analysis use BRANDHEALTH_GRID_EMOTIONAL_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: BRANDHEALTH_GRID_EMOTIONAL
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["brandhealth grid emotional"]
-      
-      - name: BRANDHEALTH_GRID_EXCITING
-        description: "NUMERIC CODE ONLY - For text analysis use BRANDHEALTH_GRID_EXCITING_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: BRANDHEALTH_GRID_EXCITING
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["brandhealth grid exciting"]
-      
-      - name: BRANDHEALTH_GRID_FAMFRIENDLY
-        description: "NUMERIC CODE ONLY - For text analysis use BRANDHEALTH_GRID_FAMFRIENDLY_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: BRANDHEALTH_GRID_FAMFRIENDLY
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["brandhealth grid famfriendly"]
-      
-      - name: BRANDHEALTH_GRID_POSINFLUENCE
-        description: "NUMERIC CODE ONLY - For text analysis use BRANDHEALTH_GRID_POSINFLUENCE_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: BRANDHEALTH_GRID_POSINFLUENCE
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["brandhealth grid posinfluence"]
-      
-      - name: BRANDHEALTH_GRID_RIGHTDIRECTION
-        description: "NUMERIC CODE ONLY - For text analysis use BRANDHEALTH_GRID_RIGHTDIRECTION_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: BRANDHEALTH_GRID_RIGHTDIRECTION
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["brandhealth grid rightdirection"]
-      
-      - name: BRANDHEALTH_GRID_SAFE
-        description: "NUMERIC CODE ONLY - For text analysis use BRANDHEALTH_GRID_SAFE_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: BRANDHEALTH_GRID_SAFE
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["brandhealth grid safe"]
-      
-      - name: BRANDHEALTH_GRID_SUSTAINABILITY
-        description: "NUMERIC CODE ONLY - For text analysis use BRANDHEALTH_GRID_SUSTAINABILITY_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: BRANDHEALTH_GRID_SUSTAINABILITY
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["brandhealth grid sustainability"]
-      
-      - name: BRANDHEALTH_GRID_TRENDY
-        description: "NUMERIC CODE ONLY - For text analysis use BRANDHEALTH_GRID_TRENDY_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: BRANDHEALTH_GRID_TRENDY
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["brandhealth grid trendy"]
-      
-      - name: BRANDHEALTH_GRID_WELCOME
-        description: "NUMERIC CODE ONLY - For text analysis use BRANDHEALTH_GRID_WELCOME_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: BRANDHEALTH_GRID_WELCOME
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["brandhealth grid welcome"]
-      
       - name: BURGERS_PREV_PURCH
         description: "Numeric data for burgers prev purch"
         expr: BURGERS_PREV_PURCH
         data_type: number
         default_aggregation: avg
         synonyms: ["burgers prev purch"]
-      
-      - name: CIH_ID
-        description: "NUMERIC CODE ONLY - For text analysis use CIH_ID_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CIH_ID
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["cih id"]
-      
-      - name: CLUB_PARKING_LOT
-        description: "Whether fan parked in stadium-affiliated lot (Yes/No/Not sure). For specific lot names, use parking_lot_name."
-        expr: CLUB_PARKING_LOT
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["club parking lot"]
-      
-      - name: COMMERCIAL_OPT_IN
-        description: "NUMERIC CODE ONLY - For text analysis use COMMERCIAL_OPT_IN_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: COMMERCIAL_OPT_IN
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["commercial opt in"]
       
       - name: CONCESSIONS_COMP
         description: "Numeric data for concessions comp"
@@ -2121,22 +2152,6 @@ tables:
         data_type: number
         default_aggregation: avg
         synonyms: ["value rating", "value score", "price rating", "worth rating", "value for money score", "pricing rating"]
-      
-      - name: CONCESS_INTENT
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_INTENT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_INTENT
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess intent"]
-      
-      - name: CONCESS_INTENT_NO
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_INTENT_NO_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_INTENT_NO
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess intent no"]
       
       - name: CONCESS_LOCATION_GRABANDGO
         description: "At a grab & go stand"
@@ -2187,14 +2202,6 @@ tables:
         default_aggregation: avg
         synonyms: ["concess location vendorstands"]
       
-      - name: CONCESS_NO
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_NO_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_NO
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess no"]
-      
       - name: CONCESS_NUMRAT
         description: "Overall concession satisfaction rating 0-10 scale. Use for general food and beverage satisfaction analysis, trending, and averaging."
         expr: CONCESS_NUMRAT
@@ -2243,294 +2250,6 @@ tables:
         data_type: number
         default_aggregation: avg
         synonyms: ["concess order method vendorstands"]
-      
-      - name: CONCESS_PAYMENT_SELECT
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_PAYMENT_SELECT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_PAYMENT_SELECT
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess payment select"]
-      
-      - name: CONCESS_PAYMENT_TOUCHSCREEN
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_PAYMENT_TOUCHSCREEN_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_PAYMENT_TOUCHSCREEN
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess payment touchscreen"]
-      
-      - name: CONCESS_QUALITY_ALCOHOL
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUALITY_ALCOHOL_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUALITY_ALCOHOL
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess quality alcohol"]
-      
-      - name: CONCESS_QUALITY_BURGERS
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUALITY_BURGERS_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUALITY_BURGERS
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess quality burgers"]
-      
-      - name: CONCESS_QUALITY_CHICKEN
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUALITY_CHICKEN_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUALITY_CHICKEN
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess quality chicken"]
-      
-      - name: CONCESS_QUALITY_FRIES
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUALITY_FRIES_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUALITY_FRIES
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess quality fries"]
-      
-      - name: CONCESS_QUALITY_HOTDOG
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUALITY_HOTDOG_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUALITY_HOTDOG
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess quality hotdog"]
-      
-      - name: CONCESS_QUALITY_ICECREAM
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUALITY_ICECREAM_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUALITY_ICECREAM
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess quality icecream"]
-      
-      - name: CONCESS_QUALITY_NACHOS
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUALITY_NACHOS_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUALITY_NACHOS
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess quality nachos"]
-      
-      - name: CONCESS_QUALITY_NONALCOHOL
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUALITY_NONALCOHOL_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUALITY_NONALCOHOL
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess quality nonalcohol"]
-      
-      - name: CONCESS_QUALITY_NUTS
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUALITY_NUTS_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUALITY_NUTS
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess quality nuts"]
-      
-      - name: CONCESS_QUALITY_OTHER_DESSERT
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUALITY_OTHER_DESSERT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUALITY_OTHER_DESSERT
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess quality other dessert"]
-      
-      - name: CONCESS_QUALITY_OTHER_ENTREE
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUALITY_OTHER_ENTREE_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUALITY_OTHER_ENTREE
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess quality other entree"]
-      
-      - name: CONCESS_QUALITY_PIZZA
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUALITY_PIZZA_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUALITY_PIZZA
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess quality pizza"]
-      
-      - name: CONCESS_QUALITY_POPCORN
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUALITY_POPCORN_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUALITY_POPCORN
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess quality popcorn"]
-      
-      - name: CONCESS_QUALITY_PRETZELS
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUALITY_PRETZELS_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUALITY_PRETZELS
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess quality pretzels"]
-      
-      - name: CONCESS_QUALITY_SALAD
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUALITY_SALAD_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUALITY_SALAD
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess quality salad"]
-      
-      - name: CONCESS_QUALITY_SANDWICH
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUALITY_SANDWICH_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUALITY_SANDWICH
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess quality sandwich"]
-      
-      - name: CONCESS_QUALITY_SAUSAGE
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUALITY_SAUSAGE_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUALITY_SAUSAGE
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess quality sausage"]
-      
-      - name: CONCESS_QUAL_REASON_BURGERS
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUAL_REASON_BURGERS_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUAL_REASON_BURGERS
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess qual reason burgers"]
-      
-      - name: CONCESS_QUAL_REASON_CHICKEN
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUAL_REASON_CHICKEN_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUAL_REASON_CHICKEN
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess qual reason chicken"]
-      
-      - name: CONCESS_QUAL_REASON_FRIES
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUAL_REASON_FRIES_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUAL_REASON_FRIES
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess qual reason fries"]
-      
-      - name: CONCESS_QUAL_REASON_HOTDOG
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUAL_REASON_HOTDOG_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUAL_REASON_HOTDOG
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess qual reason hotdog"]
-      
-      - name: CONCESS_QUAL_REASON_ICECREAM
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUAL_REASON_ICECREAM_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUAL_REASON_ICECREAM
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess qual reason icecream"]
-      
-      - name: CONCESS_QUAL_REASON_NACHOS
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUAL_REASON_NACHOS_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUAL_REASON_NACHOS
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess qual reason nachos"]
-      
-      - name: CONCESS_QUAL_REASON_NUTS
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUAL_REASON_NUTS_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUAL_REASON_NUTS
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess qual reason nuts"]
-      
-      - name: CONCESS_QUAL_REASON_PIZZA
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUAL_REASON_PIZZA_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUAL_REASON_PIZZA
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess qual reason pizza"]
-      
-      - name: CONCESS_QUAL_REASON_POPCORN
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUAL_REASON_POPCORN_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUAL_REASON_POPCORN
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess qual reason popcorn"]
-      
-      - name: CONCESS_QUAL_REASON_PRETZELS
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUAL_REASON_PRETZELS_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUAL_REASON_PRETZELS
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess qual reason pretzels"]
-      
-      - name: CONCESS_QUAL_REASON_SALAD
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUAL_REASON_SALAD_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUAL_REASON_SALAD
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess qual reason salad"]
-      
-      - name: CONCESS_QUAL_REASON_SANDWICH
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUAL_REASON_SANDWICH_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUAL_REASON_SANDWICH
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess qual reason sandwich"]
-      
-      - name: CONCESS_QUAL_REASON_SAUSAGE
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_QUAL_REASON_SAUSAGE_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_QUAL_REASON_SAUSAGE
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess qual reason sausage"]
-      
-      - name: CONCESS_SCREENER
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_SCREENER_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_SCREENER
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess screener"]
-      
-      - name: CONCESS_SPEND
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_SPEND_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_SPEND
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess spend"]
-      
-      - name: CONCESS_SPEND_EXPECT
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_SPEND_EXPECT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_SPEND_EXPECT
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess spend expect"]
-      
-      - name: CONCESS_TRANSACTIONS
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_TRANSACTIONS_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_TRANSACTIONS
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess transactions"]
       
       - name: CONCESS_TYPE_ALCOHOL
         description: "Alcoholic Beverages"
@@ -2665,14 +2384,6 @@ tables:
         default_aggregation: avg
         synonyms: ["wait time rating", "wait score", "line wait rating", "queue rating", "service speed score", "wait time number"]
       
-      - name: CONCESS_WAIT_EXPECT
-        description: "NUMERIC CODE ONLY - For text analysis use CONCESS_WAIT_EXPECT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: CONCESS_WAIT_EXPECT
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["concess wait expect"]
-      
       - name: CROWD_SIZE_ADJUSTMENT
         description: "Modeled adjustment made to overall experience rating based on crowd size"
         expr: CROWD_SIZE_ADJUSTMENT
@@ -2715,75 +2426,12 @@ tables:
         default_aggregation: avg
         synonyms: ["duration seconds"]
       
-      - name: ENTERTAIN_GRID_GAMES
-        description: "NUMERIC CODE ONLY - For text analysis use ENTERTAIN_GRID_GAMES_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: ENTERTAIN_GRID_GAMES
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["entertain grid games"]
-      
-      - name: ENTERTAIN_GRID_KIDS_ACTIVITIES
-        description: "NUMERIC CODE ONLY - For text analysis use ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: ENTERTAIN_GRID_KIDS_ACTIVITIES
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["entertain grid kids activities"]
-      
-      - name: ENTERTAIN_GRID_MUSIC
-        description: "NUMERIC CODE ONLY - For text analysis use ENTERTAIN_GRID_MUSIC_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: ENTERTAIN_GRID_MUSIC
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["entertain grid music"]
-      
-      - name: ENTERTAIN_GRID_PLAYER_CONTENT
-        description: "NUMERIC CODE ONLY - For text analysis use ENTERTAIN_GRID_PLAYER_CONTENT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: ENTERTAIN_GRID_PLAYER_CONTENT
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["entertain grid player content"]
-      
-      - name: ENTERTAIN_GRID_PREGAME_CONTENT
-        description: "NUMERIC CODE ONLY - For text analysis use ENTERTAIN_GRID_PREGAME_CONTENT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: ENTERTAIN_GRID_PREGAME_CONTENT
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["entertain grid pregame content"]
-      
-      - name: ENTERTAIN_GRID_SCOREBOARD
-        description: "NUMERIC CODE ONLY - For text analysis use ENTERTAIN_GRID_SCOREBOARD_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: ENTERTAIN_GRID_SCOREBOARD
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["entertain grid scoreboard"]
-      
-      - name: ENTERTAIN_GRID_THEME
-        description: "NUMERIC CODE ONLY - For text analysis use ENTERTAIN_GRID_THEME_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: ENTERTAIN_GRID_THEME
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["entertain grid theme"]
-      
       - name: ENTERTAIN_NUMRAT
-        description: "INTERNAL - Entertainment satisfaction on 1-100 scale. Use ENTERTAINMENT_SATISFACTION instead for 1-10 scale."
-        expr: ENTERTAIN_NUMRAT
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["entertain numrat original"]
-      
-      - name: ENTERTAINMENT_SATISFACTION
-        description: "Entertainment satisfaction rating 1-10 scale (normalized from 1-100). Game presentation and entertainment experience. Use for entertainment satisfaction analysis and comparison with other ratings."
+        description: "Entertainment satisfaction rating 1-10 scale. Game presentation and entertainment experience including music, scoreboard, games, and theme nights. Use for entertainment satisfaction analysis."
         expr: ENTERTAIN_NUMRAT / 10.0
         data_type: number
         default_aggregation: avg
+        synonyms: ["entertainment satisfaction", "entertainment rating", "entertainment score", "game entertainment", "entertainment experience", "avg entertainment satisfaction", "entertain numrat"]
       
       - name: ENTREES_PREV_PURCH
         description: "Numeric data for entrees prev purch"
@@ -2953,14 +2601,6 @@ tables:
         default_aggregation: avg
         synonyms: ["gamepk"]
       
-      - name: GAMES_PREV_SEASON
-        description: "NUMERIC CODE ONLY - For text analysis use GAMES_PREV_SEASON_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: GAMES_PREV_SEASON
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["games prev season"]
-      
       - name: GAME_OUTCOME_ADJUSTMENT
         description: "Modeled adjustment made to overall experience rating based on game outcome"
         expr: GAME_OUTCOME_ADJUSTMENT
@@ -2968,68 +2608,12 @@ tables:
         default_aggregation: avg
         synonyms: ["game outcome adjustment"]
       
-      - name: GENDER_ID
-        description: "NUMERIC CODE ONLY - For text analysis use GENDER_ID_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: GENDER_ID
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["gender id"]
-      
-      - name: GE_TIME
-        description: "NUMERIC CODE ONLY - For text analysis use GE_TIME_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: GE_TIME
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["ge time"]
-      
-      - name: GE_TIME_EXPECT
-        description: "NUMERIC CODE ONLY - For text analysis use GE_TIME_EXPECT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: GE_TIME_EXPECT
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["ge time expect"]
-      
-      - name: GIVEAWAY_ARRIVAL
-        description: "NUMERIC CODE ONLY - For text analysis use GIVEAWAY_ARRIVAL_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: GIVEAWAY_ARRIVAL
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["giveaway arrival"]
-      
-      - name: GIVEAWAY_AWARENESS
-        description: "NUMERIC CODE ONLY - For text analysis use GIVEAWAY_AWARENESS_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: GIVEAWAY_AWARENESS
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["giveaway awareness"]
-      
       - name: GIVEAWAY_ID
         description: "Numerical Giveaway ID"
         expr: GIVEAWAY_ID
         data_type: number
         default_aggregation: avg
         synonyms: ["giveaway id"]
-      
-      - name: GIVEAWAY_RECEIVE
-        description: "NUMERIC CODE ONLY - For text analysis use GIVEAWAY_RECEIVE_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: GIVEAWAY_RECEIVE
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["giveaway receive"]
-      
-      - name: GIVEAWAY_SAT
-        description: "NUMERIC CODE ONLY - For text analysis use GIVEAWAY_SAT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: GIVEAWAY_SAT
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["giveaway sat"]
       
       - name: GMS_SERVICE_RECOVERY
         description: "Numeric data for gms service recovery"
@@ -3051,22 +2635,6 @@ tables:
         data_type: number
         default_aggregation: avg
         synonyms: ["go ahead why not"]
-      
-      - name: GROUP_SIZE
-        description: "NUMERIC CODE ONLY - For text analysis use GROUP_SIZE_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: GROUP_SIZE
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["group size"]
-      
-      - name: HHI_ID
-        description: "NUMERIC CODE ONLY - For text analysis use HHI_ID_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: HHI_ID
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["hhi id"]
       
       - name: HOLIDAY
         description: "If '1', game was played on a holiday"
@@ -3095,30 +2663,6 @@ tables:
         data_type: number
         default_aggregation: avg
         synonyms: ["icecream prev purch"]
-      
-      - name: INCENTIVES_RANK_1
-        description: "NUMERIC CODE ONLY - For text analysis use INCENTIVES_RANK_1_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: INCENTIVES_RANK_1
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["incentives rank 1"]
-      
-      - name: INCENTIVES_RANK_2
-        description: "NUMERIC CODE ONLY - For text analysis use INCENTIVES_RANK_2_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: INCENTIVES_RANK_2
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["incentives rank 2"]
-      
-      - name: INCENTIVES_RANK_3
-        description: "NUMERIC CODE ONLY - For text analysis use INCENTIVES_RANK_3_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: INCENTIVES_RANK_3
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["incentives rank 3"]
       
       - name: LOADED_VALUE
         description: "Flag for whether the ticket included a loaded value / add-on item(s) component"
@@ -3377,29 +2921,13 @@ tables:
         access_modifier: private_access
         synonyms: ["parent id"]
       
-      - name: PARKING_EXIT_EXPECT
-        description: "NUMERIC CODE ONLY - For text analysis use PARKING_EXIT_EXPECT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: PARKING_EXIT_EXPECT
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["parking exit expect"]
-      
-      - name: PARKING_EXIT_TIME
-        description: "Overall gameday experience rating 1-10 scale. Use for overall satisfaction analysis."
-        expr: PARKING_EXIT_TIME
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["parking exit time"]
-      
       - name: PARKING_NUMRAT
         description: "Overall parking experience"
         expr: PARKING_NUMRAT
         data_type: number
         default_aggregation: avg
-        synonyms: ["parking numrat"]
-      
+        synonyms: ["parking numrat", "Parking_Grid_1"]
+
       - name: PARKING_TIME
         description: "NUMERIC CODE ONLY - For text analysis use PARKING_TIME_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
         expr: PARKING_TIME
@@ -3613,15 +3141,6 @@ tables:
         access_modifier: private_access
         synonyms: ["purchase intent"]
       
-      - name: PURCHASE_INTENT_NEXT
-        description: "NUMERIC CODE ONLY - For text analysis use PURCHASE_INTENT_NEXT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: PURCHASE_INTENT_NEXT
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["purchase intent next"]
-  
-      
       - name: RECEIVED_COMMERCIAL_EMAIL
         description: "If '1', respondent received survey email with commercial offering"
         expr: RECEIVED_COMMERCIAL_EMAIL
@@ -3679,19 +3198,12 @@ tables:
         synonyms: ["season perform adjustment"]
       
       - name: SEATVIEW_NUMRAT
-        description: "Seat view of the game"
+        description: "Seat view of the game. Numerical 1-10 scale."
         expr: SEATVIEW_NUMRAT
         data_type: number
         default_aggregation: avg
         synonyms: ["seatview numrat"]
-      
-      - name: SEATVIEW_VALUE
-        description: "Valuation of money spent on tickets vs view of the game"
-        expr: SEATVIEW_VALUE
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["seatview value"]
-      
+
       - name: SEAT_COMFORT
         description: "Numeric data for seat comfort"
         expr: SEAT_COMFORT
@@ -3727,54 +3239,6 @@ tables:
         default_aggregation: avg
         synonyms: ["self checkout save time"]
       
-      - name: STAFF_GRID_ACCESSIBILITY
-        description: "NUMERIC CODE ONLY - For text analysis use STAFF_GRID_ACCESSIBILITY_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: STAFF_GRID_ACCESSIBILITY
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["staff grid accessibility"]
-      
-      - name: STAFF_GRID_CONCESSIONS
-        description: "NUMERIC CODE ONLY - For text analysis use STAFF_GRID_CONCESSIONS_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: STAFF_GRID_CONCESSIONS
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["staff grid concessions"]
-      
-      - name: STAFF_GRID_FAN_SERVICES
-        description: "NUMERIC CODE ONLY - For text analysis use STAFF_GRID_FAN_SERVICES_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: STAFF_GRID_FAN_SERVICES
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["staff grid fan services"]
-      
-      - name: STAFF_GRID_MERCH
-        description: "NUMERIC CODE ONLY - For text analysis use STAFF_GRID_MERCH_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: STAFF_GRID_MERCH
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["staff grid merch"]
-      
-      - name: STAFF_GRID_PARKING
-        description: "NUMERIC CODE ONLY - For text analysis use STAFF_GRID_PARKING_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: STAFF_GRID_PARKING
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["staff grid parking"]
-      
-      - name: STAFF_GRID_SECURITY
-        description: "NUMERIC CODE ONLY - For text analysis use STAFF_GRID_SECURITY_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: STAFF_GRID_SECURITY
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["staff grid security"]
-      
       - name: STAFF_GRID_SECURITY_SCANNER
         description: "Security / Ticket Scanner"
         expr: STAFF_GRID_SECURITY_SCANNER
@@ -3788,22 +3252,6 @@ tables:
         data_type: number
         default_aggregation: avg
         synonyms: ["staff grid ticket scanner"]
-      
-      - name: STAFF_GRID_USHER
-        description: "NUMERIC CODE ONLY - For text analysis use STAFF_GRID_USHER_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: STAFF_GRID_USHER
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["staff grid usher"]
-      
-      - name: STAFF_NUMRAT
-        description: "INTERNAL - Staff satisfaction on 1-100 scale. Use STAFF_SATISFACTION instead for 1-10 scale."
-        expr: STAFF_NUMRAT
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["staff numrat original"]
       
       - name: STAFF_SATISFACTION
         description: "Staff satisfaction rating 1-10 scale (normalized from 1-100). Quality of service from stadium staff. Use for satisfaction trend analysis and comparison with other ratings."
@@ -4127,34 +3575,6 @@ tables:
         default_aggregation: avg
         synonyms: ["tb addon 15"]
       
-      - name: TB_ADDON_16
-        description: "Email address to be entered into raffle for completing the survey"
-        expr: TB_ADDON_16
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 16"]
-      
-      - name: TB_ADDON_17
-        description: "Rating of Go ahead entry experience"
-        expr: TB_ADDON_17
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 17"]
-      
-      - name: TB_ADDON_18
-        description: "Selected reason as to why Patron did not use Go Ahead Entry"
-        expr: TB_ADDON_18
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 18"]
-      
-      - name: TB_ADDON_18_OTHERSPECIFY
-        description: "Written reason as to why Patron did not use Go Ahead Entry"
-        expr: TB_ADDON_18_OTHERSPECIFY
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 18 otherspecify"]
-      
       - name: TB_ADDON_19
         description: "Satisfaction level with comfort of seat at the ballpark"
         expr: TB_ADDON_19
@@ -4401,19 +3821,26 @@ tables:
         synonyms: ["tb addon 3"]
       
       - name: TB_ADDON_4_1
-        description: "Parking staff"
+        description: "Parking staff satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
         expr: TB_ADDON_4_1
         data_type: number
         default_aggregation: avg
-        synonyms: ["tb addon 4 1"]
+        synonyms: ['On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Parking staff', 'TB_ADDON_4_1']
       
-      - name: TB_ADDON_4_10
-        description: "Fan Host Ticket Taker"
+      - name: TB_ADDON_4_36
+        description: "Fan Host satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
         expr: TB_ADDON_4_10
         data_type: number
         default_aggregation: avg
-        synonyms: ["tb addon 4 10"]
-      
+        synonyms: ["On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Fan Host Ticket Taker", "tb addon TB_ADDON_4_36"]
+
+      - name: TB_ADDON_4_37
+        description: "Security Staff satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
+        expr: TB_ADDON_4_10
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Security Staff", "tb addon TB_ADDON_4_37"]
+
       - name: TB_ADDON_4_11
         description: "Security staff"
         expr: TB_ADDON_4_11
@@ -4422,61 +3849,55 @@ tables:
         synonyms: ["tb addon 4 11"]
       
       - name: TB_ADDON_4_24
-        description: "Accessibility support"
-        expr: TB_ADDON_4_24
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 4 24"]
-      
-      - name: TB_ADDON_4_3
-        description: "Fan Host Usher"
-        expr: TB_ADDON_4_3
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 4 3"]
-      
-      - name: TB_ADDON_4_38
-        description: "Tech Team"
-        expr: TB_ADDON_4_38
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 4 38"]
-      
-      - name: TB_ADDON_4_39
-        description: "Premium Area Attendants"
-        expr: TB_ADDON_4_39
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 4 39"]
-      
-      - name: TB_ADDON_4_5
-        description: "Concessions staff"
+        description: "Accessibility Support satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
         expr: TB_ADDON_4_5
         data_type: number
         default_aggregation: avg
-        synonyms: ["tb addon 4 5"]
+        synonyms: ["On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Accessibility Support", "tb addon TB_ADDON_4_24"]
+
+      - name: TB_ADDON_4_3
+        description: "Fan Hosts Usher satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
+        expr: TB_ADDON_4_3
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Fan Host Usher", "tb addon TB_ADDON_4_3"]
+
       
+      - name: TB_ADDON_4_38
+        description: "Tech Team satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
+        expr: TB_ADDON_4_38
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Tech Team", "tb addon TB_ADDON_4_38"]
+
+      - name: TB_ADDON_4_39
+        description: "Premium Area Attendants satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
+        expr: TB_ADDON_4_39
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Premium Area Attendants", "Premium area Staff", "tb addon TB_ADDON_4_39"]
+
+      - name: TB_ADDON_4_5
+        description: "Concessions staff satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
+        expr: TB_ADDON_4_5
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Concessions Staff", "tb addon TB_ADDON_4_5"]
+
       - name: TB_ADDON_4_6
-        description: "Retail staff"
+        description: "Retail staff satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
         expr: TB_ADDON_4_6
         data_type: number
         default_aggregation: avg
-        synonyms: ["tb addon 4 6"]
+        synonyms: ["On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Retail Staff", "tb addon TB_ADDON_4_6"]
       
-      - name: TB_ADDON_5
-        description: "Patron additional comments about GMS field staff members"
-        expr: TB_ADDON_5
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 5"]
-      
-      - name: TB_ADDON_6
+      - name: TB_ADDON_6_DESC
         description: "Yes or No selection if patron experienced a problem that needed staff intervention at GMS field"
-        expr: TB_ADDON_6
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 6"]
-      
+        expr: TB_ADDON_6_DESC
+        data_type: varchar
+        synonyms: ["Did you experience a problem at Tropicana Field that needs to be addressed by a member of our team?", "tb addon 6"]
+        sample_values: ["Yes, I have a problem that needs to be addressed", "No, I do not have any problems that need to be addressed"]
+        
       - name: TB_ADDON_7
         description: "Patrons selects type of problem experiences at GMS Field"
         expr: TB_ADDON_7
@@ -4541,22 +3962,6 @@ tables:
         default_aggregation: avg
         synonyms: ["theme night flag"]
       
-      - name: THEME_SAT
-        description: "NUMERIC CODE ONLY - For text analysis use THEME_SAT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: THEME_SAT
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["theme sat"]
-      
-      - name: TIX_OFFER_SAT
-        description: "NUMERIC CODE ONLY - For text analysis use TIX_OFFER_SAT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: TIX_OFFER_SAT
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["tix offer sat"]
-      
       - name: TOTAL_ADJUSTMENT
         description: "Total modeled adjustment made to overall experience rating"
         expr: TOTAL_ADJUSTMENT
@@ -4570,30 +3975,6 @@ tables:
         data_type: number
         default_aggregation: sum
         synonyms: ["total tix"]
-      
-      - name: TRAVELTO_METHOD
-        description: "NUMERIC CODE ONLY - For text analysis use TRAVELTO_METHOD_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: TRAVELTO_METHOD
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["travelto method"]
-      
-      - name: TRAVELTO_TIME
-        description: "NUMERIC CODE ONLY - For text analysis use TRAVELTO_TIME_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: TRAVELTO_TIME
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["travelto time"]
-      
-      - name: TRAVELTO_TIME_EXPECT
-        description: "NUMERIC CODE ONLY - For text analysis use TRAVELTO_TIME_EXPECT_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: TRAVELTO_TIME_EXPECT
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["travelto time expect"]
       
       - name: TRAVEL_ADJUSTMENT
         description: "Modeled adjustment made to overall experience rating based on travel experience"
@@ -4609,46 +3990,6 @@ tables:
         default_aggregation: avg
         synonyms: ["true complete"]
       
-      - name: WALK_OUT_EXP_FUTURE
-        description: "NUMERIC CODE ONLY - For text analysis use WALK_OUT_EXP_FUTURE_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: WALK_OUT_EXP_FUTURE
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["walk out exp future"]
-      
-      - name: WALK_OUT_EXP_TIME
-        description: "NUMERIC CODE ONLY - For text analysis use WALK_OUT_EXP_TIME_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: WALK_OUT_EXP_TIME
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["walk out exp time"]
-      
-      - name: WALK_OUT_GRID_EASY
-        description: "NUMERIC CODE ONLY - For text analysis use WALK_OUT_GRID_EASY_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: WALK_OUT_GRID_EASY
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["walk out grid easy"]
-      
-      - name: WALK_OUT_GRID_SELECTION
-        description: "NUMERIC CODE ONLY - For text analysis use WALK_OUT_GRID_SELECTION_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: WALK_OUT_GRID_SELECTION
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["walk out grid selection"]
-      
-      - name: WALK_OUT_GRID_TIMEFRAME
-        description: "NUMERIC CODE ONLY - For text analysis use WALK_OUT_GRID_TIMEFRAME_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
-        expr: WALK_OUT_GRID_TIMEFRAME
-        data_type: number
-        default_aggregation: avg
-        access_modifier: private_access
-        synonyms: ["walk out grid timeframe"]
-  
   - name: overall_feedback_sentence_level
     description: "PRIMARY TABLE for analyzing fan feedback. Use this table by default for all feedback analysis questions. Each row represents one sentence from fan feedback, with individual sentiment and topic classification. Perfect for understanding mixed feedback (e.g., 'food was great but parking terrible'). Covers all seasons from 2023 forward."
     base_table:
