@@ -127,6 +127,36 @@ custom_instructions: |
   
   - WRONG: Converting 'Highly Satisfied' to 10, 'Somewhat Satisfied' to 7.5, etc.
 
+  SPONSOR RECALL QUERIES:
+  #   When users ask about sponsors, sponsor recall, brand awareness, or which sponsors/brands fans remember:
+  #   
+  #   ALWAYS USE these fields (they automatically filter N/A codes):
+  #   - SPONSOR_RECALL_1: First/primary sponsor recalled
+  #   - SPONSOR_RECALL_2: Second sponsor recalled
+  #   - SPONSOR_RECALL_3: Third sponsor recalled
+  #   - SPONSOR_RECALL_4: Fourth sponsor recalled
+  #   - SPONSOR_RECALL_5: Fifth sponsor recalled
+  #   
+  #   NEVER USE these fields (contain N/A codes like 81, 89):
+  #   - TB_ADDON_10_1_RAW through TB_ADDON_10_5_RAW (DEPRECATED)
+  #   
+  #   CORRECT SQL PATTERN for "top sponsors recalled":
+  #   WITH sponsor_mentions AS (
+  #     SELECT SPONSOR_RECALL_1 AS sponsor FROM table WHERE SPONSOR_RECALL_1 IS NOT NULL
+  #     UNION ALL
+  #     SELECT SPONSOR_RECALL_2 AS sponsor FROM table WHERE SPONSOR_RECALL_2 IS NOT NULL
+  #     UNION ALL
+  #     SELECT SPONSOR_RECALL_3 AS sponsor FROM table WHERE SPONSOR_RECALL_3 IS NOT NULL
+  #     UNION ALL
+  #     SELECT SPONSOR_RECALL_4 AS sponsor FROM table WHERE SPONSOR_RECALL_4 IS NOT NULL
+  #     UNION ALL
+  #     SELECT SPONSOR_RECALL_5 AS sponsor FROM table WHERE SPONSOR_RECALL_5 IS NOT NULL
+  #   )
+  #   SELECT sponsor, COUNT(*) AS recall_count
+  #   FROM sponsor_mentions
+  #   GROUP BY sponsor
+  #   ORDER BY recall_count DESC;
+
 tables:
   - name: voc_survey_responses
     description: "Post-game survey responses - For feedback and suggestions, always use text description fields ending in _DESC or _OT, not numeric code fields"
@@ -1325,67 +1355,69 @@ tables:
         expr: AWAYTRI
         data_type: varchar
         synonyms: ['awaytri']
-      
-      - name: BRANDING_SPONSOR_1
-        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use BRANDING_SPONSOR_1_CLEAN instead which filters codes automatically."
-        expr: BRANDING_SPONSOR_1
+
+      - name: TB_ADDON_10_1_RAW
+        description: "DEPRECATED - Contains N/A codes (81, 89). DO NOT USE for sponsor analysis. Use SPONSOR_RECALL_1 instead."
+        expr: TB_ADDON_10_1
         data_type: varchar
-        synonyms: ["branding sponsor 1 deprecated"]
+        synonyms: ["tb addon 10 1 deprecated"]
       
-      - name: BRANDING_SPONSOR_1_CLEAN
-        description: "First sponsor brand recalled by patron at stadium - numeric codes automatically filtered. Use this for sponsor analysis."
-        expr: CASE WHEN REGEXP_LIKE(BRANDING_SPONSOR_1, '^[0-9]+$') THEN NULL ELSE BRANDING_SPONSOR_1 END
+      - name: TB_ADDON_10_2_RAW
+        description: "DEPRECATED - Contains N/A codes (81, 89). DO NOT USE for sponsor analysis. Use SPONSOR_RECALL_2 instead."
+        expr: TB_ADDON_10_2
         data_type: varchar
-        synonyms: ['sponsor', 'brand', 'sponsor recall', 'first sponsor', 'sponsor 1', 'brand recall']
+        synonyms: ["tb addon 10 2 deprecated"]
+      
+      - name: TB_ADDON_10_3_RAW
+        description: "DEPRECATED - Contains N/A codes (81, 89). DO NOT USE for sponsor analysis. Use SPONSOR_RECALL_3 instead."
+        expr: TB_ADDON_10_3
+        data_type: varchar
+        synonyms: ["tb addon 10 3 deprecated"]
+      
+      - name: TB_ADDON_10_4_RAW
+        description: "DEPRECATED - Contains N/A codes (81, 89). DO NOT USE for sponsor analysis. Use SPONSOR_RECALL_4 instead."
+        expr: TB_ADDON_10_4
+        data_type: varchar
+        synonyms: ["tb addon 10 4 deprecated"]
+      
+      - name: TB_ADDON_10_5_RAW
+        description: "DEPRECATED - Contains N/A codes (81, 89). DO NOT USE for sponsor analysis. Use SPONSOR_RECALL_5 instead."
+        expr: TB_ADDON_10_5
+        data_type: varchar
+        synonyms: ["tb addon 10 5 deprecated"]
+      
+      - name: SPONSOR_RECALL_1
+        description: "First sponsor/brand recalled by fan at the game. Automatically filters N/A codes (numeric values like 81, 89) - only returns actual sponsor names like Tropicana, Budweiser, etc. Use this field for sponsor recall analysis."
+        expr: CASE WHEN REGEXP_LIKE(TB_ADDON_10_1::VARCHAR, '^[0-9]+$') THEN NULL ELSE TB_ADDON_10_1 END
+        data_type: varchar
+        synonyms: ['sponsor', 'brand', 'sponsor recall', 'first sponsor', 'sponsor 1', 'sponsor awareness', 'brand recall']
         sample_values: ['Tropicana', 'Budweiser', 'Kanes', 'Pepsi', 'Coke']
       
-      - name: BRANDING_SPONSOR_2
-        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use BRANDING_SPONSOR_2_CLEAN instead which filters codes automatically."
-        expr: BRANDING_SPONSOR_2
+      - name: SPONSOR_RECALL_2
+        description: "Second sponsor/brand recalled by fan at the game. Automatically filters N/A codes - only returns actual sponsor names."
+        expr: CASE WHEN REGEXP_LIKE(TB_ADDON_10_2::VARCHAR, '^[0-9]+$') THEN NULL ELSE TB_ADDON_10_2 END
         data_type: varchar
-        synonyms: ["branding sponsor 2 deprecated"]
-      
-      - name: BRANDING_SPONSOR_2_CLEAN
-        description: "Second sponsor brand recalled - codes filtered. Use for sponsor analysis."
-        expr: CASE WHEN REGEXP_LIKE(BRANDING_SPONSOR_2, '^[0-9]+$') THEN NULL ELSE BRANDING_SPONSOR_2 END
-        data_type: varchar
-        synonyms: ['second sponsor', 'brand 2', 'sponsor 2', 'sponsor recall 2']
+        synonyms: ['sponsor', 'brand', 'sponsor recall', 'first sponsor', 'sponsor 2', 'sponsor awareness', 'brand recall']
 
-      - name: BRANDING_SPONSOR_3
-        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use BRANDING_SPONSOR_3_CLEAN instead which filters codes automatically."
-        expr: BRANDING_SPONSOR_3
+      - name: SPONSOR_RECALL_3
+        description: "Third sponsor/brand recalled by fan at the game. Automatically filters N/A codes - only returns actual sponsor names."
+        expr: CASE WHEN REGEXP_LIKE(TB_ADDON_10_3::VARCHAR, '^[0-9]+$') THEN NULL ELSE TB_ADDON_10_3 END
         data_type: varchar
-        synonyms: ["branding sponsor 3 deprecated"]
+        synonyms: ['sponsor', 'Third sponsor', 'brand', 'sponsor recall', 'first sponsor', 'sponsor 3', 'sponsor awareness', 'brand recall']
       
-      - name: BRANDING_SPONSOR_3_CLEAN
-        description: "Third sponsor brand recalled - codes filtered. Use for sponsor analysis."
-        expr: CASE WHEN REGEXP_LIKE(BRANDING_SPONSOR_3, '^[0-9]+$') THEN NULL ELSE BRANDING_SPONSOR_3 END
+
+      - name: SPONSOR_RECALL_4
+        description: "Fourth sponsor/brand recalled by fan at the game. Automatically filters N/A codes - only returns actual sponsor names."
+        expr: CASE WHEN REGEXP_LIKE(TB_ADDON_10_4::VARCHAR, '^[0-9]+$') THEN NULL ELSE TB_ADDON_10_4 END
         data_type: varchar
-        synonyms: ['third sponsor', 'brand 3', 'sponsor 3', 'sponsor recall 3']
+        synonyms: ['sponsor', 'brand', 'sponsor recall', 'first sponsor', 'sponsor 4', 'sponsor awareness', 'brand recall']
       
-      - name: BRANDING_SPONSOR_4
-        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use BRANDING_SPONSOR_4_CLEAN instead which filters codes automatically."
-        expr: BRANDING_SPONSOR_4
-        data_type: varchar
-        synonyms: ["branding sponsor 4 deprecated"]
       
-      - name: BRANDING_SPONSOR_4_CLEAN
-        description: "Fourth sponsor brand recalled - codes filtered. Use for sponsor analysis."
-        expr: CASE WHEN REGEXP_LIKE(BRANDING_SPONSOR_4, '^[0-9]+$') THEN NULL ELSE BRANDING_SPONSOR_4 END
+      - name: SPONSOR_RECALL_5
+        description: "Fifth sponsor/brand recalled by fan at the game. Automatically filters N/A codes - only returns actual sponsor names."
+        expr: CASE WHEN REGEXP_LIKE(TB_ADDON_10_5::VARCHAR, '^[0-9]+$') THEN NULL ELSE TB_ADDON_10_5 END
         data_type: varchar
-        synonyms: ['fourth sponsor', 'brand 4', 'sponsor 4', 'sponsor recall 4']
-      
-      - name: BRANDING_SPONSOR_5
-        description: "DEPRECATED - Contains mixed data with numeric codes. DO NOT USE for analysis. Use BRANDING_SPONSOR_5_CLEAN instead which filters codes automatically."
-        expr: BRANDING_SPONSOR_5
-        data_type: varchar
-        synonyms: ["branding sponsor 5 deprecated"]
-      
-      - name: BRANDING_SPONSOR_5_CLEAN
-        description: "Fifth sponsor brand recalled - codes filtered. Use for sponsor analysis."
-        expr: CASE WHEN REGEXP_LIKE(BRANDING_SPONSOR_5, '^[0-9]+$') THEN NULL ELSE BRANDING_SPONSOR_5 END
-        data_type: varchar
-        synonyms: ['fifth sponsor', 'brand 5', 'sponsor 5', 'sponsor recall 5']
+        synonyms: ['sponsor', 'brand', 'sponsor recall', 'first sponsor', 'sponsor 5', 'sponsor awareness', 'brand recall']
       
       - name: BROWSER
         description: "Browser"
@@ -3455,41 +3487,6 @@ tables:
         data_type: number
         default_aggregation: max
         synonyms: ["system version"]
-      
-      - name: TB_ADDON_10_1
-        description: "Sponsor 1"
-        expr: TB_ADDON_10_1
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 10 1"]
-      
-      - name: TB_ADDON_10_2
-        description: "Sponsor 2"
-        expr: TB_ADDON_10_2
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 10 2"]
-      
-      - name: TB_ADDON_10_3
-        description: "Sponsor 3"
-        expr: TB_ADDON_10_3
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 10 3"]
-      
-      - name: TB_ADDON_10_4
-        description: "Sponsor 4"
-        expr: TB_ADDON_10_4
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 10 4"]
-      
-      - name: TB_ADDON_10_5
-        description: "Sponsor 5"
-        expr: TB_ADDON_10_5
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["tb addon 10 5"]
       
       - name: TB_ADDON_11
         description: "Patrons influence level with Rays brand partners"
