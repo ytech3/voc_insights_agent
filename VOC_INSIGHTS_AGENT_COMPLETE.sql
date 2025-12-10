@@ -1,8 +1,8 @@
 -- =====================================================
 -- VOC INSIGHTS AGENT - OPTIMIZED DEPLOYMENT SCRIPT (FINAL)
--- Tampa Bay Rays - Voice of Customer Analysis
+-- Tampa Bay Rays - Voice of Customer Survey Responses 
 -- =====================================================
--- Version: 2.0 (Optimized - Yuki Preferences)
+-- Version: 2.0 
 -- Last Updated: December 2025
 -- Key Notes:
 --   • NO AI_FILTER pre-filter (Optimization #1 skipped)
@@ -21,7 +21,7 @@ USE ROLE ACCOUNTADMIN;
 USE WAREHOUSE TBRDP_DW_CORTEX_XS_WH;
 
 -- =====================================================
--- CATEGORY TAXONOMY (MUST MATCH YAML)
+-- CLASSIFICATIONS FOR QUANITATIVE FEEDBACK
 -- =====================================================
 -- PRE-ARRIVAL & ARRIVAL:
 --   "Parking & Arrival"
@@ -34,9 +34,11 @@ USE WAREHOUSE TBRDP_DW_CORTEX_XS_WH;
 --   "Seating & Venue Comfort"
 --   "Crowd & Atmosphere"
 --
--- CONCESSIONS & AMENITIES:
+-- CONCESSIONS:
 --   "Food & Beverage Quality"
 --   "Concession Service & Speed"
+--
+-- Retail:
 --   "Merchandise & Team Store"
 --
 -- ENTERTAINMENT & ENGAGEMENT:
@@ -61,12 +63,11 @@ USE WAREHOUSE TBRDP_DW_CORTEX_XS_WH;
 --
 -- OTHER:
 --   "Other"
-
-
+--
 -- =====================================================
 -- 2) OVERALL FEEDBACK ANALYSIS VIEW
 -- =====================================================
--- Aligned with YAML taxonomy (incl. "stadium departure")
+-- Aligned with YAML taxonomy
 -- Adds parent_category rollup; seasons 2023–2025
 -- =====================================================
 
@@ -143,7 +144,8 @@ with_parent_category AS (
       WHEN ai_category = 'Parking & Arrival' THEN 'PRE-ARRIVAL & ARRIVAL'
       WHEN ai_category IN ('Gate Entry & Security', 'Wayfinding & Accessibility') THEN 'ENTRY & NAVIGATION'
       WHEN ai_category IN ('Seating & Venue Comfort', 'Crowd & Atmosphere') THEN 'IN-SEAT EXPERIENCE'
-      WHEN ai_category IN ('Food & Beverage Quality', 'Concession Service & Speed', 'Merchandise & Team Store') THEN 'CONCESSIONS & AMENITIES'
+      WHEN ai_category IN ('Food & Beverage Quality', 'Concession Service & Speed') THEN 'CONCESSIONS & AMENITIES'
+      WHEN ai_category IN ('Merch Pricing', 'Merch quality', 'Team Store Line', 'Merchandise & Team Store') THEN 'RETAIL'
       WHEN ai_category IN ('Game Entertainment & Presentation', 'Promotions & Special Events', 'Team Performance & Game Quality') THEN 'ENTERTAINMENT & ENGAGEMENT'
       WHEN ai_category IN ('Staff Interactions & Service', 'Facilities & Cleanliness', 'Weather', 'Technology & Digital Experience') THEN 'SERVICE & OPERATIONS'
       WHEN ai_category IN ('Pricing & Value Perception', 'Overall Experience & Loyalty', 'Ticketing & Purchase Experience') THEN 'VALUE & OVERALL'
@@ -176,7 +178,6 @@ GRANT SELECT ON VIEW TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_ANALYSIS
 COMMENT ON VIEW TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_ANALYSIS IS 
 'AI-powered analysis of fan feedback with categories aligned to YAML taxonomy.
 Includes parent category rollups for reporting. Covers seasons 2023–2025.';
-
 
 -- =====================================================
 -- 3) SENTENCE-LEVEL ANALYSIS (SINGLE AI CALL)
