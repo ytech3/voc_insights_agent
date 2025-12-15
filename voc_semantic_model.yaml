@@ -57,10 +57,12 @@ custom_instructions: |
   - "Seating & Venue Comfort" - seat quality, views, sightlines, temperature, comfort, legroom, seat location
   - "Crowd & Atmosphere" - fan energy, crowd excitement, stadium atmosphere, game environment, fan behavior
 
-  CONCESSIONS & AMENITIES:
+  CONCESSIONS:
   - "Food & Beverage Quality" Taste, freshness, food temperature, portion size, presentation, menu variety
   - "Concession Service & Speed" - wait times, line length, staff service at concessions, mobile ordering speed, checkout process
-  - "Merchandise & Team Store" - team store products, merchandise selection, quality, availability, sizing, retail staff
+
+  RETAIL
+  - "Merchandise & Team Store" - team store products, merchandise selection, quality, availability, sizing, retail staff, retail price, retail quality 
 
   ENTERTAINMENT & ENGAGEMENT:
   - "Game Entertainment & Presentation" - scoreboard content, music, videos, between-inning activities, announcer, sound quality
@@ -642,12 +644,6 @@ tables:
         synonyms: ['How did what you spent at concessions compare to what you expected to spend per person for food and/or beverages?']
         sample_values: ['Much more than what I expected', 'Slightly more than what I expected', 'About what I expected', 'Slightly less than what I expected', 'Much less than what I expected']
         is_enum: true
-      
-      - name: CONCESS_TRANSACTIONS_DESC
-        description: "Text description for concess transactions. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
-        expr: CONCESS_TRANSACTIONS_DESC
-        data_type: varchar
-        synonyms: ['concess transactions text', 'concess transactions', 'concess transactions description', 'concess transactions desc']
       
       - name: CONCESS_TYPE_OTHER_DESSERT_SPECIFY
         description: "Open-ended text feedback explaining why patron selected their rating for concess typeher dessert specify. Contains actual text responses, not numeric codes."
@@ -1262,7 +1258,7 @@ tables:
         synonyms: ['staff grid parking text', 'staff grid parking description', 'staff grid parking desc', 'staff grid parking']
       
       - name: STAFF_GRID_SECURITY_DESC
-        description: "Text description for staff grid security. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Text description for staff grid security. Contains human-readable descriptions, not numeric codes. Use this for text analysis. For NUMERICAL Security rating use "
         expr: STAFF_GRID_SECURITY_DESC
         data_type: varchar
         synonyms: ['staff grid security desc', 'staff grid security description', 'staff grid security text', 'staff grid security']
@@ -2241,6 +2237,12 @@ tables:
         default_aggregation: avg
         synonyms: ["concession satisfaction", "food satisfaction", "fb satisfaction", "concession rating", "food and beverage rating", "f&b satisfaction", "concession score"]
       
+      - name: CONCESS_TRANSACTIONS
+        description: "Overall, how many separate food and/or beverage transactions did you make?"
+        expr: CONCESS_TRANSACTIONS
+        data_type: varchar
+        synonyms: ['Number of Transactions made for concessions', 'concess transactions', 'concess transactions description', 'concess transactions desc']
+  
       - name: CONCESS_ORDER_METHOD_MOBILE
         description: "Binary indicator: 1 = patron placed a mobile order, 0 = did not. Use for counting mobile order users or filtering to actual users. In 2024: 809 users (value = 1), rest did not use (value = 0)."
         expr: CONCESS_ORDER_METHOD_MOBILE
@@ -2954,11 +2956,18 @@ tables:
         synonyms: ["parent id"]
       
       - name: PARKING_NUMRAT
-        description: "Overall parking experience"
+        description: "Overall parking experience. On a scale from 0 to 10, how would you rate your experience with each of the following at [Field-stadium]?* - Finding a space and parking your vehicle"
         expr: PARKING_NUMRAT
         data_type: number
         default_aggregation: avg
         synonyms: ["parking numrat", "Parking_Grid_1"]
+
+      - name: PARKING_GRID_2
+        description: "Overall experience leaving the parking lot after a game. On a scale from 0 to 10, how would you rate your experience with each of the following at [Field-stadium]?* - Exiting the parking lot after the game"
+        expr: PARKING_GRID_2 
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["parking numrat", "Parking_Grid_2"]
 
       - name: PARKING_TIME
         description: "NUMERIC CODE ONLY - For text analysis use PARKING_TIME_DESC instead. This field contains numeric codes (1, 2, 3, etc) not readable text."
