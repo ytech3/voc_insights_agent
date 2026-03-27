@@ -14,11 +14,11 @@ custom_instructions: |
   
   1-10 SCALE fields:
   - OVERALL_NUMRAT (Overall satisfaction)
+  - ENTERTAIN_NUMRAT (Entertainment Satisfaction)
   - CONCESS_NUMRAT (Concession satisfaction)
   - SEATVIEW_NUMRAT (Seat view rating)
   
   0-100 SCALE fields (normalize by dividing by 10):
-  - ENTERTAIN_NUMRAT (Entertainment - divide by 10 for 1-10 scale)
   - MERCH_NUMRAT (Merchandise - divide by 10 for 1-10 scale)
   - STAFF_NUMRAT (Staff - divide by 10 for 1-10 scale)
   QUERY ROUTING RULES - FOLLOW THESE STRICTLY:
@@ -398,6 +398,7 @@ tables:
         expr: CONCESS_INTENT_NO_DESC
         data_type: varchar
         synonyms: ['concess intent no desc', 'concess intent no text', 'concess intent no', 'concess intent no description']
+        sample_values: ["Additional budget-friendly options", "Better value of the food / beverages for the money", "Shorter wait times", "More options that meet my dietary needs (e.g. gluten-free, vegan, healthier options)", "More variety", "Better options near my seat", "Other"]
       
       - name: CONCESS_INTENT_NO_OTHERSPECIFY
         description: "Open-ended text feedback explaining why patron selected their rating for concess intent noherspecify. Contains actual text responses, not numeric codes."
@@ -416,7 +417,8 @@ tables:
         expr: CONCESS_NO_DESC
         data_type: varchar
         synonyms: ['concess no desc', 'concess no description', 'concess no', 'concess no text']
-      
+        sample_values: ["Additional budget-friendly options", "Better value of the food / beverages for the money", "Shorter wait times", "More options that meet my dietary needs (e.g. gluten-free, vegan, healthier options)", "More variety", "Better options near my seat", "Other"]
+
       - name: CONCESS_NO_OTHERSPECIFY
         description: "Open-ended text feedback explaining why patron selected their rating for concess noherspecify. Contains actual text responses, not numeric codes."
         expr: CONCESS_NO_OTHERSPECIFY
@@ -2460,13 +2462,6 @@ tables:
         default_aggregation: avg
         synonyms: ["duration seconds"]
       
-      - name: ENTERTAIN_NUMRAT
-        description: "Entertainment satisfaction rating 1-10 scale. Game presentation and entertainment experience including music, scoreboard, games, and theme nights. Use for entertainment satisfaction analysis."
-        expr: ENTERTAIN_NUMRAT / 10.0
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["entertainment satisfaction", "entertainment rating", "entertainment score", "game entertainment", "entertainment experience", "avg entertainment satisfaction", "entertain numrat"]
-      
       - name: ENTREES_PREV_PURCH
         description: "Numeric data for entrees prev purch"
         expr: ENTREES_PREV_PURCH
@@ -2940,6 +2935,13 @@ tables:
         default_aggregation: avg
         synonyms: ["overall satisfaction", "overall rating", "overall experience", "satisfaction score", "overall numrat"]
       
+      - name: ENTERTAIN_NUMRAT
+        description: "Overall gameday experience rating 1-10 scale. Use for overall satisfaction analysis."
+        expr: ENTERTAIN_NUMRAT
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["Entertainment satisfaction", "Entertainment rating", "Entertainment score"]
+
       - name: OVERALL_NUMRAT_ADJUSTED
         description: "Overall experience rating after applying adjustments"
         expr: OVERALL_NUMRAT_ADJUSTED
@@ -4208,7 +4210,7 @@ tables:
         synonyms: ['response ID', 'survey ID']
       
       - name: season
-        description: "Baseball season year (2023, 2024, 2025, etc.)"
+        description: "Baseball season year (2023, 2024, 2025, 2026, etc.)"
         expr: season
         data_type: number
         synonyms: ['year', 'season year']
@@ -4396,12 +4398,17 @@ tables:
       - name: season_2024
         description: "Filter to 2024 season only"
         expr: season = 2024
-        synonyms: ['2024', '2024 season', 'last season']
+        synonyms: ['2024', '2024 season']
       
       - name: season_2025
         description: "Filter to 2025 season only"
         expr: season = 2025
-        synonyms: ['2025', '2025 season', 'current season']
+        synonyms: ['2025', '2025 season', 'last season']
+      
+      - name: season_2026
+        description: "Filter to 2026 season only"
+        expr: season = 2026
+        synonyms: ['2026', '2026 season', 'current season']
 
   - name: merch_no_purchase_analysis
     description: "AI-powered analysis of reasons why fans did not purchase merchandise across all seasons with sentiment classification"
