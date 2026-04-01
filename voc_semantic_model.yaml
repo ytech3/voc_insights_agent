@@ -45,13 +45,14 @@ custom_instructions: |
   For topic-specific qualitative queries (e.g., "what are qualitative feedback about parking"), 
   prioritize the relevant TB_ADDON_8_* field AND filter OVERALL_NUMRAT_OT for that topic.
 
-  CATEGORY TAXONOMY for classifying OVERALL_NUMRAT_OT (61 categories, 9 departments):
+  CATEGORY TAXONOMY for classifying OVERALL_NUMRAT_OT (64 categories, 9 departments):
   
-  CONCESSIONS (14 categories):
+  CONCESSIONS (15 categories):
   - "Food Quality" - taste, freshness, food temperature, portion size, presentation
   - "Beverage Quality" - drink quality, freshness, temperature, taste
   - "Concession Wait Times" - line length, wait duration, speed of service
   - "Concession Staff Service" - staff friendliness, helpfulness at concession stands
+  - "Concessions Staff" - general concessions staff interactions, attitude, professionalism
   - "Food Cost" - food pricing, value for money on food items
   - "Beverage Cost" - drink pricing, value for money on beverages
   - "Menu Variety" - selection, options available, dietary accommodations
@@ -63,11 +64,12 @@ custom_instructions: |
   - "Alcohol" - beer, wine, spirits quality and selection
   - "Alcohol Pricing" - beer prices, drink prices, alcohol value
 
-  RETAIL (4 categories):
+  RETAIL (5 categories):
   - "Merchandise Selection" - product variety, availability, sizing
   - "Merchandise Cost" - merchandise pricing, value
   - "Team Store Experience" - store layout, browsing, shopping experience
   - "Team Store Line" - retail checkout wait, store crowding
+  - "Retail Staff" - retail and team store staff interactions, helpfulness, merch staff
 
   GAME ENTERTAINMENT (10 categories):
   - "Team Performance" - on-field play, wins/losses, player performance
@@ -81,12 +83,13 @@ custom_instructions: |
   - "Pregame" - pregame ceremonies, warmups, early entry experience
   - "Postgame" - postgame activities, fireworks, post-event experience
 
-  FAN EXPERIENCE (10 categories):
+  FAN EXPERIENCE (11 categories):
+  - "Fan Experience" - general overall experience comments, catch-all for broad positive/negative experience feedback
   - "Crowd Energy" - fan excitement, atmosphere, crowd engagement
   - "Seating Comfort" - seat quality, legroom, comfort, seat condition
   - "Venue Cleanliness" - general cleanliness, trash, upkeep
   - "Wayfinding" - signage, navigation, finding seats/concessions
-  - "Staff Friendliness" - usher helpfulness, guest services, staff attitude
+  - "Staff Support" - usher helpfulness, guest services, general staff attitude, non-concession/non-retail staff
   - "ADA Accessibility" - handicapped parking, wheelchair access, ADA services
   - "Restroom Experience" - restroom cleanliness, wait times, supplies
   - "Seat View" - sightlines, obstructions, view quality
@@ -126,7 +129,7 @@ custom_instructions: |
   - "Concert Experience" - concert events, musical performances at venue
   - "Concert Artist" - specific artist/performer feedback
 
-  NOTE: The V_OVERALL_FEEDBACK_ANALYSIS view uses AI_CLASSIFY with these 61 categories
+  NOTE: The V_OVERALL_FEEDBACK_ANALYSIS view uses AI_CLASSIFY with these 64 categories
   and maps them to the 9 parent departments above. When users ask about feedback by
   department or category, use V_OVERALL_FEEDBACK_ANALYSIS which has pre-classified
   AI_CATEGORY and PARENT_CATEGORY columns.

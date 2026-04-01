@@ -82,6 +82,84 @@ BEGIN
     LET v_email_subject VARCHAR;
 
     -- =============================================
+    -- SECTION 3 CONTEXT: Game identity
+    -- =============================================
+    LET v_theme_names VARCHAR DEFAULT 'None';
+    LET v_giveaway_name VARCHAR DEFAULT 'None';
+    LET v_giveaway_type VARCHAR DEFAULT 'None';
+    LET v_holiday_flag NUMBER DEFAULT 0;
+
+    -- SECTION 3 CONTEXT: Audience composition (game-day)
+    LET v_pct_left_early FLOAT DEFAULT 0;
+    LET v_pct_exit_7th_or_earlier FLOAT DEFAULT 0;
+    LET v_pct_with_young_kids FLOAT DEFAULT 0;
+    LET v_pct_with_friends FLOAT DEFAULT 0;
+    LET v_pct_with_spouse FLOAT DEFAULT 0;
+    LET v_pct_alone FLOAT DEFAULT 0;
+    LET v_pct_first_time_buyer FLOAT DEFAULT 0;
+    LET v_pct_repurchase_intent FLOAT DEFAULT 0;
+    LET v_avg_group_size FLOAT DEFAULT 0;
+    LET v_pct_rays_fans FLOAT DEFAULT 0;
+    LET v_pct_opposing_fans FLOAT DEFAULT 0;
+    LET v_pct_passionate_fans FLOAT DEFAULT 0;
+    LET v_avg_age FLOAT DEFAULT 0;
+    LET v_avg_home_dist FLOAT DEFAULT 0;
+    LET v_pct_drove FLOAT DEFAULT 0;
+    LET v_pct_no_prev_season_games FLOAT DEFAULT 0;
+
+    -- SECTION 3 CONTEXT: Operational metrics (game-day)
+    LET v_pct_concess_wait_long FLOAT DEFAULT 0;
+    LET v_pct_parking_arrival_long FLOAT DEFAULT 0;
+    LET v_pct_parking_exit_long FLOAT DEFAULT 0;
+    LET v_pct_travel_longer FLOAT DEFAULT 0;
+    LET v_pct_gate_entry_long FLOAT DEFAULT 0;
+    LET v_pct_bought_concessions FLOAT DEFAULT 0;
+    LET v_pct_bought_merch FLOAT DEFAULT 0;
+    LET v_pct_mobile_order FLOAT DEFAULT 0;
+    LET v_pct_concess_spend_high FLOAT DEFAULT 0;
+
+    -- SECTION 3 CONTEXT: Promo/theme performance (game-day)
+    LET v_pct_giveaway_satisfied FLOAT DEFAULT 0;
+    LET v_pct_arrived_early_for_giveaway FLOAT DEFAULT 0;
+    LET v_pct_cared_giveaway FLOAT DEFAULT 0;
+    LET v_pct_cared_theme FLOAT DEFAULT 0;
+    LET v_pct_theme_drove_attendance FLOAT DEFAULT 0;
+    LET v_pct_theme_satisfied FLOAT DEFAULT 0;
+
+    -- SECTION 3 CONTEXT: Top incentive + buyer segment summary
+    LET v_top_incentive VARCHAR DEFAULT 'N/A';
+    LET v_buyer_seg_summary VARCHAR DEFAULT 'N/A';
+
+    -- SECTION 3 BENCHMARKS: Season average
+    LET v_szn_pct_left_early FLOAT DEFAULT 0;
+    LET v_szn_pct_with_young_kids FLOAT DEFAULT 0;
+    LET v_szn_pct_first_time_buyer FLOAT DEFAULT 0;
+    LET v_szn_pct_repurchase_intent FLOAT DEFAULT 0;
+    LET v_szn_pct_concess_wait_long FLOAT DEFAULT 0;
+    LET v_szn_pct_parking_arrival_long FLOAT DEFAULT 0;
+    LET v_szn_pct_parking_exit_long FLOAT DEFAULT 0;
+    LET v_szn_pct_bought_concessions FLOAT DEFAULT 0;
+    LET v_szn_pct_bought_merch FLOAT DEFAULT 0;
+    LET v_szn_avg_group_size FLOAT DEFAULT 0;
+
+    -- SECTION 3 BENCHMARKS: Same day-of-week
+    LET v_dow_pct_left_early FLOAT DEFAULT 0;
+    LET v_dow_pct_first_time_buyer FLOAT DEFAULT 0;
+    LET v_dow_pct_repurchase_intent FLOAT DEFAULT 0;
+    LET v_dow_pct_concess_wait_long FLOAT DEFAULT 0;
+    LET v_dow_pct_parking_arrival_long FLOAT DEFAULT 0;
+    LET v_dow_avg_group_size FLOAT DEFAULT 0;
+
+    -- SECTION 3 BENCHMARKS: Same opponent historical
+    LET v_opp_avg_overall FLOAT DEFAULT 0;
+    LET v_opp_pct_left_early FLOAT DEFAULT 0;
+    LET v_opp_pct_first_time_buyer FLOAT DEFAULT 0;
+    LET v_opp_pct_repurchase_intent FLOAT DEFAULT 0;
+    LET v_opp_num_games NUMBER DEFAULT 0;
+    LET v_opp_total_responses NUMBER DEFAULT 0;
+    LET v_opp_pct_rays_fans FLOAT DEFAULT 0;
+
+    -- =============================================
     -- DETERMINE TARGET GAME DATE
     -- =============================================
     IF (P_GAME_DATE IS NOT NULL) THEN
@@ -652,11 +730,278 @@ BEGIN
     END FOR;
 
     -- =============================================
-    -- AI-GENERATED ACTION ITEMS
+    -- SECTION 3 CONTEXT: Query A — Game-day comprehensive aggregates
+    -- =============================================
+    SELECT
+        -- Theme / Giveaway / Holiday
+        COALESCE(t.theme_list, 'None'),
+        COALESCE(g.giveaway_nm, 'None'),
+        COALESCE(g.giveaway_tp, 'None'),
+        COALESCE(MAX(v.HOLIDAY), 0),
+        -- Audience composition
+        ROUND(100.0 * SUM(CASE WHEN v.EXIT_STAGE_DESC IS NOT NULL AND v.EXIT_STAGE_DESC != 'After the final pitch' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.EXIT_STAGE_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.EXIT_STAGE_DESC IN ('7th inning','6th inning','5th inning','4th inning','3rd inning','2nd inning','1st inning') THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.EXIT_STAGE_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.ATTEND_WITH_CATEGORY_YOUNG_KIDS > 0 THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.ATTEND_WITH_CATEGORY_YOUNG_KIDS IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.ATTEND_WITH_CATEGORY_FRIENDS > 0 THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.ATTEND_WITH_CATEGORY_FRIENDS IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.ATTEND_WITH_CATEGORY_SPOUSE > 0 THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.ATTEND_WITH_CATEGORY_SPOUSE IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.ATTEND_WITH_CATEGORY_ALONE > 0 THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.ATTEND_WITH_CATEGORY_ALONE IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.PREVIOUS_PURCHASE_DESC = 'No' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.PREVIOUS_PURCHASE_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.PURCHASE_INTENT_DESC = 'Yes, I do' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.PURCHASE_INTENT_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(AVG(v.GROUP_SIZE), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.FAVORITE_TEAM_CLEAN ILIKE '%rays%' OR v.FAVORITE_TEAM_CLEAN ILIKE '%tampa bay%' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.FAVORITE_TEAM_CLEAN IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.FAVORITE_TEAM_CLEAN ILIKE '%' || v.TEAM_NICKNAME || '%' AND NOT (v.FAVORITE_TEAM_CLEAN ILIKE '%rays%' OR v.FAVORITE_TEAM_CLEAN ILIKE '%tampa bay%') THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.FAVORITE_TEAM_CLEAN IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.TEAM_AVIDITY_DESC = '5 (passionate fan)' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.TEAM_AVIDITY_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(AVG(v.AGE), 1),
+        ROUND(AVG(v.HOME_DIST), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.TRAVELTO_METHOD_DESC ILIKE '%car%' OR v.TRAVELTO_METHOD_DESC ILIKE '%vehicle%' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.TRAVELTO_METHOD_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.GAMES_PREV_SEASON_DESC = 'I did not attend any games' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.GAMES_PREV_SEASON_DESC IS NOT NULL THEN 1 END), 0), 1),
+        -- Operational metrics
+        ROUND(100.0 * SUM(CASE WHEN v.CONCESS_WAIT_EXPECT_DESC IN ('Much more than what I expected','Slightly more than what I expected') THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.CONCESS_WAIT_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.PARKING_TIME_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.PARKING_TIME_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.PARKING_EXIT_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.PARKING_EXIT_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.TRAVELTO_TIME_EXPECT_DESC = 'More than what I expected' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.TRAVELTO_TIME_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.GE_TIME_EXPECT_DESC = 'More than what I expected' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.GE_TIME_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.CONCESS_SCREENER = 1 THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.CONCESS_SCREENER IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.MERCH_SCREENER = 1 THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.MERCH_SCREENER IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.CONCESS_ORDER_METHOD_MOBILE > 0 THEN 1 ELSE 0 END)
+              / NULLIF(SUM(CASE WHEN v.CONCESS_SCREENER = 1 THEN 1 ELSE 0 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.CONCESS_SPEND IN (4, 5) THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.CONCESS_SPEND IS NOT NULL THEN 1 END), 0), 1),
+        -- Promo/theme metrics
+        ROUND(100.0 * SUM(CASE WHEN v.GIVEAWAY_SAT_DESC IN ('Highly satisfied','Somewhat satisfied') THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.GIVEAWAY_SAT_DESC IS NOT NULL AND v.GIVEAWAY_SAT_DESC != 'N/A' THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.GIVEAWAY_ARRIVAL_DESC IS NOT NULL AND v.GIVEAWAY_ARRIVAL_DESC != 'It had no impact / I arrived when I usualy would' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.GIVEAWAY_ARRIVAL_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.PA_PROMO_GRID_GIVEAWAY_DESC = 'I cared about this' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.PA_PROMO_GRID_GIVEAWAY_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.PA_PROMO_GRID_THEME_DESC = 'I cared about this' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.PA_PROMO_GRID_THEME_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.PA_THEME_INTENT_DESC = 'I would not have purchased / attended at this time' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.PA_THEME_INTENT_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.THEME_SAT_DESC IN ('Highly satisfied','Somewhat satisfied') THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.THEME_SAT_DESC IS NOT NULL AND v.THEME_SAT_DESC != 'N/A' THEN 1 END), 0), 1)
+    INTO
+        :v_theme_names, :v_giveaway_name, :v_giveaway_type, :v_holiday_flag,
+        :v_pct_left_early, :v_pct_exit_7th_or_earlier,
+        :v_pct_with_young_kids, :v_pct_with_friends, :v_pct_with_spouse, :v_pct_alone,
+        :v_pct_first_time_buyer, :v_pct_repurchase_intent, :v_avg_group_size,
+        :v_pct_rays_fans, :v_pct_opposing_fans, :v_pct_passionate_fans,
+        :v_avg_age, :v_avg_home_dist, :v_pct_drove, :v_pct_no_prev_season_games,
+        :v_pct_concess_wait_long, :v_pct_parking_arrival_long, :v_pct_parking_exit_long,
+        :v_pct_travel_longer, :v_pct_gate_entry_long,
+        :v_pct_bought_concessions, :v_pct_bought_merch, :v_pct_mobile_order, :v_pct_concess_spend_high,
+        :v_pct_giveaway_satisfied, :v_pct_arrived_early_for_giveaway,
+        :v_pct_cared_giveaway, :v_pct_cared_theme, :v_pct_theme_drove_attendance, :v_pct_theme_satisfied
+    FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI v
+    LEFT JOIN (
+        SELECT GAME_DATE::DATE AS gd, LISTAGG(DISTINCT THEME_NAME, ', ') WITHIN GROUP (ORDER BY THEME_NAME) AS theme_list
+        FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+        WHERE GAME_DATE::DATE = :v_target_game_date AND THEME_NAME IS NOT NULL
+        GROUP BY gd
+    ) t ON v.GAME_DATE::DATE = t.gd
+    LEFT JOIN (
+        SELECT GAME_DATE::DATE AS gd, MAX(GIVEAWAY_NAME) AS giveaway_nm, MAX(GIVEAWAY_TYPE) AS giveaway_tp
+        FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+        WHERE GAME_DATE::DATE = :v_target_game_date AND GIVEAWAY_NAME IS NOT NULL
+        GROUP BY gd
+    ) g ON v.GAME_DATE::DATE = g.gd
+    WHERE v.GAME_DATE::DATE = :v_target_game_date
+      AND v.OVERALL_NUMRAT IS NOT NULL;
+
+    -- =============================================
+    -- SECTION 3 CONTEXT: Query B — Season benchmark (2023+2024 for 2026; same season for historical)
+    -- =============================================
+    SELECT
+        ROUND(100.0 * SUM(CASE WHEN EXIT_STAGE_DESC IS NOT NULL AND EXIT_STAGE_DESC != 'After the final pitch' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN EXIT_STAGE_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN ATTEND_WITH_CATEGORY_YOUNG_KIDS > 0 THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN ATTEND_WITH_CATEGORY_YOUNG_KIDS IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN PREVIOUS_PURCHASE_DESC = 'No' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN PREVIOUS_PURCHASE_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN PURCHASE_INTENT_DESC = 'Yes, I do' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN PURCHASE_INTENT_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN CONCESS_WAIT_EXPECT_DESC IN ('Much more than what I expected','Slightly more than what I expected') THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN CONCESS_WAIT_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN PARKING_TIME_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN PARKING_TIME_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN PARKING_EXIT_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN PARKING_EXIT_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN CONCESS_SCREENER = 1 THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN CONCESS_SCREENER IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN MERCH_SCREENER = 1 THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN MERCH_SCREENER IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(AVG(GROUP_SIZE), 1)
+    INTO
+        :v_szn_pct_left_early, :v_szn_pct_with_young_kids,
+        :v_szn_pct_first_time_buyer, :v_szn_pct_repurchase_intent,
+        :v_szn_pct_concess_wait_long, :v_szn_pct_parking_arrival_long, :v_szn_pct_parking_exit_long,
+        :v_szn_pct_bought_concessions, :v_szn_pct_bought_merch, :v_szn_avg_group_size
+    FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+    WHERE OVERALL_NUMRAT IS NOT NULL
+      AND SEASON IN (CASE WHEN :v_season >= 2026 THEN 2023 ELSE :v_season END,
+                     CASE WHEN :v_season >= 2026 THEN 2024 ELSE :v_season END);
+
+    -- =============================================
+    -- SECTION 3 CONTEXT: Query C — Same day-of-week benchmark
+    -- =============================================
+    SELECT
+        ROUND(100.0 * SUM(CASE WHEN EXIT_STAGE_DESC IS NOT NULL AND EXIT_STAGE_DESC != 'After the final pitch' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN EXIT_STAGE_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN PREVIOUS_PURCHASE_DESC = 'No' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN PREVIOUS_PURCHASE_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN PURCHASE_INTENT_DESC = 'Yes, I do' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN PURCHASE_INTENT_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN CONCESS_WAIT_EXPECT_DESC IN ('Much more than what I expected','Slightly more than what I expected') THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN CONCESS_WAIT_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN PARKING_TIME_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN PARKING_TIME_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(AVG(GROUP_SIZE), 1)
+    INTO
+        :v_dow_pct_left_early, :v_dow_pct_first_time_buyer, :v_dow_pct_repurchase_intent,
+        :v_dow_pct_concess_wait_long, :v_dow_pct_parking_arrival_long, :v_dow_avg_group_size
+    FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+    WHERE OVERALL_NUMRAT IS NOT NULL
+      AND DAYNAME(GAME_DATE::DATE) = DAYNAME(:v_target_game_date)
+      AND SEASON IN (CASE WHEN :v_season >= 2026 THEN 2023 ELSE :v_season END,
+                     CASE WHEN :v_season >= 2026 THEN 2024 ELSE :v_season END);
+
+    -- =============================================
+    -- SECTION 3 CONTEXT: Query D — Same opponent historical (2023+2024)
+    -- =============================================
+    SELECT
+        ROUND(AVG(OVERALL_NUMRAT), 2),
+        ROUND(100.0 * SUM(CASE WHEN EXIT_STAGE_DESC IS NOT NULL AND EXIT_STAGE_DESC != 'After the final pitch' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN EXIT_STAGE_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN PREVIOUS_PURCHASE_DESC = 'No' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN PREVIOUS_PURCHASE_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN PURCHASE_INTENT_DESC = 'Yes, I do' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN PURCHASE_INTENT_DESC IS NOT NULL THEN 1 END), 0), 1),
+        COUNT(DISTINCT GAME_DATE::DATE),
+        COUNT(*),
+        ROUND(100.0 * SUM(CASE WHEN FAVORITE_TEAM_CLEAN ILIKE '%rays%' OR FAVORITE_TEAM_CLEAN ILIKE '%tampa bay%' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN FAVORITE_TEAM_CLEAN IS NOT NULL THEN 1 END), 0), 1)
+    INTO
+        :v_opp_avg_overall, :v_opp_pct_left_early, :v_opp_pct_first_time_buyer,
+        :v_opp_pct_repurchase_intent, :v_opp_num_games, :v_opp_total_responses, :v_opp_pct_rays_fans
+    FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+    WHERE AWAYTRI = :v_opponent
+      AND OVERALL_NUMRAT IS NOT NULL
+      AND SEASON IN (2023, 2024);
+
+    -- =============================================
+    -- SECTION 3 CONTEXT: Query E — Top 5 buyer segments with avg ratings
+    -- =============================================
+    SELECT LISTAGG(seg_line, ' | ') WITHIN GROUP (ORDER BY rn)
+    INTO :v_buyer_seg_summary
+    FROM (
+        SELECT
+            ROW_NUMBER() OVER (ORDER BY cnt DESC) AS rn,
+            buyer_segment || ': ' || ROUND(100.0 * cnt / total_n, 0)::VARCHAR || '% (avg ' || avg_ovr::VARCHAR || '/10)' AS seg_line
+        FROM (
+            SELECT
+                CASE
+                    WHEN BUYER_TYPE ILIKE '%plan%' OR BUYER_TYPE ILIKE '%season%' OR BUYER_TYPE ILIKE '%162%' THEN 'Season/Plan'
+                    WHEN BUYER_TYPE ILIKE '%single game ticket' THEN 'Single Game'
+                    WHEN BUYER_TYPE ILIKE '%complimentary%' OR BUYER_TYPE ILIKE '%comp%' THEN 'Complimentary'
+                    WHEN BUYER_TYPE ILIKE '%group%' THEN 'Group'
+                    WHEN BUYER_TYPE ILIKE '%suite%' THEN 'Suite/Premium'
+                    WHEN BUYER_TYPE ILIKE '%fevo%' OR BUYER_TYPE ILIKE '%offer%' OR BUYER_TYPE ILIKE '%pack%' OR BUYER_TYPE ILIKE '%ten-dollar%' THEN 'Promotional/Offer'
+                    ELSE 'Other'
+                END AS buyer_segment,
+                COUNT(*) AS cnt,
+                ROUND(AVG(OVERALL_NUMRAT), 2) AS avg_ovr,
+                SUM(COUNT(*)) OVER () AS total_n
+            FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+            WHERE GAME_DATE::DATE = :v_target_game_date AND BUYER_TYPE IS NOT NULL AND OVERALL_NUMRAT IS NOT NULL
+            GROUP BY buyer_segment
+        )
+        WHERE cnt > 0
+    )
+    WHERE rn <= 5;
+
+    -- =============================================
+    -- SECTION 3 CONTEXT: Query F — Top incentive fans requested
+    -- =============================================
+    SELECT inc_desc
+    INTO :v_top_incentive
+    FROM (
+        SELECT INCENTIVES_RANK_1_DESC AS inc_desc, COUNT(*) AS cnt
+        FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+        WHERE GAME_DATE::DATE = :v_target_game_date AND INCENTIVES_RANK_1_DESC IS NOT NULL
+        GROUP BY INCENTIVES_RANK_1_DESC
+        ORDER BY cnt DESC
+        LIMIT 1
+    );
+
+    -- =============================================
+    -- AI-GENERATED ACTION ITEMS (enriched with full context)
     -- =============================================
     LET v_action_prompt VARCHAR;
-    v_action_prompt := 'You are a senior sports business analyst for the Tampa Bay Rays. Generate exactly 2 action items. FIRST: reinforce the top positive area. SECOND: address the top negative area. Each one sentence with department and data. Use HTML div tags with icons. No markdown. GAME: ' || v_header_line || ' | ' || v_response_count::VARCHAR || ' responses | ' || v_game_avg::VARCHAR || '/10 vs ' || v_season_avg::VARCHAR || '/10 season BEST: ' || v_best1_label || ' (' || v_best1_dept || ') was ' || v_best1_delta || v_best1_suffix || ' than season average WORST: ' || v_worst1_label || ' (' || v_worst1_dept || ') was ' || v_worst1_delta || v_worst1_suffix || ' than season average FORMAT: <div>&#9989; [positive action]</div> <div>&#128640; [corrective action]</div>';
-    SELECT AI_COMPLETE('claude-sonnet-4-6', :v_action_prompt, {'temperature': 0.3, 'max_tokens': 300})
+    v_action_prompt := 'You are a sports business analyst for the Tampa Bay Rays reviewing post-game survey data. Generate exactly 2 insights as HTML.' ||
+        ' RULES:' ||
+        ' - Insight 1 (checkmark): A positive finding worth replicating — an anomaly, trend, or standout result backed by data.' ||
+        ' - Insight 2 (rocket): An area that underperformed relative to benchmarks and can be improved, with a specific recommendation.' ||
+        ' - Ground every insight in specific numbers and comparisons from the data below.' ||
+        ' - Look across ALL data to find meaningful patterns — connect audience composition, behavior, operations, qualitative feedback, promos, and benchmarks to surface non-obvious insights.' ||
+        ' - Do NOT recommend pricing adjustments to tickets, concessions, or retail — these are fixed and not adjustable.' ||
+        ' - Keep language professional and direct — no jargon, no filler, just data-backed findings and clear recommendations.' ||
+        ' GAME: ' || v_day_of_week || ', ' || v_game_date_display || ' vs ' || v_opponent ||
+        ' | ' || v_response_count::VARCHAR || ' responses | Overall: ' || v_game_avg::VARCHAR || '/10 (Season avg: ' || v_season_avg::VARCHAR || '/10)' ||
+        ' | Theme(s): ' || v_theme_names || ' | Giveaway: ' || v_giveaway_name || ' (' || v_giveaway_type || ')' ||
+        ' | Holiday: ' || IFF(v_holiday_flag > 0, 'Yes', 'No') ||
+        ' AUDIENCE:' ||
+        ' - First-time buyers: ' || COALESCE(v_pct_first_time_buyer, 0)::VARCHAR || '% (Season: ' || COALESCE(v_szn_pct_first_time_buyer, 0)::VARCHAR || '% | ' || v_day_of_week || 's: ' || COALESCE(v_dow_pct_first_time_buyer, 0)::VARCHAR || '% | vs ' || v_opponent || ' hist: ' || COALESCE(v_opp_pct_first_time_buyer, 0)::VARCHAR || '%)' ||
+        ' - Young kids: ' || COALESCE(v_pct_with_young_kids, 0)::VARCHAR || '% (Season: ' || COALESCE(v_szn_pct_with_young_kids, 0)::VARCHAR || '%)' ||
+        ' - Friends: ' || COALESCE(v_pct_with_friends, 0)::VARCHAR || '% | Spouse: ' || COALESCE(v_pct_with_spouse, 0)::VARCHAR || '% | Alone: ' || COALESCE(v_pct_alone, 0)::VARCHAR || '%' ||
+        ' - Avg group: ' || COALESCE(v_avg_group_size, 0)::VARCHAR || ' (Season: ' || COALESCE(v_szn_avg_group_size, 0)::VARCHAR || ' | ' || v_day_of_week || 's: ' || COALESCE(v_dow_avg_group_size, 0)::VARCHAR || ')' ||
+        ' - Passionate fans (5/5): ' || COALESCE(v_pct_passionate_fans, 0)::VARCHAR || '% | Rays fans: ' || COALESCE(v_pct_rays_fans, 0)::VARCHAR || '% | ' || v_opponent || ' fans: ' || COALESCE(v_pct_opposing_fans, 0)::VARCHAR || '%' ||
+        ' - No games last season: ' || COALESCE(v_pct_no_prev_season_games, 0)::VARCHAR || '% | Avg age: ' || COALESCE(v_avg_age, 0)::VARCHAR || ' | Avg distance: ' || COALESCE(v_avg_home_dist, 0)::VARCHAR || 'mi | Drove: ' || COALESCE(v_pct_drove, 0)::VARCHAR || '%' ||
+        ' - Repurchase intent: ' || COALESCE(v_pct_repurchase_intent, 0)::VARCHAR || '% (Season: ' || COALESCE(v_szn_pct_repurchase_intent, 0)::VARCHAR || '% | ' || v_day_of_week || 's: ' || COALESCE(v_dow_pct_repurchase_intent, 0)::VARCHAR || '% | vs ' || v_opponent || ' hist: ' || COALESCE(v_opp_pct_repurchase_intent, 0)::VARCHAR || '%)' ||
+        ' BUYER MIX (top 5): ' || COALESCE(v_buyer_seg_summary, 'N/A') ||
+        ' OPERATIONS (game | season | same DOW):' ||
+        ' - Left early: ' || COALESCE(v_pct_left_early, 0)::VARCHAR || '% | ' || COALESCE(v_szn_pct_left_early, 0)::VARCHAR || '% | ' || COALESCE(v_dow_pct_left_early, 0)::VARCHAR || '% (7th or earlier: ' || COALESCE(v_pct_exit_7th_or_earlier, 0)::VARCHAR || '%)' ||
+        ' - Concession wait long: ' || COALESCE(v_pct_concess_wait_long, 0)::VARCHAR || '% | ' || COALESCE(v_szn_pct_concess_wait_long, 0)::VARCHAR || '% | ' || COALESCE(v_dow_pct_concess_wait_long, 0)::VARCHAR || '%' ||
+        ' - Parking arrival long: ' || COALESCE(v_pct_parking_arrival_long, 0)::VARCHAR || '% | ' || COALESCE(v_szn_pct_parking_arrival_long, 0)::VARCHAR || '% | ' || COALESCE(v_dow_pct_parking_arrival_long, 0)::VARCHAR || '%' ||
+        ' - Parking exit long: ' || COALESCE(v_pct_parking_exit_long, 0)::VARCHAR || '% | ' || COALESCE(v_szn_pct_parking_exit_long, 0)::VARCHAR || '%' ||
+        ' - Travel longer: ' || COALESCE(v_pct_travel_longer, 0)::VARCHAR || '% | Gate entry longer: ' || COALESCE(v_pct_gate_entry_long, 0)::VARCHAR || '%' ||
+        ' - Bought concessions: ' || COALESCE(v_pct_bought_concessions, 0)::VARCHAR || '% (Season: ' || COALESCE(v_szn_pct_bought_concessions, 0)::VARCHAR || '%) | Bought merch: ' || COALESCE(v_pct_bought_merch, 0)::VARCHAR || '% (Season: ' || COALESCE(v_szn_pct_bought_merch, 0)::VARCHAR || '%)' ||
+        ' - Mobile ordering: ' || COALESCE(v_pct_mobile_order, 0)::VARCHAR || '% | Concession spend $41+: ' || COALESCE(v_pct_concess_spend_high, 0)::VARCHAR || '%' ||
+        ' PROMO/THEME:' ||
+        ' - Giveaway satisfaction: ' || COALESCE(v_pct_giveaway_satisfied, 0)::VARCHAR || '% | Arrived early for giveaway: ' || COALESCE(v_pct_arrived_early_for_giveaway, 0)::VARCHAR || '%' ||
+        ' - Cared about giveaway: ' || COALESCE(v_pct_cared_giveaway, 0)::VARCHAR || '% | Cared about theme: ' || COALESCE(v_pct_cared_theme, 0)::VARCHAR || '%' ||
+        ' - Theme drove attendance: ' || COALESCE(v_pct_theme_drove_attendance, 0)::VARCHAR || '% | Theme satisfaction: ' || COALESCE(v_pct_theme_satisfied, 0)::VARCHAR || '%' ||
+        ' VS ' || v_opponent || ' HISTORY (' || COALESCE(v_opp_num_games, 0)::VARCHAR || ' games, ' || COALESCE(v_opp_total_responses, 0)::VARCHAR || ' responses):' ||
+        ' - Overall: ' || COALESCE(v_opp_avg_overall, 0)::VARCHAR || '/10 | Left early: ' || COALESCE(v_opp_pct_left_early, 0)::VARCHAR || '% | First-timers: ' || COALESCE(v_opp_pct_first_time_buyer, 0)::VARCHAR || '% | Rays fans: ' || COALESCE(v_opp_pct_rays_fans, 0)::VARCHAR || '%' ||
+        ' QUANTITATIVE (game vs season, 35 metrics):' ||
+        ' - Best: ' || v_best1_label || ' (' || v_best1_delta || v_best1_suffix || '), ' || v_best2_label || ' (' || v_best2_delta || v_best2_suffix || '), ' || v_best3_label || ' (' || v_best3_delta || v_best3_suffix || ')' ||
+        ' - Worst: ' || v_worst1_label || ' (' || v_worst1_delta || v_worst1_suffix || '), ' || v_worst2_label || ' (' || v_worst2_delta || v_worst2_suffix || '), ' || v_worst3_label || ' (' || v_worst3_delta || v_worst3_suffix || ')' ||
+        ' QUALITATIVE (top sentence-level topics):' ||
+        ' - Positive: ' || v_pos_topic_1 || ' (' || v_pos_topic_1_pct::VARCHAR || '%), ' || v_pos_topic_2 || ' (' || v_pos_topic_2_pct::VARCHAR || '%), ' || v_pos_topic_3 || ' (' || v_pos_topic_3_pct::VARCHAR || '%)' ||
+        ' - Negative: ' || v_neg_topic_1 || ' (' || v_neg_topic_1_pct::VARCHAR || '%), ' || v_neg_topic_2 || ' (' || v_neg_topic_2_pct::VARCHAR || '%), ' || v_neg_topic_3 || ' (' || v_neg_topic_3_pct::VARCHAR || '%)' ||
+        ' TOP FAN REQUEST: ' || COALESCE(v_top_incentive, 'N/A') ||
+        ' FORMAT (output ONLY these two divs, nothing else): <div>&#9989; [positive insight with specific data]</div> <div>&#128640; [improvement insight with specific data]</div>';
+
+    SELECT AI_COMPLETE('claude-sonnet-4-6', :v_action_prompt, {'temperature': 0.3, 'max_tokens': 500})
     INTO :v_action_items;
 
     -- =============================================

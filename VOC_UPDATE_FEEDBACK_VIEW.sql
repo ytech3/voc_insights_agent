@@ -48,15 +48,16 @@ WITH base_data AS (
 with_ai_analysis AS (
     SELECT
         *,
-        -- Topic classification (61 categories)
+        -- Topic classification (64 categories)
         AI_CLASSIFY(
             feedback_text,
             ARRAY_CONSTRUCT(
-                -- Concessions (14)
+                -- Concessions (15)
                 'Food Quality',
                 'Beverage Quality',
                 'Concession Wait Times',
                 'Concession Staff Service',
+                'Concessions Staff',
                 'Food Cost',
                 'Beverage Cost',
                 'Menu Variety',
@@ -67,11 +68,12 @@ with_ai_analysis AS (
                 'Vegan Options',
                 'Alcohol',
                 'Alcohol Pricing',
-                -- Retail (4)
+                -- Retail (5)
                 'Merchandise Selection',
                 'Merchandise Cost',
                 'Team Store Experience',
                 'Team Store Line',
+                'Retail Staff',
                 -- Game Entertainment (10)
                 'Team Performance',
                 'Game Competitiveness',
@@ -83,12 +85,13 @@ with_ai_analysis AS (
                 'Kids Club',
                 'Pregame',
                 'Postgame',
-                -- Fan Experience (10)
+                -- Fan Experience (11)
+                'Fan Experience',
                 'Crowd Energy',
                 'Seating Comfort',
                 'Venue Cleanliness',
                 'Wayfinding',
-                'Staff Friendliness',
+                'Staff Support',
                 'ADA Accessibility',
                 'Restroom Experience',
                 'Seat View',
@@ -147,19 +150,20 @@ with_parent_category AS (
     SELECT
         *,
         CASE
-            -- Concessions (14)
+            -- Concessions (15)
             WHEN ai_category IN ('Food Quality', 'Beverage Quality', 'Concession Wait Times', 'Concession Staff Service',
-                                 'Food Cost', 'Beverage Cost', 'Menu Variety',
+                                 'Concessions Staff', 'Food Cost', 'Beverage Cost', 'Menu Variety',
                                  'Hot Dogs', 'Pizza', 'Burger', 'Fries', 'Vegan Options',
                                  'Alcohol', 'Alcohol Pricing') THEN 'Concessions'
-            -- Retail (4)
-            WHEN ai_category IN ('Merchandise Selection', 'Merchandise Cost', 'Team Store Experience', 'Team Store Line') THEN 'Retail'
+            -- Retail (5)
+            WHEN ai_category IN ('Merchandise Selection', 'Merchandise Cost', 'Team Store Experience', 'Team Store Line',
+                                 'Retail Staff') THEN 'Retail'
             -- Game Entertainment (10)
             WHEN ai_category IN ('Team Performance', 'Game Competitiveness', 'On-Field Entertainment', 'Game Production',
                                  'Promotions', 'Music', 'Giveaway', 'Kids Club', 'Pregame', 'Postgame') THEN 'Game Entertainment'
-            -- Fan Experience (10)
-            WHEN ai_category IN ('Crowd Energy', 'Seating Comfort', 'Venue Cleanliness', 'Wayfinding', 'Staff Friendliness',
-                                 'ADA Accessibility', 'Restroom Experience', 'Seat View',
+            -- Fan Experience (11)
+            WHEN ai_category IN ('Fan Experience', 'Crowd Energy', 'Seating Comfort', 'Venue Cleanliness', 'Wayfinding',
+                                 'Staff Support', 'ADA Accessibility', 'Restroom Experience', 'Seat View',
                                  'Run the Bases', 'Autographs') THEN 'Fan Experience'
             -- Parking (3)
             WHEN ai_category IN ('Parking Availability', 'Departure Traffic', 'Parking Cost') THEN 'Parking'
