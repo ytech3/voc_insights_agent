@@ -48,6 +48,9 @@ BEGIN
     -- Section 2: Sentence-level qualitative variables
     LET v_positive_total NUMBER DEFAULT 0;
     LET v_negative_total NUMBER DEFAULT 0;
+    LET v_feedback_total NUMBER DEFAULT 0;
+    LET v_positive_pct VARCHAR DEFAULT '0';
+    LET v_negative_pct VARCHAR DEFAULT '0';
     LET v_pos_topic_1 VARCHAR DEFAULT 'N/A'; LET v_pos_topic_1_pct VARCHAR DEFAULT '0';
     LET v_pos_topic_2 VARCHAR DEFAULT 'N/A'; LET v_pos_topic_2_pct VARCHAR DEFAULT '0';
     LET v_pos_topic_3 VARCHAR DEFAULT 'N/A'; LET v_pos_topic_3_pct VARCHAR DEFAULT '0';
@@ -63,16 +66,15 @@ BEGIN
     LET v_worst2_label VARCHAR DEFAULT 'N/A'; LET v_worst2_dept VARCHAR DEFAULT ''; LET v_worst2_delta VARCHAR DEFAULT '0'; LET v_worst2_unit VARCHAR DEFAULT '';
     LET v_worst3_label VARCHAR DEFAULT 'N/A'; LET v_worst3_dept VARCHAR DEFAULT ''; LET v_worst3_delta VARCHAR DEFAULT '0'; LET v_worst3_unit VARCHAR DEFAULT '';
 
-    -- Natural language suffix: "% higher/lower" for percentages, "points higher/lower" for /10 ratings
+    -- Natural language suffix: always "% higher" or "% lower"
     LET v_best1_suffix VARCHAR DEFAULT '% higher';
     LET v_best2_suffix VARCHAR DEFAULT '% higher';
     LET v_best3_suffix VARCHAR DEFAULT '% higher';
-    LET v_worst1_suffix VARCHAR DEFAULT '% lower';
-    LET v_worst2_suffix VARCHAR DEFAULT '% lower';
-    LET v_worst3_suffix VARCHAR DEFAULT '% lower';
+    LET v_worst1_suffix VARCHAR DEFAULT '% higher';
+    LET v_worst2_suffix VARCHAR DEFAULT '% higher';
+    LET v_worst3_suffix VARCHAR DEFAULT '% higher';
 
     -- Logo variables
-    LET v_opponent_logo_file VARCHAR;
     LET v_opponent_logo_url VARCHAR DEFAULT '';
     LET v_rays_logo_url VARCHAR DEFAULT '';
 
@@ -126,38 +128,38 @@ BEGIN
     LET v_pct_theme_drove_attendance FLOAT DEFAULT 0;
     LET v_pct_theme_satisfied FLOAT DEFAULT 0;
 
-    -- SECTION 3 CONTEXT: Top incentive + buyer segment summary
-    LET v_top_incentive VARCHAR DEFAULT 'N/A';
+    -- SECTION 3 CONTEXT: Buyer segment summary
     LET v_buyer_seg_summary VARCHAR DEFAULT 'N/A';
 
-    -- SECTION 3 BENCHMARKS: Season average
-    LET v_szn_pct_left_early FLOAT DEFAULT 0;
-    LET v_szn_pct_with_young_kids FLOAT DEFAULT 0;
-    LET v_szn_pct_first_time_buyer FLOAT DEFAULT 0;
-    LET v_szn_pct_repurchase_intent FLOAT DEFAULT 0;
-    LET v_szn_pct_concess_wait_long FLOAT DEFAULT 0;
-    LET v_szn_pct_parking_arrival_long FLOAT DEFAULT 0;
-    LET v_szn_pct_parking_exit_long FLOAT DEFAULT 0;
-    LET v_szn_pct_bought_concessions FLOAT DEFAULT 0;
-    LET v_szn_pct_bought_merch FLOAT DEFAULT 0;
-    LET v_szn_avg_group_size FLOAT DEFAULT 0;
-
-    -- SECTION 3 BENCHMARKS: Same day-of-week
-    LET v_dow_pct_left_early FLOAT DEFAULT 0;
-    LET v_dow_pct_first_time_buyer FLOAT DEFAULT 0;
-    LET v_dow_pct_repurchase_intent FLOAT DEFAULT 0;
-    LET v_dow_pct_concess_wait_long FLOAT DEFAULT 0;
-    LET v_dow_pct_parking_arrival_long FLOAT DEFAULT 0;
-    LET v_dow_avg_group_size FLOAT DEFAULT 0;
-
-    -- SECTION 3 BENCHMARKS: Same opponent historical
-    LET v_opp_avg_overall FLOAT DEFAULT 0;
-    LET v_opp_pct_left_early FLOAT DEFAULT 0;
-    LET v_opp_pct_first_time_buyer FLOAT DEFAULT 0;
-    LET v_opp_pct_repurchase_intent FLOAT DEFAULT 0;
-    LET v_opp_num_games NUMBER DEFAULT 0;
-    LET v_opp_total_responses NUMBER DEFAULT 0;
-    LET v_opp_pct_rays_fans FLOAT DEFAULT 0;
+    -- SECTION 3 BENCHMARKS: Game Tier (same-tier avg from 2023+2024)
+    LET v_game_tier NUMBER DEFAULT 0;
+    LET v_tier_avg_overall FLOAT DEFAULT 0;
+    LET v_tier_num_games NUMBER DEFAULT 0;
+    LET v_tier_total_responses NUMBER DEFAULT 0;
+    LET v_tier_pct_left_early FLOAT DEFAULT 0;
+    LET v_tier_pct_exit_7th_or_earlier FLOAT DEFAULT 0;
+    LET v_tier_pct_with_young_kids FLOAT DEFAULT 0;
+    LET v_tier_pct_with_friends FLOAT DEFAULT 0;
+    LET v_tier_pct_with_spouse FLOAT DEFAULT 0;
+    LET v_tier_pct_alone FLOAT DEFAULT 0;
+    LET v_tier_pct_first_time_buyer FLOAT DEFAULT 0;
+    LET v_tier_pct_repurchase_intent FLOAT DEFAULT 0;
+    LET v_tier_avg_group_size FLOAT DEFAULT 0;
+    LET v_tier_pct_rays_fans FLOAT DEFAULT 0;
+    LET v_tier_pct_passionate_fans FLOAT DEFAULT 0;
+    LET v_tier_avg_age FLOAT DEFAULT 0;
+    LET v_tier_avg_home_dist FLOAT DEFAULT 0;
+    LET v_tier_pct_drove FLOAT DEFAULT 0;
+    LET v_tier_pct_no_prev_season_games FLOAT DEFAULT 0;
+    LET v_tier_pct_concess_wait_long FLOAT DEFAULT 0;
+    LET v_tier_pct_parking_arrival_long FLOAT DEFAULT 0;
+    LET v_tier_pct_parking_exit_long FLOAT DEFAULT 0;
+    LET v_tier_pct_travel_longer FLOAT DEFAULT 0;
+    LET v_tier_pct_gate_entry_long FLOAT DEFAULT 0;
+    LET v_tier_pct_bought_concessions FLOAT DEFAULT 0;
+    LET v_tier_pct_bought_merch FLOAT DEFAULT 0;
+    LET v_tier_pct_mobile_order FLOAT DEFAULT 0;
+    LET v_tier_pct_concess_spend_high FLOAT DEFAULT 0;
 
     -- =============================================
     -- DETERMINE TARGET GAME DATE
@@ -178,8 +180,10 @@ BEGIN
     END IF;
 
     -- =============================================
-    -- HEADER: Game date, opponent, day of week, logo filename
+    -- HEADER: Game date, opponent, day of week, opponent logo (base64)
     -- =============================================
+    -- The opponent logo base64 is generated inline to avoid passing a bind variable
+    -- through BUILD_SCOPED_FILE_URL, which can fail in procedure context.
     SELECT
         DECODE(DAYNAME(GAME_DATE::DATE),
             'Mon','Monday','Tue','Tuesday','Wed','Wednesday',
@@ -187,39 +191,43 @@ BEGIN
         AWAYTRI,
         TO_VARCHAR(GAME_DATE::DATE, 'MMMM DD'),
         SEASON,
-        CASE AWAYTRI
-            WHEN 'ATH' THEN 'Oakland_Athletics.png'
-            WHEN 'ATL' THEN 'Atlanta_Braves.png'
-            WHEN 'AZ'  THEN 'Arizona_Diamondbacks.png'
-            WHEN 'BAL' THEN 'Baltimore_Orioles.png'
-            WHEN 'BOS' THEN 'Boston_Redsox.png'
-            WHEN 'CHC' THEN 'Chicago_Cubs.png'
-            WHEN 'CIN' THEN 'Cincinnati_Reds.png'
-            WHEN 'CLE' THEN 'Cleveland_Guardians.png'
-            WHEN 'COL' THEN 'Colorado_Rockies.png'
-            WHEN 'CWS' THEN 'Chicago_Whitesox.png'
-            WHEN 'DET' THEN 'Detroit_Tigers.png'
-            WHEN 'HOU' THEN 'Houston_Astros.png'
-            WHEN 'KC'  THEN 'KansasCity_Royals.png'
-            WHEN 'LAA' THEN 'LosAngeles_Angels.png'
-            WHEN 'LAD' THEN 'LosAngeles_Dodgers.png'
-            WHEN 'MIA' THEN 'Miami_Marlins.png'
-            WHEN 'MIL' THEN 'Milwaukee_Brewers.png'
-            WHEN 'MIN' THEN 'Minnesota_Twins.png'
-            WHEN 'NYM' THEN 'NewYork_Mets.png'
-            WHEN 'NYY' THEN 'NewYork_Yankees.png'
-            WHEN 'PHI' THEN 'Philadelphia_Phillies.png'
-            WHEN 'PIT' THEN 'Pittsburgh_Pirates.png'
-            WHEN 'SD'  THEN 'SanDiego_Padres.png'
-            WHEN 'SEA' THEN 'Seattle_Mariners.png'
-            WHEN 'SF'  THEN 'SanFrancisco_Giants.png'
-            WHEN 'STL' THEN 'StLouis_Cardinals.png'
-            WHEN 'TEX' THEN 'Texas_Rangers.png'
-            WHEN 'TOR' THEN 'Toronto_BlueJays.png'
-            WHEN 'WSH' THEN 'Washington_Nationals.png'
-            ELSE 'TampaBay_Rays.png'
-        END
-    INTO :v_day_of_week, :v_opponent, :v_game_date_display, :v_season, :v_opponent_logo_file
+        TBRDP_DW_DEV.IM_RPT.READ_STAGE_FILE_BASE64(
+            BUILD_SCOPED_FILE_URL(@TBRDP_DW_DEV.IM_RPT.MLB_LOGOS_STAGE,
+                CASE AWAYTRI
+                    WHEN 'ATH' THEN 'Oakland_Athletics.png'
+                    WHEN 'ATL' THEN 'Atlanta_Braves.png'
+                    WHEN 'AZ'  THEN 'Arizona_Diamondbacks.png'
+                    WHEN 'BAL' THEN 'Baltimore_Orioles.png'
+                    WHEN 'BOS' THEN 'Boston_Redsox.png'
+                    WHEN 'CHC' THEN 'Chicago_Cubs.png'
+                    WHEN 'CIN' THEN 'Cincinnati_Reds.png'
+                    WHEN 'CLE' THEN 'Cleveland_Guardians.png'
+                    WHEN 'COL' THEN 'Colorado_Rockies.png'
+                    WHEN 'CWS' THEN 'Chicago_Whitesox.png'
+                    WHEN 'DET' THEN 'Detroit_Tigers.png'
+                    WHEN 'HOU' THEN 'Houston_Astros.png'
+                    WHEN 'KC'  THEN 'KansasCity_Royals.png'
+                    WHEN 'LAA' THEN 'LosAngeles_Angels.png'
+                    WHEN 'LAD' THEN 'LosAngeles_Dodgers.png'
+                    WHEN 'MIA' THEN 'Miami_Marlins.png'
+                    WHEN 'MIL' THEN 'Milwaukee_Brewers.png'
+                    WHEN 'MIN' THEN 'Minnesota_Twins.png'
+                    WHEN 'NYM' THEN 'NewYork_Mets.png'
+                    WHEN 'NYY' THEN 'NewYork_Yankees.png'
+                    WHEN 'PHI' THEN 'Philadelphia_Phillies.png'
+                    WHEN 'PIT' THEN 'Pittsburgh_Pirates.png'
+                    WHEN 'SD'  THEN 'SanDiego_Padres.png'
+                    WHEN 'SEA' THEN 'Seattle_Mariners.png'
+                    WHEN 'SF'  THEN 'SanFrancisco_Giants.png'
+                    WHEN 'STL' THEN 'StLouis_Cardinals.png'
+                    WHEN 'TEX' THEN 'Texas_Rangers.png'
+                    WHEN 'TOR' THEN 'Toronto_BlueJays.png'
+                    WHEN 'WSH' THEN 'Washington_Nationals.png'
+                    ELSE 'TampaBay_Rays.png'
+                END
+            )
+        )
+    INTO :v_day_of_week, :v_opponent, :v_game_date_display, :v_season, :v_opponent_logo_url
     FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
     WHERE GAME_DATE::DATE = :v_target_game_date
       AND AWAYTRI IS NOT NULL
@@ -227,16 +235,7 @@ BEGIN
 
     v_header_line := v_day_of_week || ', ' || v_game_date_display || ' vs ' || v_opponent;
 
-    -- Embed logos as base64 data URIs — images are encoded directly into the HTML
-    -- so they display without requiring "show images" in email clients that support data URIs.
-    -- Uses permanent Python UDF READ_STAGE_FILE_BASE64 which reads PNG from stage and returns
-    -- data:image/png;base64,... string. BUILD_SCOPED_FILE_URL provides the stage file reference.
-    SELECT TBRDP_DW_DEV.IM_RPT.READ_STAGE_FILE_BASE64(
-        BUILD_SCOPED_FILE_URL(@TBRDP_DW_DEV.IM_RPT.MLB_LOGOS_STAGE, fname)
-    )
-    INTO :v_opponent_logo_url
-    FROM (SELECT :v_opponent_logo_file AS fname);
-
+    -- Embed Rays logo as base64 data URI
     SELECT TBRDP_DW_DEV.IM_RPT.READ_STAGE_FILE_BASE64(
         BUILD_SCOPED_FILE_URL(@TBRDP_DW_DEV.IM_RPT.MLB_LOGOS_STAGE, 'TampaBay_Rays.png')
     )
@@ -285,6 +284,14 @@ BEGIN
     WHERE GAME_DATE::DATE = :v_target_game_date
       AND ai_category IS NOT NULL
       AND sentiment_category IN ('Positive', 'Negative');
+
+    v_feedback_total := v_positive_total + v_negative_total;
+    v_positive_pct := CASE WHEN v_feedback_total > 0
+        THEN ROUND(100.0 * v_positive_total / v_feedback_total, 0)::VARCHAR
+        ELSE '0' END;
+    v_negative_pct := CASE WHEN v_feedback_total > 0
+        THEN ROUND(100.0 * v_negative_total / v_feedback_total, 0)::VARCHAR
+        ELSE '0' END;
 
     -- Top 3 Positive topics
     LET rs_pos RESULTSET := (
@@ -342,14 +349,14 @@ BEGIN
 
     -- =============================================
     -- SECTION 3: QUANTITATIVE SUMMARY
-    -- Game vs Season metric comparison (35 metrics)
+    -- Game vs Season metric comparison (~30 metrics, satisfaction extremes)
     -- Top 3 best improvements, Top 3 worst regressions
-    -- Natural language: "Fans satisfied with X was Y% higher/lower"
-    -- For /10 ratings: "Y points higher/lower"
-    -- Improvement calc: /10 = game-season; % = season-game (positive = better)
+    -- Positive: "Fans highly satisfied with X was Y% higher"
+    -- Negative: "Fans highly dissatisfied with X was Y% higher"
+    -- Improvement calc: game_val - season_val (all metrics are percentages)
     -- =============================================
 
-    -- Top 3 BEST improvements
+    -- Top 3 BEST improvements (% highly satisfied / % 9-10 scores, game vs season)
     LET rs_best RESULTSET := (
         WITH game AS (
             SELECT * FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
@@ -360,208 +367,188 @@ BEGIN
             WHERE SEASON = :v_season AND OVERALL_NUMRAT IS NOT NULL
         ),
         metrics AS (
-            -- Rating metrics (/10) — higher = better
-            SELECT 'Overall Rating' AS metric_label, 'General' AS dept, '/10' AS unit,
-                ROUND(AVG(OVERALL_NUMRAT),2) AS game_val,
-                (SELECT ROUND(AVG(OVERALL_NUMRAT),2) FROM season) AS season_val,
-                COUNT(CASE WHEN OVERALL_NUMRAT IS NOT NULL THEN 1 END) AS n
+            -- 0-10 Numeric Ratings: % of 9-10 responses (top scores)
+            SELECT 'Overall Rating' AS metric_label, 'General' AS dept, '% Top Scores' AS unit,
+                ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT >= 9 AND OVERALL_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT IS NOT NULL AND OVERALL_NUMRAT < 80 THEN 1 ELSE 0 END),0),2) AS game_val,
+                (SELECT ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT >= 9 AND OVERALL_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT IS NOT NULL AND OVERALL_NUMRAT < 80 THEN 1 ELSE 0 END),0),2) FROM season) AS season_val,
+                SUM(CASE WHEN OVERALL_NUMRAT IS NOT NULL AND OVERALL_NUMRAT < 80 THEN 1 ELSE 0 END) AS n
             FROM game
             UNION ALL
-            SELECT 'Concession Rating', 'Concessions', '/10',
-                ROUND(AVG(CONCESS_NUMRAT),2),
-                (SELECT ROUND(AVG(CONCESS_NUMRAT),2) FROM season WHERE CONCESS_NUMRAT IS NOT NULL),
-                COUNT(CASE WHEN CONCESS_NUMRAT IS NOT NULL THEN 1 END)
-            FROM game WHERE CONCESS_NUMRAT IS NOT NULL
-            UNION ALL
-            SELECT 'Parking Rating', 'Parking', '/10',
-                ROUND(AVG(PARKING_NUMRAT),2),
-                (SELECT ROUND(AVG(PARKING_NUMRAT),2) FROM season WHERE PARKING_NUMRAT IS NOT NULL),
-                COUNT(CASE WHEN PARKING_NUMRAT IS NOT NULL THEN 1 END)
-            FROM game WHERE PARKING_NUMRAT IS NOT NULL
-            UNION ALL
-            -- Concession grid dissatisfaction (lower = better, improvement = season - game)
-            SELECT 'Concession Value', 'Concessions', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_VALUE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_VALUE_DESC IS NOT NULL AND CONCESS_GRID_VALUE_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_VALUE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_VALUE_DESC IS NOT NULL AND CONCESS_GRID_VALUE_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN CONCESS_GRID_VALUE_DESC IS NOT NULL AND CONCESS_GRID_VALUE_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Concession Rating', 'Concessions', '% Top Scores',
+                ROUND(100.0*SUM(CASE WHEN CONCESS_NUMRAT >= 9 AND CONCESS_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_NUMRAT IS NOT NULL AND CONCESS_NUMRAT < 80 THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_NUMRAT >= 9 AND CONCESS_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_NUMRAT IS NOT NULL AND CONCESS_NUMRAT < 80 THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN CONCESS_NUMRAT IS NOT NULL AND CONCESS_NUMRAT < 80 THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Concession Service', 'Concessions', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC IS NOT NULL AND CONCESS_GRID_CUSTSERV_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC IS NOT NULL AND CONCESS_GRID_CUSTSERV_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC IS NOT NULL AND CONCESS_GRID_CUSTSERV_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Parking Rating', 'Parking', '% Top Scores',
+                ROUND(100.0*SUM(CASE WHEN PARKING_NUMRAT >= 9 AND PARKING_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN PARKING_NUMRAT IS NOT NULL AND PARKING_NUMRAT < 80 THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN PARKING_NUMRAT >= 9 AND PARKING_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN PARKING_NUMRAT IS NOT NULL AND PARKING_NUMRAT < 80 THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN PARKING_NUMRAT IS NOT NULL AND PARKING_NUMRAT < 80 THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Concession Selection', 'Concessions', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC IS NOT NULL AND CONCESS_GRID_SELECTION_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC IS NOT NULL AND CONCESS_GRID_SELECTION_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC IS NOT NULL AND CONCESS_GRID_SELECTION_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Entertainment Rating', 'Game Entertainment', '% Top Scores',
+                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_NUMRAT >= 9 AND ENTERTAIN_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_NUMRAT IS NOT NULL AND ENTERTAIN_NUMRAT < 80 THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_NUMRAT >= 9 AND ENTERTAIN_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_NUMRAT IS NOT NULL AND ENTERTAIN_NUMRAT < 80 THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN ENTERTAIN_NUMRAT IS NOT NULL AND ENTERTAIN_NUMRAT < 80 THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Concession Cleanliness', 'Concessions', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC IS NOT NULL AND CONCESS_GRID_CLEAN_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC IS NOT NULL AND CONCESS_GRID_CLEAN_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC IS NOT NULL AND CONCESS_GRID_CLEAN_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Merch Rating', 'Retail', '% Top Scores',
+                ROUND(100.0*SUM(CASE WHEN MERCH_NUMRAT >= 9 AND MERCH_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_NUMRAT IS NOT NULL AND MERCH_NUMRAT < 80 THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_NUMRAT >= 9 AND MERCH_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_NUMRAT IS NOT NULL AND MERCH_NUMRAT < 80 THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN MERCH_NUMRAT IS NOT NULL AND MERCH_NUMRAT < 80 THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            -- Merchandise grid dissatisfaction
-            SELECT 'Merch Pricing', 'Retail', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_PRICE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_PRICE_DESC IS NOT NULL AND MERCH_GRID_PRICE_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_PRICE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_PRICE_DESC IS NOT NULL AND MERCH_GRID_PRICE_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN MERCH_GRID_PRICE_DESC IS NOT NULL AND MERCH_GRID_PRICE_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Staff Rating', 'Operations', '% Top Scores',
+                ROUND(100.0*SUM(CASE WHEN STAFF_NUMRAT >= 9 AND STAFF_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_NUMRAT IS NOT NULL AND STAFF_NUMRAT < 80 THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN STAFF_NUMRAT >= 9 AND STAFF_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_NUMRAT IS NOT NULL AND STAFF_NUMRAT < 80 THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN STAFF_NUMRAT IS NOT NULL AND STAFF_NUMRAT < 80 THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Merch Selection', 'Retail', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_SELECTION_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_SELECTION_DESC IS NOT NULL AND MERCH_GRID_SELECTION_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_SELECTION_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_SELECTION_DESC IS NOT NULL AND MERCH_GRID_SELECTION_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN MERCH_GRID_SELECTION_DESC IS NOT NULL AND MERCH_GRID_SELECTION_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Seat View Rating', 'General', '% Top Scores',
+                ROUND(100.0*SUM(CASE WHEN SEATVIEW_NUMRAT >= 9 AND SEATVIEW_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN SEATVIEW_NUMRAT IS NOT NULL AND SEATVIEW_NUMRAT < 80 THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN SEATVIEW_NUMRAT >= 9 AND SEATVIEW_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN SEATVIEW_NUMRAT IS NOT NULL AND SEATVIEW_NUMRAT < 80 THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN SEATVIEW_NUMRAT IS NOT NULL AND SEATVIEW_NUMRAT < 80 THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Merch Quality', 'Retail', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC IS NOT NULL AND MERCH_GRID_MERCHQUALITY_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC IS NOT NULL AND MERCH_GRID_MERCHQUALITY_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC IS NOT NULL AND MERCH_GRID_MERCHQUALITY_DESC!='N/A' THEN 1 ELSE 0 END)
+            -- Concession Grid: % Highly satisfied
+            SELECT 'Concession Value', 'Concessions', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_VALUE_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_VALUE_DESC IS NOT NULL AND CONCESS_GRID_VALUE_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_VALUE_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_VALUE_DESC IS NOT NULL AND CONCESS_GRID_VALUE_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN CONCESS_GRID_VALUE_DESC IS NOT NULL AND CONCESS_GRID_VALUE_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Merch Wait Time', 'Retail', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_WAIT_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_WAIT_DESC IS NOT NULL AND MERCH_GRID_WAIT_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_WAIT_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_WAIT_DESC IS NOT NULL AND MERCH_GRID_WAIT_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN MERCH_GRID_WAIT_DESC IS NOT NULL AND MERCH_GRID_WAIT_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Concession Service', 'Concessions', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC IS NOT NULL AND CONCESS_GRID_CUSTSERV_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC IS NOT NULL AND CONCESS_GRID_CUSTSERV_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC IS NOT NULL AND CONCESS_GRID_CUSTSERV_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Merch Customer Service', 'Retail', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC IS NOT NULL AND MERCH_GRID_CUSTSERV_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC IS NOT NULL AND MERCH_GRID_CUSTSERV_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC IS NOT NULL AND MERCH_GRID_CUSTSERV_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Concession Selection', 'Concessions', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC IS NOT NULL AND CONCESS_GRID_SELECTION_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC IS NOT NULL AND CONCESS_GRID_SELECTION_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC IS NOT NULL AND CONCESS_GRID_SELECTION_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            -- Entertainment grid dissatisfaction
-            SELECT 'In-Game Music', 'Game Entertainment', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC IS NOT NULL AND ENTERTAIN_GRID_MUSIC_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC IS NOT NULL AND ENTERTAIN_GRID_MUSIC_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC IS NOT NULL AND ENTERTAIN_GRID_MUSIC_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Concession Cleanliness', 'Concessions', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC IS NOT NULL AND CONCESS_GRID_CLEAN_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC IS NOT NULL AND CONCESS_GRID_CLEAN_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC IS NOT NULL AND CONCESS_GRID_CLEAN_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'In-Game Activities', 'Game Entertainment', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_GAMES_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_GAMES_DESC IS NOT NULL AND ENTERTAIN_GRID_GAMES_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_GAMES_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_GAMES_DESC IS NOT NULL AND ENTERTAIN_GRID_GAMES_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN ENTERTAIN_GRID_GAMES_DESC IS NOT NULL AND ENTERTAIN_GRID_GAMES_DESC!='N/A' THEN 1 ELSE 0 END)
+            -- Merchandise Grid: % Highly satisfied
+            SELECT 'Merch Pricing', 'Retail', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_PRICE_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_PRICE_DESC IS NOT NULL AND MERCH_GRID_PRICE_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_PRICE_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_PRICE_DESC IS NOT NULL AND MERCH_GRID_PRICE_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN MERCH_GRID_PRICE_DESC IS NOT NULL AND MERCH_GRID_PRICE_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Scoreboard', 'Game Entertainment', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_SCOREBOARD_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_SCOREBOARD_DESC IS NOT NULL AND ENTERTAIN_GRID_SCOREBOARD_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_SCOREBOARD_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_SCOREBOARD_DESC IS NOT NULL AND ENTERTAIN_GRID_SCOREBOARD_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN ENTERTAIN_GRID_SCOREBOARD_DESC IS NOT NULL AND ENTERTAIN_GRID_SCOREBOARD_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Merch Selection', 'Retail', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_SELECTION_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_SELECTION_DESC IS NOT NULL AND MERCH_GRID_SELECTION_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_SELECTION_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_SELECTION_DESC IS NOT NULL AND MERCH_GRID_SELECTION_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN MERCH_GRID_SELECTION_DESC IS NOT NULL AND MERCH_GRID_SELECTION_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Game Theme', 'Game Entertainment', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_THEME_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_THEME_DESC IS NOT NULL AND ENTERTAIN_GRID_THEME_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_THEME_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_THEME_DESC IS NOT NULL AND ENTERTAIN_GRID_THEME_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN ENTERTAIN_GRID_THEME_DESC IS NOT NULL AND ENTERTAIN_GRID_THEME_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Merch Quality', 'Retail', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC IS NOT NULL AND MERCH_GRID_MERCHQUALITY_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC IS NOT NULL AND MERCH_GRID_MERCHQUALITY_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC IS NOT NULL AND MERCH_GRID_MERCHQUALITY_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Kids Activities', 'Game Entertainment', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC IS NOT NULL AND ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC IS NOT NULL AND ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC IS NOT NULL AND ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Merch Wait Time', 'Retail', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_WAIT_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_WAIT_DESC IS NOT NULL AND MERCH_GRID_WAIT_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_WAIT_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_WAIT_DESC IS NOT NULL AND MERCH_GRID_WAIT_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN MERCH_GRID_WAIT_DESC IS NOT NULL AND MERCH_GRID_WAIT_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Pregame Content', 'Game Entertainment', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_PREGAME_CONTENT_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_PREGAME_CONTENT_DESC IS NOT NULL AND ENTERTAIN_GRID_PREGAME_CONTENT_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_PREGAME_CONTENT_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_PREGAME_CONTENT_DESC IS NOT NULL AND ENTERTAIN_GRID_PREGAME_CONTENT_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN ENTERTAIN_GRID_PREGAME_CONTENT_DESC IS NOT NULL AND ENTERTAIN_GRID_PREGAME_CONTENT_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Merch Customer Service', 'Retail', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC IS NOT NULL AND MERCH_GRID_CUSTSERV_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC IS NOT NULL AND MERCH_GRID_CUSTSERV_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC IS NOT NULL AND MERCH_GRID_CUSTSERV_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            -- Parking (wait expectations)
-            SELECT 'Parking Arrival Wait', 'Parking', '% Longer Than Expected',
-                ROUND(100.0*SUM(CASE WHEN PARKING_TIME_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN PARKING_TIME_EXPECT_DESC IS NOT NULL THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN PARKING_TIME_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN PARKING_TIME_EXPECT_DESC IS NOT NULL THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN PARKING_TIME_EXPECT_DESC IS NOT NULL THEN 1 ELSE 0 END)
+            -- Entertainment Grid: % Highly satisfied
+            SELECT 'In-Game Music', 'Game Entertainment', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC IS NOT NULL AND ENTERTAIN_GRID_MUSIC_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC IS NOT NULL AND ENTERTAIN_GRID_MUSIC_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC IS NOT NULL AND ENTERTAIN_GRID_MUSIC_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Parking Exit Wait', 'Parking', '% Longer Than Expected',
-                ROUND(100.0*SUM(CASE WHEN PARKING_EXIT_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN PARKING_EXIT_EXPECT_DESC IS NOT NULL THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN PARKING_EXIT_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN PARKING_EXIT_EXPECT_DESC IS NOT NULL THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN PARKING_EXIT_EXPECT_DESC IS NOT NULL THEN 1 ELSE 0 END)
+            SELECT 'In-Game Activities', 'Game Entertainment', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_GAMES_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_GAMES_DESC IS NOT NULL AND ENTERTAIN_GRID_GAMES_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_GAMES_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_GAMES_DESC IS NOT NULL AND ENTERTAIN_GRID_GAMES_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN ENTERTAIN_GRID_GAMES_DESC IS NOT NULL AND ENTERTAIN_GRID_GAMES_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            -- Brand Health (disagree = negative, lower = better)
-            SELECT 'Brand: Accessible', 'Marketing', '% Disagreement',
-                ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_ACCESSIBLE_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_ACCESSIBLE_DESC IS NOT NULL AND BRANDHEALTH_GRID_ACCESSIBLE_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_ACCESSIBLE_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_ACCESSIBLE_DESC IS NOT NULL AND BRANDHEALTH_GRID_ACCESSIBLE_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN BRANDHEALTH_GRID_ACCESSIBLE_DESC IS NOT NULL AND BRANDHEALTH_GRID_ACCESSIBLE_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Scoreboard', 'Game Entertainment', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_SCOREBOARD_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_SCOREBOARD_DESC IS NOT NULL AND ENTERTAIN_GRID_SCOREBOARD_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_SCOREBOARD_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_SCOREBOARD_DESC IS NOT NULL AND ENTERTAIN_GRID_SCOREBOARD_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN ENTERTAIN_GRID_SCOREBOARD_DESC IS NOT NULL AND ENTERTAIN_GRID_SCOREBOARD_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Brand: Exciting', 'Marketing', '% Disagreement',
-                ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_EXCITING_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_EXCITING_DESC IS NOT NULL AND BRANDHEALTH_GRID_EXCITING_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_EXCITING_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_EXCITING_DESC IS NOT NULL AND BRANDHEALTH_GRID_EXCITING_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN BRANDHEALTH_GRID_EXCITING_DESC IS NOT NULL AND BRANDHEALTH_GRID_EXCITING_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Game Theme', 'Game Entertainment', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_THEME_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_THEME_DESC IS NOT NULL AND ENTERTAIN_GRID_THEME_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_THEME_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_THEME_DESC IS NOT NULL AND ENTERTAIN_GRID_THEME_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN ENTERTAIN_GRID_THEME_DESC IS NOT NULL AND ENTERTAIN_GRID_THEME_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Brand: Family Friendly', 'Marketing', '% Disagreement',
-                ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_FAMFRIENDLY_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_FAMFRIENDLY_DESC IS NOT NULL AND BRANDHEALTH_GRID_FAMFRIENDLY_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_FAMFRIENDLY_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_FAMFRIENDLY_DESC IS NOT NULL AND BRANDHEALTH_GRID_FAMFRIENDLY_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN BRANDHEALTH_GRID_FAMFRIENDLY_DESC IS NOT NULL AND BRANDHEALTH_GRID_FAMFRIENDLY_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Kids Activities', 'Game Entertainment', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC IS NOT NULL AND ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC IS NOT NULL AND ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC IS NOT NULL AND ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Brand: Welcoming', 'Marketing', '% Disagreement',
-                ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_WELCOME_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_WELCOME_DESC IS NOT NULL AND BRANDHEALTH_GRID_WELCOME_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_WELCOME_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_WELCOME_DESC IS NOT NULL AND BRANDHEALTH_GRID_WELCOME_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN BRANDHEALTH_GRID_WELCOME_DESC IS NOT NULL AND BRANDHEALTH_GRID_WELCOME_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Pregame Content', 'Game Entertainment', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_PREGAME_CONTENT_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_PREGAME_CONTENT_DESC IS NOT NULL AND ENTERTAIN_GRID_PREGAME_CONTENT_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_PREGAME_CONTENT_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_PREGAME_CONTENT_DESC IS NOT NULL AND ENTERTAIN_GRID_PREGAME_CONTENT_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN ENTERTAIN_GRID_PREGAME_CONTENT_DESC IS NOT NULL AND ENTERTAIN_GRID_PREGAME_CONTENT_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Brand: Trendy', 'Marketing', '% Disagreement',
-                ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_TRENDY_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_TRENDY_DESC IS NOT NULL AND BRANDHEALTH_GRID_TRENDY_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_TRENDY_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_TRENDY_DESC IS NOT NULL AND BRANDHEALTH_GRID_TRENDY_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN BRANDHEALTH_GRID_TRENDY_DESC IS NOT NULL AND BRANDHEALTH_GRID_TRENDY_DESC!='N/A' THEN 1 ELSE 0 END)
+            -- Staff Grid: % Highly satisfied
+            SELECT 'Staff: Parking', 'Operations', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN STAFF_GRID_PARKING_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_PARKING_DESC IS NOT NULL AND STAFF_GRID_PARKING_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN STAFF_GRID_PARKING_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_PARKING_DESC IS NOT NULL AND STAFF_GRID_PARKING_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN STAFF_GRID_PARKING_DESC IS NOT NULL AND STAFF_GRID_PARKING_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Brand: Safe', 'Marketing', '% Disagreement',
-                ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_SAFE_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_SAFE_DESC IS NOT NULL AND BRANDHEALTH_GRID_SAFE_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_SAFE_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_SAFE_DESC IS NOT NULL AND BRANDHEALTH_GRID_SAFE_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN BRANDHEALTH_GRID_SAFE_DESC IS NOT NULL AND BRANDHEALTH_GRID_SAFE_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Staff: Security', 'Operations', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN STAFF_GRID_SECURITY_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_SECURITY_DESC IS NOT NULL AND STAFF_GRID_SECURITY_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN STAFF_GRID_SECURITY_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_SECURITY_DESC IS NOT NULL AND STAFF_GRID_SECURITY_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN STAFF_GRID_SECURITY_DESC IS NOT NULL AND STAFF_GRID_SECURITY_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Brand: Sustainability', 'Marketing', '% Disagreement',
-                ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_SUSTAINABILITY_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_SUSTAINABILITY_DESC IS NOT NULL AND BRANDHEALTH_GRID_SUSTAINABILITY_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_SUSTAINABILITY_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_SUSTAINABILITY_DESC IS NOT NULL AND BRANDHEALTH_GRID_SUSTAINABILITY_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN BRANDHEALTH_GRID_SUSTAINABILITY_DESC IS NOT NULL AND BRANDHEALTH_GRID_SUSTAINABILITY_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Staff: Usher', 'Operations', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN STAFF_GRID_USHER_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_USHER_DESC IS NOT NULL AND STAFF_GRID_USHER_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN STAFF_GRID_USHER_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_USHER_DESC IS NOT NULL AND STAFF_GRID_USHER_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN STAFF_GRID_USHER_DESC IS NOT NULL AND STAFF_GRID_USHER_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Brand: Emotional Connection', 'Marketing', '% Disagreement',
-                ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_EMOTIONAL_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_EMOTIONAL_DESC IS NOT NULL AND BRANDHEALTH_GRID_EMOTIONAL_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_EMOTIONAL_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_EMOTIONAL_DESC IS NOT NULL AND BRANDHEALTH_GRID_EMOTIONAL_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN BRANDHEALTH_GRID_EMOTIONAL_DESC IS NOT NULL AND BRANDHEALTH_GRID_EMOTIONAL_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Staff: Fan Services', 'Operations', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN STAFF_GRID_FAN_SERVICES_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_FAN_SERVICES_DESC IS NOT NULL AND STAFF_GRID_FAN_SERVICES_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN STAFF_GRID_FAN_SERVICES_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_FAN_SERVICES_DESC IS NOT NULL AND STAFF_GRID_FAN_SERVICES_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN STAFF_GRID_FAN_SERVICES_DESC IS NOT NULL AND STAFF_GRID_FAN_SERVICES_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Brand: Champion', 'Marketing', '% Disagreement',
-                ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_CHAMPION_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_CHAMPION_DESC IS NOT NULL AND BRANDHEALTH_GRID_CHAMPION_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_CHAMPION_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_CHAMPION_DESC IS NOT NULL AND BRANDHEALTH_GRID_CHAMPION_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN BRANDHEALTH_GRID_CHAMPION_DESC IS NOT NULL AND BRANDHEALTH_GRID_CHAMPION_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Staff: Concessions', 'Operations', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN STAFF_GRID_CONCESSIONS_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_CONCESSIONS_DESC IS NOT NULL AND STAFF_GRID_CONCESSIONS_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN STAFF_GRID_CONCESSIONS_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_CONCESSIONS_DESC IS NOT NULL AND STAFF_GRID_CONCESSIONS_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN STAFF_GRID_CONCESSIONS_DESC IS NOT NULL AND STAFF_GRID_CONCESSIONS_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Brand: Diversity', 'Marketing', '% Disagreement',
-                ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_DIVERSITY_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_DIVERSITY_DESC IS NOT NULL AND BRANDHEALTH_GRID_DIVERSITY_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_DIVERSITY_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_DIVERSITY_DESC IS NOT NULL AND BRANDHEALTH_GRID_DIVERSITY_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN BRANDHEALTH_GRID_DIVERSITY_DESC IS NOT NULL AND BRANDHEALTH_GRID_DIVERSITY_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Staff: Merch', 'Operations', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN STAFF_GRID_MERCH_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_MERCH_DESC IS NOT NULL AND STAFF_GRID_MERCH_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN STAFF_GRID_MERCH_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_MERCH_DESC IS NOT NULL AND STAFF_GRID_MERCH_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN STAFF_GRID_MERCH_DESC IS NOT NULL AND STAFF_GRID_MERCH_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Brand: Positive Influence', 'Marketing', '% Disagreement',
-                ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_POSINFLUENCE_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_POSINFLUENCE_DESC IS NOT NULL AND BRANDHEALTH_GRID_POSINFLUENCE_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_POSINFLUENCE_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_POSINFLUENCE_DESC IS NOT NULL AND BRANDHEALTH_GRID_POSINFLUENCE_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN BRANDHEALTH_GRID_POSINFLUENCE_DESC IS NOT NULL AND BRANDHEALTH_GRID_POSINFLUENCE_DESC!='N/A' THEN 1 ELSE 0 END)
-            FROM game
-            UNION ALL
-            SELECT 'Brand: Right Direction', 'Marketing', '% Disagreement',
-                ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_RIGHTDIRECTION_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_RIGHTDIRECTION_DESC IS NOT NULL AND BRANDHEALTH_GRID_RIGHTDIRECTION_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_RIGHTDIRECTION_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_RIGHTDIRECTION_DESC IS NOT NULL AND BRANDHEALTH_GRID_RIGHTDIRECTION_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN BRANDHEALTH_GRID_RIGHTDIRECTION_DESC IS NOT NULL AND BRANDHEALTH_GRID_RIGHTDIRECTION_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Staff: Accessibility', 'Operations', '% Highly Satisfied',
+                ROUND(100.0*SUM(CASE WHEN STAFF_GRID_ACCESSIBILITY_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_ACCESSIBILITY_DESC IS NOT NULL AND STAFF_GRID_ACCESSIBILITY_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN STAFF_GRID_ACCESSIBILITY_DESC = 'Highly satisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_ACCESSIBILITY_DESC IS NOT NULL AND STAFF_GRID_ACCESSIBILITY_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN STAFF_GRID_ACCESSIBILITY_DESC IS NOT NULL AND STAFF_GRID_ACCESSIBILITY_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
         ),
         scored AS (
             SELECT metric_label, dept, unit, game_val, season_val, n,
-                CASE WHEN unit = '/10' THEN ROUND(game_val - season_val, 2)
-                     ELSE ROUND(season_val - game_val, 2) END AS improvement
+                ROUND(game_val - season_val, 2) AS improvement
             FROM metrics
             WHERE game_val IS NOT NULL AND season_val IS NOT NULL AND n >= 20
         )
@@ -575,19 +562,19 @@ BEGIN
         IF (v_rank = 1) THEN
             v_best1_label := rec.metric_label; v_best1_dept := rec.dept;
             v_best1_delta := ABS(rec.improvement)::VARCHAR; v_best1_unit := rec.unit;
-            IF (rec.unit = '/10') THEN v_best1_suffix := ' points higher'; ELSE v_best1_suffix := '% higher'; END IF;
+            v_best1_suffix := '% higher';
         ELSEIF (v_rank = 2) THEN
             v_best2_label := rec.metric_label; v_best2_dept := rec.dept;
             v_best2_delta := ABS(rec.improvement)::VARCHAR; v_best2_unit := rec.unit;
-            IF (rec.unit = '/10') THEN v_best2_suffix := ' points higher'; ELSE v_best2_suffix := '% higher'; END IF;
+            v_best2_suffix := '% higher';
         ELSEIF (v_rank = 3) THEN
             v_best3_label := rec.metric_label; v_best3_dept := rec.dept;
             v_best3_delta := ABS(rec.improvement)::VARCHAR; v_best3_unit := rec.unit;
-            IF (rec.unit = '/10') THEN v_best3_suffix := ' points higher'; ELSE v_best3_suffix := '% higher'; END IF;
+            v_best3_suffix := '% higher';
         END IF;
     END FOR;
 
-    -- Top 3 WORST regressions (same 35 metrics, ordered ASC)
+    -- Top 3 WORST regressions (% highly dissatisfied / % 0-7 scores, game vs season)
     LET rs_worst RESULTSET := (
         WITH game AS (
             SELECT * FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
@@ -598,117 +585,193 @@ BEGIN
             WHERE SEASON = :v_season AND OVERALL_NUMRAT IS NOT NULL
         ),
         metrics AS (
-            SELECT 'Overall Rating' AS metric_label, 'General' AS dept, '/10' AS unit,
-                ROUND(AVG(OVERALL_NUMRAT),2) AS game_val,
-                (SELECT ROUND(AVG(OVERALL_NUMRAT),2) FROM season) AS season_val,
-                COUNT(CASE WHEN OVERALL_NUMRAT IS NOT NULL THEN 1 END) AS n
+            -- 0-10 Numeric Ratings: % of 0-7 responses (low scores)
+            SELECT 'Overall Rating' AS metric_label, 'General' AS dept, '% Low Scores' AS unit,
+                ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT <= 7 AND OVERALL_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT IS NOT NULL AND OVERALL_NUMRAT < 80 THEN 1 ELSE 0 END),0),2) AS game_val,
+                (SELECT ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT <= 7 AND OVERALL_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT IS NOT NULL AND OVERALL_NUMRAT < 80 THEN 1 ELSE 0 END),0),2) FROM season) AS season_val,
+                SUM(CASE WHEN OVERALL_NUMRAT IS NOT NULL AND OVERALL_NUMRAT < 80 THEN 1 ELSE 0 END) AS n
             FROM game
             UNION ALL
-            SELECT 'Concession Rating', 'Concessions', '/10',
-                ROUND(AVG(CONCESS_NUMRAT),2),
-                (SELECT ROUND(AVG(CONCESS_NUMRAT),2) FROM season WHERE CONCESS_NUMRAT IS NOT NULL),
-                COUNT(CASE WHEN CONCESS_NUMRAT IS NOT NULL THEN 1 END)
-            FROM game WHERE CONCESS_NUMRAT IS NOT NULL
-            UNION ALL
-            SELECT 'Parking Rating', 'Parking', '/10',
-                ROUND(AVG(PARKING_NUMRAT),2),
-                (SELECT ROUND(AVG(PARKING_NUMRAT),2) FROM season WHERE PARKING_NUMRAT IS NOT NULL),
-                COUNT(CASE WHEN PARKING_NUMRAT IS NOT NULL THEN 1 END)
-            FROM game WHERE PARKING_NUMRAT IS NOT NULL
-            UNION ALL
-            SELECT 'Concession Value', 'Concessions', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_VALUE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_VALUE_DESC IS NOT NULL AND CONCESS_GRID_VALUE_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_VALUE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_VALUE_DESC IS NOT NULL AND CONCESS_GRID_VALUE_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN CONCESS_GRID_VALUE_DESC IS NOT NULL AND CONCESS_GRID_VALUE_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Concession Rating', 'Concessions', '% Low Scores',
+                ROUND(100.0*SUM(CASE WHEN CONCESS_NUMRAT <= 7 AND CONCESS_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_NUMRAT IS NOT NULL AND CONCESS_NUMRAT < 80 THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_NUMRAT <= 7 AND CONCESS_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_NUMRAT IS NOT NULL AND CONCESS_NUMRAT < 80 THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN CONCESS_NUMRAT IS NOT NULL AND CONCESS_NUMRAT < 80 THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Concession Service', 'Concessions', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC IS NOT NULL AND CONCESS_GRID_CUSTSERV_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC IS NOT NULL AND CONCESS_GRID_CUSTSERV_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC IS NOT NULL AND CONCESS_GRID_CUSTSERV_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Parking Rating', 'Parking', '% Low Scores',
+                ROUND(100.0*SUM(CASE WHEN PARKING_NUMRAT <= 7 AND PARKING_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN PARKING_NUMRAT IS NOT NULL AND PARKING_NUMRAT < 80 THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN PARKING_NUMRAT <= 7 AND PARKING_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN PARKING_NUMRAT IS NOT NULL AND PARKING_NUMRAT < 80 THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN PARKING_NUMRAT IS NOT NULL AND PARKING_NUMRAT < 80 THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Concession Selection', 'Concessions', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC IS NOT NULL AND CONCESS_GRID_SELECTION_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC IS NOT NULL AND CONCESS_GRID_SELECTION_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC IS NOT NULL AND CONCESS_GRID_SELECTION_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Entertainment Rating', 'Game Entertainment', '% Low Scores',
+                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_NUMRAT <= 7 AND ENTERTAIN_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_NUMRAT IS NOT NULL AND ENTERTAIN_NUMRAT < 80 THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_NUMRAT <= 7 AND ENTERTAIN_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_NUMRAT IS NOT NULL AND ENTERTAIN_NUMRAT < 80 THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN ENTERTAIN_NUMRAT IS NOT NULL AND ENTERTAIN_NUMRAT < 80 THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Concession Cleanliness', 'Concessions', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC IS NOT NULL AND CONCESS_GRID_CLEAN_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC IS NOT NULL AND CONCESS_GRID_CLEAN_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC IS NOT NULL AND CONCESS_GRID_CLEAN_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Merch Rating', 'Retail', '% Low Scores',
+                ROUND(100.0*SUM(CASE WHEN MERCH_NUMRAT <= 7 AND MERCH_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_NUMRAT IS NOT NULL AND MERCH_NUMRAT < 80 THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_NUMRAT <= 7 AND MERCH_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_NUMRAT IS NOT NULL AND MERCH_NUMRAT < 80 THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN MERCH_NUMRAT IS NOT NULL AND MERCH_NUMRAT < 80 THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Merch Pricing', 'Retail', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_PRICE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_PRICE_DESC IS NOT NULL AND MERCH_GRID_PRICE_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_PRICE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_PRICE_DESC IS NOT NULL AND MERCH_GRID_PRICE_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN MERCH_GRID_PRICE_DESC IS NOT NULL AND MERCH_GRID_PRICE_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Staff Rating', 'Operations', '% Low Scores',
+                ROUND(100.0*SUM(CASE WHEN STAFF_NUMRAT <= 7 AND STAFF_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_NUMRAT IS NOT NULL AND STAFF_NUMRAT < 80 THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN STAFF_NUMRAT <= 7 AND STAFF_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_NUMRAT IS NOT NULL AND STAFF_NUMRAT < 80 THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN STAFF_NUMRAT IS NOT NULL AND STAFF_NUMRAT < 80 THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Merch Selection', 'Retail', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_SELECTION_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_SELECTION_DESC IS NOT NULL AND MERCH_GRID_SELECTION_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_SELECTION_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_SELECTION_DESC IS NOT NULL AND MERCH_GRID_SELECTION_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN MERCH_GRID_SELECTION_DESC IS NOT NULL AND MERCH_GRID_SELECTION_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Seat View Rating', 'General', '% Low Scores',
+                ROUND(100.0*SUM(CASE WHEN SEATVIEW_NUMRAT <= 7 AND SEATVIEW_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN SEATVIEW_NUMRAT IS NOT NULL AND SEATVIEW_NUMRAT < 80 THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN SEATVIEW_NUMRAT <= 7 AND SEATVIEW_NUMRAT < 80 THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN SEATVIEW_NUMRAT IS NOT NULL AND SEATVIEW_NUMRAT < 80 THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN SEATVIEW_NUMRAT IS NOT NULL AND SEATVIEW_NUMRAT < 80 THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Merch Quality', 'Retail', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC IS NOT NULL AND MERCH_GRID_MERCHQUALITY_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC IS NOT NULL AND MERCH_GRID_MERCHQUALITY_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC IS NOT NULL AND MERCH_GRID_MERCHQUALITY_DESC!='N/A' THEN 1 ELSE 0 END)
+            -- Concession Grid: % Highly dissatisfied
+            SELECT 'Concession Value', 'Concessions', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_VALUE_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_VALUE_DESC IS NOT NULL AND CONCESS_GRID_VALUE_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_VALUE_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_VALUE_DESC IS NOT NULL AND CONCESS_GRID_VALUE_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN CONCESS_GRID_VALUE_DESC IS NOT NULL AND CONCESS_GRID_VALUE_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Merch Wait Time', 'Retail', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_WAIT_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_WAIT_DESC IS NOT NULL AND MERCH_GRID_WAIT_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_WAIT_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_WAIT_DESC IS NOT NULL AND MERCH_GRID_WAIT_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN MERCH_GRID_WAIT_DESC IS NOT NULL AND MERCH_GRID_WAIT_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Concession Service', 'Concessions', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC IS NOT NULL AND CONCESS_GRID_CUSTSERV_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC IS NOT NULL AND CONCESS_GRID_CUSTSERV_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN CONCESS_GRID_CUSTSERV_DESC IS NOT NULL AND CONCESS_GRID_CUSTSERV_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Merch Customer Service', 'Retail', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC IS NOT NULL AND MERCH_GRID_CUSTSERV_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC IS NOT NULL AND MERCH_GRID_CUSTSERV_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC IS NOT NULL AND MERCH_GRID_CUSTSERV_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Concession Selection', 'Concessions', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC IS NOT NULL AND CONCESS_GRID_SELECTION_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC IS NOT NULL AND CONCESS_GRID_SELECTION_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN CONCESS_GRID_SELECTION_DESC IS NOT NULL AND CONCESS_GRID_SELECTION_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'In-Game Music', 'Game Entertainment', '% Dissatisfaction',
-                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC IS NOT NULL AND ENTERTAIN_GRID_MUSIC_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC IS NOT NULL AND ENTERTAIN_GRID_MUSIC_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC IS NOT NULL AND ENTERTAIN_GRID_MUSIC_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Concession Cleanliness', 'Concessions', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC IS NOT NULL AND CONCESS_GRID_CLEAN_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC IS NOT NULL AND CONCESS_GRID_CLEAN_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN CONCESS_GRID_CLEAN_DESC IS NOT NULL AND CONCESS_GRID_CLEAN_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Parking Arrival Wait', 'Parking', '% Longer Than Expected',
-                ROUND(100.0*SUM(CASE WHEN PARKING_TIME_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN PARKING_TIME_EXPECT_DESC IS NOT NULL THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN PARKING_TIME_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN PARKING_TIME_EXPECT_DESC IS NOT NULL THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN PARKING_TIME_EXPECT_DESC IS NOT NULL THEN 1 ELSE 0 END)
+            -- Merchandise Grid: % Highly dissatisfied
+            SELECT 'Merch Pricing', 'Retail', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_PRICE_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_PRICE_DESC IS NOT NULL AND MERCH_GRID_PRICE_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_PRICE_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_PRICE_DESC IS NOT NULL AND MERCH_GRID_PRICE_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN MERCH_GRID_PRICE_DESC IS NOT NULL AND MERCH_GRID_PRICE_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Parking Exit Wait', 'Parking', '% Longer Than Expected',
-                ROUND(100.0*SUM(CASE WHEN PARKING_EXIT_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN PARKING_EXIT_EXPECT_DESC IS NOT NULL THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN PARKING_EXIT_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN PARKING_EXIT_EXPECT_DESC IS NOT NULL THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN PARKING_EXIT_EXPECT_DESC IS NOT NULL THEN 1 ELSE 0 END)
+            SELECT 'Merch Selection', 'Retail', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_SELECTION_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_SELECTION_DESC IS NOT NULL AND MERCH_GRID_SELECTION_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_SELECTION_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_SELECTION_DESC IS NOT NULL AND MERCH_GRID_SELECTION_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN MERCH_GRID_SELECTION_DESC IS NOT NULL AND MERCH_GRID_SELECTION_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Brand: Accessible', 'Marketing', '% Disagreement',
-                ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_ACCESSIBLE_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_ACCESSIBLE_DESC IS NOT NULL AND BRANDHEALTH_GRID_ACCESSIBLE_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_ACCESSIBLE_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_ACCESSIBLE_DESC IS NOT NULL AND BRANDHEALTH_GRID_ACCESSIBLE_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN BRANDHEALTH_GRID_ACCESSIBLE_DESC IS NOT NULL AND BRANDHEALTH_GRID_ACCESSIBLE_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Merch Quality', 'Retail', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC IS NOT NULL AND MERCH_GRID_MERCHQUALITY_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC IS NOT NULL AND MERCH_GRID_MERCHQUALITY_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN MERCH_GRID_MERCHQUALITY_DESC IS NOT NULL AND MERCH_GRID_MERCHQUALITY_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
             UNION ALL
-            SELECT 'Brand: Right Direction', 'Marketing', '% Disagreement',
-                ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_RIGHTDIRECTION_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_RIGHTDIRECTION_DESC IS NOT NULL AND BRANDHEALTH_GRID_RIGHTDIRECTION_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
-                (SELECT ROUND(100.0*SUM(CASE WHEN BRANDHEALTH_GRID_RIGHTDIRECTION_DESC IN ('Somewhat disagree','Strongly disagree') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN BRANDHEALTH_GRID_RIGHTDIRECTION_DESC IS NOT NULL AND BRANDHEALTH_GRID_RIGHTDIRECTION_DESC!='N/A' THEN 1 ELSE 0 END),0),2) FROM season),
-                SUM(CASE WHEN BRANDHEALTH_GRID_RIGHTDIRECTION_DESC IS NOT NULL AND BRANDHEALTH_GRID_RIGHTDIRECTION_DESC!='N/A' THEN 1 ELSE 0 END)
+            SELECT 'Merch Wait Time', 'Retail', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_WAIT_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_WAIT_DESC IS NOT NULL AND MERCH_GRID_WAIT_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_WAIT_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_WAIT_DESC IS NOT NULL AND MERCH_GRID_WAIT_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN MERCH_GRID_WAIT_DESC IS NOT NULL AND MERCH_GRID_WAIT_DESC != 'N/A' THEN 1 ELSE 0 END)
+            FROM game
+            UNION ALL
+            SELECT 'Merch Customer Service', 'Retail', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC IS NOT NULL AND MERCH_GRID_CUSTSERV_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC IS NOT NULL AND MERCH_GRID_CUSTSERV_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN MERCH_GRID_CUSTSERV_DESC IS NOT NULL AND MERCH_GRID_CUSTSERV_DESC != 'N/A' THEN 1 ELSE 0 END)
+            FROM game
+            UNION ALL
+            -- Entertainment Grid: % Highly dissatisfied
+            SELECT 'In-Game Music', 'Game Entertainment', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC IS NOT NULL AND ENTERTAIN_GRID_MUSIC_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC IS NOT NULL AND ENTERTAIN_GRID_MUSIC_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN ENTERTAIN_GRID_MUSIC_DESC IS NOT NULL AND ENTERTAIN_GRID_MUSIC_DESC != 'N/A' THEN 1 ELSE 0 END)
+            FROM game
+            UNION ALL
+            SELECT 'In-Game Activities', 'Game Entertainment', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_GAMES_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_GAMES_DESC IS NOT NULL AND ENTERTAIN_GRID_GAMES_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_GAMES_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_GAMES_DESC IS NOT NULL AND ENTERTAIN_GRID_GAMES_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN ENTERTAIN_GRID_GAMES_DESC IS NOT NULL AND ENTERTAIN_GRID_GAMES_DESC != 'N/A' THEN 1 ELSE 0 END)
+            FROM game
+            UNION ALL
+            SELECT 'Scoreboard', 'Game Entertainment', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_SCOREBOARD_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_SCOREBOARD_DESC IS NOT NULL AND ENTERTAIN_GRID_SCOREBOARD_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_SCOREBOARD_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_SCOREBOARD_DESC IS NOT NULL AND ENTERTAIN_GRID_SCOREBOARD_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN ENTERTAIN_GRID_SCOREBOARD_DESC IS NOT NULL AND ENTERTAIN_GRID_SCOREBOARD_DESC != 'N/A' THEN 1 ELSE 0 END)
+            FROM game
+            UNION ALL
+            SELECT 'Game Theme', 'Game Entertainment', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_THEME_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_THEME_DESC IS NOT NULL AND ENTERTAIN_GRID_THEME_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_THEME_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_THEME_DESC IS NOT NULL AND ENTERTAIN_GRID_THEME_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN ENTERTAIN_GRID_THEME_DESC IS NOT NULL AND ENTERTAIN_GRID_THEME_DESC != 'N/A' THEN 1 ELSE 0 END)
+            FROM game
+            UNION ALL
+            SELECT 'Kids Activities', 'Game Entertainment', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC IS NOT NULL AND ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC IS NOT NULL AND ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC IS NOT NULL AND ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC != 'N/A' THEN 1 ELSE 0 END)
+            FROM game
+            UNION ALL
+            SELECT 'Pregame Content', 'Game Entertainment', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_PREGAME_CONTENT_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_PREGAME_CONTENT_DESC IS NOT NULL AND ENTERTAIN_GRID_PREGAME_CONTENT_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN ENTERTAIN_GRID_PREGAME_CONTENT_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN ENTERTAIN_GRID_PREGAME_CONTENT_DESC IS NOT NULL AND ENTERTAIN_GRID_PREGAME_CONTENT_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN ENTERTAIN_GRID_PREGAME_CONTENT_DESC IS NOT NULL AND ENTERTAIN_GRID_PREGAME_CONTENT_DESC != 'N/A' THEN 1 ELSE 0 END)
+            FROM game
+            UNION ALL
+            -- Staff Grid: % Highly dissatisfied
+            SELECT 'Staff: Parking', 'Operations', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN STAFF_GRID_PARKING_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_PARKING_DESC IS NOT NULL AND STAFF_GRID_PARKING_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN STAFF_GRID_PARKING_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_PARKING_DESC IS NOT NULL AND STAFF_GRID_PARKING_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN STAFF_GRID_PARKING_DESC IS NOT NULL AND STAFF_GRID_PARKING_DESC != 'N/A' THEN 1 ELSE 0 END)
+            FROM game
+            UNION ALL
+            SELECT 'Staff: Security', 'Operations', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN STAFF_GRID_SECURITY_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_SECURITY_DESC IS NOT NULL AND STAFF_GRID_SECURITY_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN STAFF_GRID_SECURITY_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_SECURITY_DESC IS NOT NULL AND STAFF_GRID_SECURITY_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN STAFF_GRID_SECURITY_DESC IS NOT NULL AND STAFF_GRID_SECURITY_DESC != 'N/A' THEN 1 ELSE 0 END)
+            FROM game
+            UNION ALL
+            SELECT 'Staff: Usher', 'Operations', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN STAFF_GRID_USHER_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_USHER_DESC IS NOT NULL AND STAFF_GRID_USHER_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN STAFF_GRID_USHER_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_USHER_DESC IS NOT NULL AND STAFF_GRID_USHER_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN STAFF_GRID_USHER_DESC IS NOT NULL AND STAFF_GRID_USHER_DESC != 'N/A' THEN 1 ELSE 0 END)
+            FROM game
+            UNION ALL
+            SELECT 'Staff: Fan Services', 'Operations', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN STAFF_GRID_FAN_SERVICES_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_FAN_SERVICES_DESC IS NOT NULL AND STAFF_GRID_FAN_SERVICES_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN STAFF_GRID_FAN_SERVICES_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_FAN_SERVICES_DESC IS NOT NULL AND STAFF_GRID_FAN_SERVICES_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN STAFF_GRID_FAN_SERVICES_DESC IS NOT NULL AND STAFF_GRID_FAN_SERVICES_DESC != 'N/A' THEN 1 ELSE 0 END)
+            FROM game
+            UNION ALL
+            SELECT 'Staff: Concessions', 'Operations', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN STAFF_GRID_CONCESSIONS_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_CONCESSIONS_DESC IS NOT NULL AND STAFF_GRID_CONCESSIONS_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN STAFF_GRID_CONCESSIONS_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_CONCESSIONS_DESC IS NOT NULL AND STAFF_GRID_CONCESSIONS_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN STAFF_GRID_CONCESSIONS_DESC IS NOT NULL AND STAFF_GRID_CONCESSIONS_DESC != 'N/A' THEN 1 ELSE 0 END)
+            FROM game
+            UNION ALL
+            SELECT 'Staff: Merch', 'Operations', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN STAFF_GRID_MERCH_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_MERCH_DESC IS NOT NULL AND STAFF_GRID_MERCH_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN STAFF_GRID_MERCH_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_MERCH_DESC IS NOT NULL AND STAFF_GRID_MERCH_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN STAFF_GRID_MERCH_DESC IS NOT NULL AND STAFF_GRID_MERCH_DESC != 'N/A' THEN 1 ELSE 0 END)
+            FROM game
+            UNION ALL
+            SELECT 'Staff: Accessibility', 'Operations', '% Highly Dissatisfied',
+                ROUND(100.0*SUM(CASE WHEN STAFF_GRID_ACCESSIBILITY_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_ACCESSIBILITY_DESC IS NOT NULL AND STAFF_GRID_ACCESSIBILITY_DESC != 'N/A' THEN 1 ELSE 0 END),0),2),
+                (SELECT ROUND(100.0*SUM(CASE WHEN STAFF_GRID_ACCESSIBILITY_DESC = 'Highly dissatisfied' THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN STAFF_GRID_ACCESSIBILITY_DESC IS NOT NULL AND STAFF_GRID_ACCESSIBILITY_DESC != 'N/A' THEN 1 ELSE 0 END),0),2) FROM season),
+                SUM(CASE WHEN STAFF_GRID_ACCESSIBILITY_DESC IS NOT NULL AND STAFF_GRID_ACCESSIBILITY_DESC != 'N/A' THEN 1 ELSE 0 END)
             FROM game
         ),
         scored AS (
             SELECT metric_label, dept, unit, game_val, season_val, n,
-                CASE WHEN unit = '/10' THEN ROUND(game_val - season_val, 2)
-                     ELSE ROUND(season_val - game_val, 2) END AS improvement
+                ROUND(game_val - season_val, 2) AS regression
             FROM metrics
             WHERE game_val IS NOT NULL AND season_val IS NOT NULL AND n >= 20
         )
-        SELECT metric_label, dept, unit, improvement
-        FROM scored ORDER BY improvement ASC LIMIT 3
+        SELECT metric_label, dept, unit, regression
+        FROM scored ORDER BY regression DESC LIMIT 3
     );
     LET c_worst CURSOR FOR rs_worst;
     v_rank := 0;
@@ -716,16 +779,16 @@ BEGIN
         v_rank := v_rank + 1;
         IF (v_rank = 1) THEN
             v_worst1_label := rec.metric_label; v_worst1_dept := rec.dept;
-            v_worst1_delta := ABS(rec.improvement)::VARCHAR; v_worst1_unit := rec.unit;
-            IF (rec.unit = '/10') THEN v_worst1_suffix := ' points lower'; ELSE v_worst1_suffix := '% lower'; END IF;
+            v_worst1_delta := ABS(rec.regression)::VARCHAR; v_worst1_unit := rec.unit;
+            v_worst1_suffix := '% higher';
         ELSEIF (v_rank = 2) THEN
             v_worst2_label := rec.metric_label; v_worst2_dept := rec.dept;
-            v_worst2_delta := ABS(rec.improvement)::VARCHAR; v_worst2_unit := rec.unit;
-            IF (rec.unit = '/10') THEN v_worst2_suffix := ' points lower'; ELSE v_worst2_suffix := '% lower'; END IF;
+            v_worst2_delta := ABS(rec.regression)::VARCHAR; v_worst2_unit := rec.unit;
+            v_worst2_suffix := '% higher';
         ELSEIF (v_rank = 3) THEN
             v_worst3_label := rec.metric_label; v_worst3_dept := rec.dept;
-            v_worst3_delta := ABS(rec.improvement)::VARCHAR; v_worst3_unit := rec.unit;
-            IF (rec.unit = '/10') THEN v_worst3_suffix := ' points lower'; ELSE v_worst3_suffix := '% lower'; END IF;
+            v_worst3_delta := ABS(rec.regression)::VARCHAR; v_worst3_unit := rec.unit;
+            v_worst3_suffix := '% higher';
         END IF;
     END FOR;
 
@@ -734,9 +797,9 @@ BEGIN
     -- =============================================
     SELECT
         -- Theme / Giveaway / Holiday
-        COALESCE(t.theme_list, 'None'),
-        COALESCE(g.giveaway_nm, 'None'),
-        COALESCE(g.giveaway_tp, 'None'),
+        COALESCE(MAX(t.theme_list), 'None'),
+        COALESCE(MAX(g.giveaway_nm), 'None'),
+        COALESCE(MAX(g.giveaway_tp), 'None'),
         COALESCE(MAX(v.HOLIDAY), 0),
         -- Audience composition
         ROUND(100.0 * SUM(CASE WHEN v.EXIT_STAGE_DESC IS NOT NULL AND v.EXIT_STAGE_DESC != 'After the final pitch' THEN 1 ELSE 0 END)
@@ -755,7 +818,7 @@ BEGIN
               / NULLIF(COUNT(CASE WHEN v.PREVIOUS_PURCHASE_DESC IS NOT NULL THEN 1 END), 0), 1),
         ROUND(100.0 * SUM(CASE WHEN v.PURCHASE_INTENT_DESC = 'Yes, I do' THEN 1 ELSE 0 END)
               / NULLIF(COUNT(CASE WHEN v.PURCHASE_INTENT_DESC IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(AVG(v.GROUP_SIZE), 1),
+        ROUND(AVG(TRY_TO_NUMBER(REGEXP_SUBSTR(v.GROUP_SIZE_DESC, '\\d+'))), 1),
         ROUND(100.0 * SUM(CASE WHEN v.FAVORITE_TEAM_CLEAN ILIKE '%rays%' OR v.FAVORITE_TEAM_CLEAN ILIKE '%tampa bay%' THEN 1 ELSE 0 END)
               / NULLIF(COUNT(CASE WHEN v.FAVORITE_TEAM_CLEAN IS NOT NULL THEN 1 END), 0), 1),
         ROUND(100.0 * SUM(CASE WHEN v.FAVORITE_TEAM_CLEAN ILIKE '%' || v.TEAM_NICKNAME || '%' AND NOT (v.FAVORITE_TEAM_CLEAN ILIKE '%rays%' OR v.FAVORITE_TEAM_CLEAN ILIKE '%tampa bay%') THEN 1 ELSE 0 END)
@@ -779,14 +842,14 @@ BEGIN
               / NULLIF(COUNT(CASE WHEN v.TRAVELTO_TIME_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
         ROUND(100.0 * SUM(CASE WHEN v.GE_TIME_EXPECT_DESC = 'More than what I expected' THEN 1 ELSE 0 END)
               / NULLIF(COUNT(CASE WHEN v.GE_TIME_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN v.CONCESS_SCREENER = 1 THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN v.CONCESS_SCREENER IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN v.MERCH_SCREENER = 1 THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN v.MERCH_SCREENER IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.CONCESS_SCREENER_DESC = 'Yes, I did' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.CONCESS_SCREENER_DESC IS NOT NULL THEN 1 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.MERCH_SCREENER_DESC = 'Yes, I did' THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.MERCH_SCREENER_DESC IS NOT NULL THEN 1 END), 0), 1),
         ROUND(100.0 * SUM(CASE WHEN v.CONCESS_ORDER_METHOD_MOBILE > 0 THEN 1 ELSE 0 END)
-              / NULLIF(SUM(CASE WHEN v.CONCESS_SCREENER = 1 THEN 1 ELSE 0 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN v.CONCESS_SPEND IN (4, 5) THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN v.CONCESS_SPEND IS NOT NULL THEN 1 END), 0), 1),
+              / NULLIF(SUM(CASE WHEN v.CONCESS_SCREENER_DESC = 'Yes, I did' THEN 1 ELSE 0 END), 0), 1),
+        ROUND(100.0 * SUM(CASE WHEN v.CONCESS_SPEND_DESC IN ('Between $41 and $50','More than $50') THEN 1 ELSE 0 END)
+              / NULLIF(COUNT(CASE WHEN v.CONCESS_SPEND_DESC IS NOT NULL THEN 1 END), 0), 1),
         -- Promo/theme metrics
         ROUND(100.0 * SUM(CASE WHEN v.GIVEAWAY_SAT_DESC IN ('Highly satisfied','Somewhat satisfied') THEN 1 ELSE 0 END)
               / NULLIF(COUNT(CASE WHEN v.GIVEAWAY_SAT_DESC IS NOT NULL AND v.GIVEAWAY_SAT_DESC != 'N/A' THEN 1 END), 0), 1),
@@ -829,86 +892,6 @@ BEGIN
       AND v.OVERALL_NUMRAT IS NOT NULL;
 
     -- =============================================
-    -- SECTION 3 CONTEXT: Query B — Season benchmark (2023+2024 for 2026; same season for historical)
-    -- =============================================
-    SELECT
-        ROUND(100.0 * SUM(CASE WHEN EXIT_STAGE_DESC IS NOT NULL AND EXIT_STAGE_DESC != 'After the final pitch' THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN EXIT_STAGE_DESC IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN ATTEND_WITH_CATEGORY_YOUNG_KIDS > 0 THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN ATTEND_WITH_CATEGORY_YOUNG_KIDS IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN PREVIOUS_PURCHASE_DESC = 'No' THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN PREVIOUS_PURCHASE_DESC IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN PURCHASE_INTENT_DESC = 'Yes, I do' THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN PURCHASE_INTENT_DESC IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN CONCESS_WAIT_EXPECT_DESC IN ('Much more than what I expected','Slightly more than what I expected') THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN CONCESS_WAIT_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN PARKING_TIME_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN PARKING_TIME_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN PARKING_EXIT_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN PARKING_EXIT_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN CONCESS_SCREENER = 1 THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN CONCESS_SCREENER IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN MERCH_SCREENER = 1 THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN MERCH_SCREENER IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(AVG(GROUP_SIZE), 1)
-    INTO
-        :v_szn_pct_left_early, :v_szn_pct_with_young_kids,
-        :v_szn_pct_first_time_buyer, :v_szn_pct_repurchase_intent,
-        :v_szn_pct_concess_wait_long, :v_szn_pct_parking_arrival_long, :v_szn_pct_parking_exit_long,
-        :v_szn_pct_bought_concessions, :v_szn_pct_bought_merch, :v_szn_avg_group_size
-    FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
-    WHERE OVERALL_NUMRAT IS NOT NULL
-      AND SEASON IN (CASE WHEN :v_season >= 2026 THEN 2023 ELSE :v_season END,
-                     CASE WHEN :v_season >= 2026 THEN 2024 ELSE :v_season END);
-
-    -- =============================================
-    -- SECTION 3 CONTEXT: Query C — Same day-of-week benchmark
-    -- =============================================
-    SELECT
-        ROUND(100.0 * SUM(CASE WHEN EXIT_STAGE_DESC IS NOT NULL AND EXIT_STAGE_DESC != 'After the final pitch' THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN EXIT_STAGE_DESC IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN PREVIOUS_PURCHASE_DESC = 'No' THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN PREVIOUS_PURCHASE_DESC IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN PURCHASE_INTENT_DESC = 'Yes, I do' THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN PURCHASE_INTENT_DESC IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN CONCESS_WAIT_EXPECT_DESC IN ('Much more than what I expected','Slightly more than what I expected') THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN CONCESS_WAIT_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN PARKING_TIME_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN PARKING_TIME_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(AVG(GROUP_SIZE), 1)
-    INTO
-        :v_dow_pct_left_early, :v_dow_pct_first_time_buyer, :v_dow_pct_repurchase_intent,
-        :v_dow_pct_concess_wait_long, :v_dow_pct_parking_arrival_long, :v_dow_avg_group_size
-    FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
-    WHERE OVERALL_NUMRAT IS NOT NULL
-      AND DAYNAME(GAME_DATE::DATE) = DAYNAME(:v_target_game_date)
-      AND SEASON IN (CASE WHEN :v_season >= 2026 THEN 2023 ELSE :v_season END,
-                     CASE WHEN :v_season >= 2026 THEN 2024 ELSE :v_season END);
-
-    -- =============================================
-    -- SECTION 3 CONTEXT: Query D — Same opponent historical (2023+2024)
-    -- =============================================
-    SELECT
-        ROUND(AVG(OVERALL_NUMRAT), 2),
-        ROUND(100.0 * SUM(CASE WHEN EXIT_STAGE_DESC IS NOT NULL AND EXIT_STAGE_DESC != 'After the final pitch' THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN EXIT_STAGE_DESC IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN PREVIOUS_PURCHASE_DESC = 'No' THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN PREVIOUS_PURCHASE_DESC IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN PURCHASE_INTENT_DESC = 'Yes, I do' THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN PURCHASE_INTENT_DESC IS NOT NULL THEN 1 END), 0), 1),
-        COUNT(DISTINCT GAME_DATE::DATE),
-        COUNT(*),
-        ROUND(100.0 * SUM(CASE WHEN FAVORITE_TEAM_CLEAN ILIKE '%rays%' OR FAVORITE_TEAM_CLEAN ILIKE '%tampa bay%' THEN 1 ELSE 0 END)
-              / NULLIF(COUNT(CASE WHEN FAVORITE_TEAM_CLEAN IS NOT NULL THEN 1 END), 0), 1)
-    INTO
-        :v_opp_avg_overall, :v_opp_pct_left_early, :v_opp_pct_first_time_buyer,
-        :v_opp_pct_repurchase_intent, :v_opp_num_games, :v_opp_total_responses, :v_opp_pct_rays_fans
-    FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
-    WHERE AWAYTRI = :v_opponent
-      AND OVERALL_NUMRAT IS NOT NULL
-      AND SEASON IN (2023, 2024);
-
-    -- =============================================
     -- SECTION 3 CONTEXT: Query E — Top 5 buyer segments with avg ratings
     -- =============================================
     SELECT LISTAGG(seg_line, ' | ') WITHIN GROUP (ORDER BY rn)
@@ -940,18 +923,88 @@ BEGIN
     WHERE rn <= 5;
 
     -- =============================================
-    -- SECTION 3 CONTEXT: Query F — Top incentive fans requested
+    -- SECTION 3 CONTEXT: Game Tier lookup
     -- =============================================
-    SELECT inc_desc
-    INTO :v_top_incentive
-    FROM (
-        SELECT INCENTIVES_RANK_1_DESC AS inc_desc, COUNT(*) AS cnt
-        FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
-        WHERE GAME_DATE::DATE = :v_target_game_date AND INCENTIVES_RANK_1_DESC IS NOT NULL
-        GROUP BY INCENTIVES_RANK_1_DESC
-        ORDER BY cnt DESC
-        LIMIT 1
+    SELECT GAME_TIER
+    INTO :v_game_tier
+    FROM TBRDP_DW_DEV.IM_RPT.T_GAME_TIERS
+    WHERE GAME_DATE = :v_target_game_date;
+
+    -- =============================================
+    -- SECTION 3 CONTEXT: Tier Benchmark — same-tier avg from 2023+2024
+    -- Computes all Query A metrics for historical games of the same tier
+    -- =============================================
+    LET v_tier_rs RESULTSET;
+    v_tier_rs := (
+        SELECT
+            ROUND(AVG(v.OVERALL_NUMRAT), 2),
+            COUNT(DISTINCT v.GAME_DATE::DATE),
+            COUNT(*),
+            ROUND(100.0 * SUM(CASE WHEN v.EXIT_STAGE_DESC IS NOT NULL AND v.EXIT_STAGE_DESC != 'After the final pitch' THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.EXIT_STAGE_DESC IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.EXIT_STAGE_DESC IN ('7th inning or earlier') THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.EXIT_STAGE_DESC IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.ATTEND_WITH_CATEGORY_YOUNG_KIDS > 0 THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.ATTEND_WITH_CATEGORY_YOUNG_KIDS IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.ATTEND_WITH_CATEGORY_FRIENDS > 0 THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.ATTEND_WITH_CATEGORY_FRIENDS IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.ATTEND_WITH_CATEGORY_SPOUSE > 0 THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.ATTEND_WITH_CATEGORY_SPOUSE IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.ATTEND_WITH_CATEGORY_ALONE > 0 THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.ATTEND_WITH_CATEGORY_ALONE IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.PREVIOUS_PURCHASE_DESC = 'No' THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.PREVIOUS_PURCHASE_DESC IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.PURCHASE_INTENT_DESC = 'Yes, I do' THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.PURCHASE_INTENT_DESC IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(AVG(TRY_TO_NUMBER(REGEXP_SUBSTR(v.GROUP_SIZE_DESC, '\\d+'))), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.FAVORITE_TEAM_CLEAN ILIKE '%rays%' OR v.FAVORITE_TEAM_CLEAN ILIKE '%tampa bay%' THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.FAVORITE_TEAM_CLEAN IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.TEAM_AVIDITY_DESC = '5 (passionate fan)' THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.TEAM_AVIDITY_DESC IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(AVG(v.AGE), 1),
+            ROUND(AVG(v.HOME_DIST), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.TRAVELTO_METHOD_DESC ILIKE '%car%' OR v.TRAVELTO_METHOD_DESC ILIKE '%vehicle%' THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.TRAVELTO_METHOD_DESC IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.GAMES_PREV_SEASON_DESC = 'I did not attend any games' THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.GAMES_PREV_SEASON_DESC IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.CONCESS_WAIT_EXPECT_DESC IN ('Much more than what I expected','Slightly more than what I expected') THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.CONCESS_WAIT_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.PARKING_TIME_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.PARKING_TIME_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.PARKING_EXIT_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.PARKING_EXIT_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.TRAVELTO_TIME_EXPECT_DESC = 'More than what I expected' THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.TRAVELTO_TIME_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.GE_TIME_EXPECT_DESC = 'More than what I expected' THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.GE_TIME_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.CONCESS_SCREENER_DESC = 'Yes, I did' THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.CONCESS_SCREENER_DESC IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.MERCH_SCREENER_DESC = 'Yes, I did' THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.MERCH_SCREENER_DESC IS NOT NULL THEN 1 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.CONCESS_ORDER_METHOD_MOBILE > 0 THEN 1 ELSE 0 END)
+                  / NULLIF(SUM(CASE WHEN v.CONCESS_SCREENER_DESC = 'Yes, I did' THEN 1 ELSE 0 END), 0), 1),
+            ROUND(100.0 * SUM(CASE WHEN v.CONCESS_SPEND_DESC IN ('Between $41 and $50','More than $50') THEN 1 ELSE 0 END)
+                  / NULLIF(COUNT(CASE WHEN v.CONCESS_SPEND_DESC IS NOT NULL THEN 1 END), 0), 1)
+        FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI v
+        INNER JOIN TBRDP_DW_DEV.IM_RPT.T_GAME_TIERS gt
+            ON v.GAME_DATE::DATE = gt.GAME_DATE
+        WHERE gt.GAME_TIER = :v_game_tier
+          AND gt.SEASON IN (2023, 2024)
+          AND v.OVERALL_NUMRAT IS NOT NULL
     );
+    LET v_tier_cur CURSOR FOR v_tier_rs;
+    OPEN v_tier_cur;
+    FETCH v_tier_cur INTO
+        v_tier_avg_overall, v_tier_num_games, v_tier_total_responses,
+        v_tier_pct_left_early, v_tier_pct_exit_7th_or_earlier,
+        v_tier_pct_with_young_kids, v_tier_pct_with_friends, v_tier_pct_with_spouse, v_tier_pct_alone,
+        v_tier_pct_first_time_buyer, v_tier_pct_repurchase_intent, v_tier_avg_group_size,
+        v_tier_pct_rays_fans, v_tier_pct_passionate_fans, v_tier_avg_age, v_tier_avg_home_dist,
+        v_tier_pct_drove, v_tier_pct_no_prev_season_games,
+        v_tier_pct_concess_wait_long, v_tier_pct_parking_arrival_long, v_tier_pct_parking_exit_long,
+        v_tier_pct_travel_longer, v_tier_pct_gate_entry_long,
+        v_tier_pct_bought_concessions, v_tier_pct_bought_merch, v_tier_pct_mobile_order, v_tier_pct_concess_spend_high;
+    CLOSE v_tier_cur;
 
     -- =============================================
     -- AI-GENERATED ACTION ITEMS (enriched with full context)
@@ -967,38 +1020,45 @@ BEGIN
         ' - Keep language professional and direct — no jargon, no filler, just data-backed findings and clear recommendations.' ||
         ' GAME: ' || v_day_of_week || ', ' || v_game_date_display || ' vs ' || v_opponent ||
         ' | ' || v_response_count::VARCHAR || ' responses | Overall: ' || v_game_avg::VARCHAR || '/10 (Season avg: ' || v_season_avg::VARCHAR || '/10)' ||
+        ' | Game Tier: ' || v_game_tier::VARCHAR || ' (1=premium, 5=lower draw) — Tier benchmark: ' || v_tier_num_games::VARCHAR || ' games, ' || v_tier_total_responses::VARCHAR || ' responses, avg ' || v_tier_avg_overall::VARCHAR || '/10' ||
         ' | Theme(s): ' || v_theme_names || ' | Giveaway: ' || v_giveaway_name || ' (' || v_giveaway_type || ')' ||
         ' | Holiday: ' || IFF(v_holiday_flag > 0, 'Yes', 'No') ||
-        ' AUDIENCE:' ||
-        ' - First-time buyers: ' || COALESCE(v_pct_first_time_buyer, 0)::VARCHAR || '% (Season: ' || COALESCE(v_szn_pct_first_time_buyer, 0)::VARCHAR || '% | ' || v_day_of_week || 's: ' || COALESCE(v_dow_pct_first_time_buyer, 0)::VARCHAR || '% | vs ' || v_opponent || ' hist: ' || COALESCE(v_opp_pct_first_time_buyer, 0)::VARCHAR || '%)' ||
-        ' - Young kids: ' || COALESCE(v_pct_with_young_kids, 0)::VARCHAR || '% (Season: ' || COALESCE(v_szn_pct_with_young_kids, 0)::VARCHAR || '%)' ||
-        ' - Friends: ' || COALESCE(v_pct_with_friends, 0)::VARCHAR || '% | Spouse: ' || COALESCE(v_pct_with_spouse, 0)::VARCHAR || '% | Alone: ' || COALESCE(v_pct_alone, 0)::VARCHAR || '%' ||
-        ' - Avg group: ' || COALESCE(v_avg_group_size, 0)::VARCHAR || ' (Season: ' || COALESCE(v_szn_avg_group_size, 0)::VARCHAR || ' | ' || v_day_of_week || 's: ' || COALESCE(v_dow_avg_group_size, 0)::VARCHAR || ')' ||
-        ' - Passionate fans (5/5): ' || COALESCE(v_pct_passionate_fans, 0)::VARCHAR || '% | Rays fans: ' || COALESCE(v_pct_rays_fans, 0)::VARCHAR || '% | ' || v_opponent || ' fans: ' || COALESCE(v_pct_opposing_fans, 0)::VARCHAR || '%' ||
-        ' - No games last season: ' || COALESCE(v_pct_no_prev_season_games, 0)::VARCHAR || '% | Avg age: ' || COALESCE(v_avg_age, 0)::VARCHAR || ' | Avg distance: ' || COALESCE(v_avg_home_dist, 0)::VARCHAR || 'mi | Drove: ' || COALESCE(v_pct_drove, 0)::VARCHAR || '%' ||
-        ' - Repurchase intent: ' || COALESCE(v_pct_repurchase_intent, 0)::VARCHAR || '% (Season: ' || COALESCE(v_szn_pct_repurchase_intent, 0)::VARCHAR || '% | ' || v_day_of_week || 's: ' || COALESCE(v_dow_pct_repurchase_intent, 0)::VARCHAR || '% | vs ' || v_opponent || ' hist: ' || COALESCE(v_opp_pct_repurchase_intent, 0)::VARCHAR || '%)' ||
+        ' AUDIENCE (game value | Tier ' || v_game_tier::VARCHAR || ' avg):' ||
+        ' - First-time buyers: ' || COALESCE(v_pct_first_time_buyer, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_first_time_buyer, 0)::VARCHAR || '%)' ||
+        ' - Young kids: ' || COALESCE(v_pct_with_young_kids, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_with_young_kids, 0)::VARCHAR || '%)' ||
+        ' - Friends: ' || COALESCE(v_pct_with_friends, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_with_friends, 0)::VARCHAR || '%)' ||
+        ' - Spouse: ' || COALESCE(v_pct_with_spouse, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_with_spouse, 0)::VARCHAR || '%)' ||
+        ' - Alone: ' || COALESCE(v_pct_alone, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_alone, 0)::VARCHAR || '%)' ||
+        ' - Avg group: ' || COALESCE(v_avg_group_size, 0)::VARCHAR || ' (Tier: ' || COALESCE(v_tier_avg_group_size, 0)::VARCHAR || ')' ||
+        ' - Passionate fans (Die-hard/Avid): ' || COALESCE(v_pct_passionate_fans, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_passionate_fans, 0)::VARCHAR || '%)' ||
+        ' - Rays fans: ' || COALESCE(v_pct_rays_fans, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_rays_fans, 0)::VARCHAR || '%) | ' || v_opponent || ' fans: ' || COALESCE(v_pct_opposing_fans, 0)::VARCHAR || '%' ||
+        ' - No games last season: ' || COALESCE(v_pct_no_prev_season_games, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_no_prev_season_games, 0)::VARCHAR || '%)' ||
+        ' - Avg age: ' || COALESCE(v_avg_age, 0)::VARCHAR || ' (Tier: ' || COALESCE(v_tier_avg_age, 0)::VARCHAR || ')' ||
+        ' - Avg distance: ' || COALESCE(v_avg_home_dist, 0)::VARCHAR || 'mi (Tier: ' || COALESCE(v_tier_avg_home_dist, 0)::VARCHAR || 'mi)' ||
+        ' - Drove: ' || COALESCE(v_pct_drove, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_drove, 0)::VARCHAR || '%)' ||
+        ' - Repurchase intent: ' || COALESCE(v_pct_repurchase_intent, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_repurchase_intent, 0)::VARCHAR || '%)' ||
         ' BUYER MIX (top 5): ' || COALESCE(v_buyer_seg_summary, 'N/A') ||
-        ' OPERATIONS (game | season | same DOW):' ||
-        ' - Left early: ' || COALESCE(v_pct_left_early, 0)::VARCHAR || '% | ' || COALESCE(v_szn_pct_left_early, 0)::VARCHAR || '% | ' || COALESCE(v_dow_pct_left_early, 0)::VARCHAR || '% (7th or earlier: ' || COALESCE(v_pct_exit_7th_or_earlier, 0)::VARCHAR || '%)' ||
-        ' - Concession wait long: ' || COALESCE(v_pct_concess_wait_long, 0)::VARCHAR || '% | ' || COALESCE(v_szn_pct_concess_wait_long, 0)::VARCHAR || '% | ' || COALESCE(v_dow_pct_concess_wait_long, 0)::VARCHAR || '%' ||
-        ' - Parking arrival long: ' || COALESCE(v_pct_parking_arrival_long, 0)::VARCHAR || '% | ' || COALESCE(v_szn_pct_parking_arrival_long, 0)::VARCHAR || '% | ' || COALESCE(v_dow_pct_parking_arrival_long, 0)::VARCHAR || '%' ||
-        ' - Parking exit long: ' || COALESCE(v_pct_parking_exit_long, 0)::VARCHAR || '% | ' || COALESCE(v_szn_pct_parking_exit_long, 0)::VARCHAR || '%' ||
-        ' - Travel longer: ' || COALESCE(v_pct_travel_longer, 0)::VARCHAR || '% | Gate entry longer: ' || COALESCE(v_pct_gate_entry_long, 0)::VARCHAR || '%' ||
-        ' - Bought concessions: ' || COALESCE(v_pct_bought_concessions, 0)::VARCHAR || '% (Season: ' || COALESCE(v_szn_pct_bought_concessions, 0)::VARCHAR || '%) | Bought merch: ' || COALESCE(v_pct_bought_merch, 0)::VARCHAR || '% (Season: ' || COALESCE(v_szn_pct_bought_merch, 0)::VARCHAR || '%)' ||
-        ' - Mobile ordering: ' || COALESCE(v_pct_mobile_order, 0)::VARCHAR || '% | Concession spend $41+: ' || COALESCE(v_pct_concess_spend_high, 0)::VARCHAR || '%' ||
+        ' OPERATIONS (game | Tier ' || v_game_tier::VARCHAR || ' avg):' ||
+        ' - Left early: ' || COALESCE(v_pct_left_early, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_left_early, 0)::VARCHAR || '%) — 7th or earlier: ' || COALESCE(v_pct_exit_7th_or_earlier, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_exit_7th_or_earlier, 0)::VARCHAR || '%)' ||
+        ' - Concession wait long: ' || COALESCE(v_pct_concess_wait_long, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_concess_wait_long, 0)::VARCHAR || '%)' ||
+        ' - Parking arrival long: ' || COALESCE(v_pct_parking_arrival_long, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_parking_arrival_long, 0)::VARCHAR || '%)' ||
+        ' - Parking exit long: ' || COALESCE(v_pct_parking_exit_long, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_parking_exit_long, 0)::VARCHAR || '%)' ||
+        ' - Travel longer: ' || COALESCE(v_pct_travel_longer, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_travel_longer, 0)::VARCHAR || '%)' ||
+        ' - Gate entry longer: ' || COALESCE(v_pct_gate_entry_long, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_gate_entry_long, 0)::VARCHAR || '%)' ||
+        ' - Bought concessions: ' || COALESCE(v_pct_bought_concessions, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_bought_concessions, 0)::VARCHAR || '%)' ||
+        ' - Bought merch: ' || COALESCE(v_pct_bought_merch, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_bought_merch, 0)::VARCHAR || '%)' ||
+        ' - Mobile ordering: ' || COALESCE(v_pct_mobile_order, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_mobile_order, 0)::VARCHAR || '%)' ||
+        ' - Concession spend $41+: ' || COALESCE(v_pct_concess_spend_high, 0)::VARCHAR || '% (Tier: ' || COALESCE(v_tier_pct_concess_spend_high, 0)::VARCHAR || '%)' ||
         ' PROMO/THEME:' ||
         ' - Giveaway satisfaction: ' || COALESCE(v_pct_giveaway_satisfied, 0)::VARCHAR || '% | Arrived early for giveaway: ' || COALESCE(v_pct_arrived_early_for_giveaway, 0)::VARCHAR || '%' ||
         ' - Cared about giveaway: ' || COALESCE(v_pct_cared_giveaway, 0)::VARCHAR || '% | Cared about theme: ' || COALESCE(v_pct_cared_theme, 0)::VARCHAR || '%' ||
         ' - Theme drove attendance: ' || COALESCE(v_pct_theme_drove_attendance, 0)::VARCHAR || '% | Theme satisfaction: ' || COALESCE(v_pct_theme_satisfied, 0)::VARCHAR || '%' ||
-        ' VS ' || v_opponent || ' HISTORY (' || COALESCE(v_opp_num_games, 0)::VARCHAR || ' games, ' || COALESCE(v_opp_total_responses, 0)::VARCHAR || ' responses):' ||
-        ' - Overall: ' || COALESCE(v_opp_avg_overall, 0)::VARCHAR || '/10 | Left early: ' || COALESCE(v_opp_pct_left_early, 0)::VARCHAR || '% | First-timers: ' || COALESCE(v_opp_pct_first_time_buyer, 0)::VARCHAR || '% | Rays fans: ' || COALESCE(v_opp_pct_rays_fans, 0)::VARCHAR || '%' ||
-        ' QUANTITATIVE (game vs season, 35 metrics):' ||
+        ' QUANTITATIVE (game vs season, ~30 metrics, satisfaction extremes):' ||
         ' - Best: ' || v_best1_label || ' (' || v_best1_delta || v_best1_suffix || '), ' || v_best2_label || ' (' || v_best2_delta || v_best2_suffix || '), ' || v_best3_label || ' (' || v_best3_delta || v_best3_suffix || ')' ||
         ' - Worst: ' || v_worst1_label || ' (' || v_worst1_delta || v_worst1_suffix || '), ' || v_worst2_label || ' (' || v_worst2_delta || v_worst2_suffix || '), ' || v_worst3_label || ' (' || v_worst3_delta || v_worst3_suffix || ')' ||
         ' QUALITATIVE (top sentence-level topics):' ||
         ' - Positive: ' || v_pos_topic_1 || ' (' || v_pos_topic_1_pct::VARCHAR || '%), ' || v_pos_topic_2 || ' (' || v_pos_topic_2_pct::VARCHAR || '%), ' || v_pos_topic_3 || ' (' || v_pos_topic_3_pct::VARCHAR || '%)' ||
         ' - Negative: ' || v_neg_topic_1 || ' (' || v_neg_topic_1_pct::VARCHAR || '%), ' || v_neg_topic_2 || ' (' || v_neg_topic_2_pct::VARCHAR || '%), ' || v_neg_topic_3 || ' (' || v_neg_topic_3_pct::VARCHAR || '%)' ||
-        ' TOP FAN REQUEST: ' || COALESCE(v_top_incentive, 'N/A') ||
         ' FORMAT (output ONLY these two divs, nothing else): <div>&#9989; [positive insight with specific data]</div> <div>&#128640; [improvement insight with specific data]</div>';
 
     SELECT AI_COMPLETE('claude-sonnet-4-6', :v_action_prompt, {'temperature': 0.3, 'max_tokens': 500})
@@ -1008,8 +1068,8 @@ BEGIN
     -- BUILD EMAIL HTML — matches reference format
     -- Section labels: OVERALL, QUALITATIVE SUMMARY, QUANTITATIVE SUMMARY
     -- No department names displayed in qualitative or quantitative
-    -- Natural language: "Fans satisfied with X was Y% higher/lower"
-    -- For /10 ratings: "Y points higher/lower"
+    -- Natural language: "Fans highly satisfied with X was Y% higher"
+    -- For negative: "Fans highly dissatisfied with X was Y% higher"
     -- MSO conditional comments for Outlook compatibility
     -- =============================================
     v_email_subject := 'Rays VOC Report Card - ' || v_game_date_display || ' VS ' || v_opponent;
@@ -1034,22 +1094,22 @@ BEGIN
     v_html_body := v_html_body || '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:6px 0 4px 0;font-size:10px;letter-spacing:1.5px;color:#092C5C;font-weight:700;">&#128172; QUALITATIVE SUMMARY</td></tr></table>';
 
     -- Positive topics (no department names)
-    v_html_body := v_html_body || '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:6px;"><tr><td style="padding:6px 10px;background-color:#f0fff4;border-left:3px solid #2ecc71;border-radius:0 6px 6px 0;"><div style="font-size:10px;font-weight:700;color:#1a7431;letter-spacing:0.5px;margin-bottom:4px;">&#9989; POSITIVE FEEDBACK &middot; ' || v_positive_total::VARCHAR || '</div><div style="font-size:11px;color:#333;line-height:1.6;"><div><strong>' || v_pos_topic_1 || '</strong> <span style="color:#1a7431;font-weight:600;">' || v_pos_topic_1_pct || '%</span></div><div><strong>' || v_pos_topic_2 || '</strong> <span style="color:#1a7431;font-weight:600;">' || v_pos_topic_2_pct || '%</span></div><div><strong>' || v_pos_topic_3 || '</strong> <span style="color:#1a7431;font-weight:600;">' || v_pos_topic_3_pct || '%</span></div></div></td></tr></table>';
+    v_html_body := v_html_body || '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:6px;"><tr><td style="padding:6px 10px;background-color:#f0fff4;border-left:3px solid #2ecc71;border-radius:0 6px 6px 0;"><div style="font-size:10px;font-weight:700;color:#1a7431;letter-spacing:0.5px;margin-bottom:4px;">&#9989; POSITIVE FEEDBACK &middot; ' || v_positive_total::VARCHAR || ' (' || v_positive_pct || '%)</div><div style="font-size:11px;color:#333;line-height:1.6;"><div><strong>' || v_pos_topic_1 || '</strong> <span style="color:#1a7431;font-weight:600;">' || v_pos_topic_1_pct || '%</span></div><div><strong>' || v_pos_topic_2 || '</strong> <span style="color:#1a7431;font-weight:600;">' || v_pos_topic_2_pct || '%</span></div><div><strong>' || v_pos_topic_3 || '</strong> <span style="color:#1a7431;font-weight:600;">' || v_pos_topic_3_pct || '%</span></div></div></td></tr></table>';
 
     -- Negative topics (no department names)
-    v_html_body := v_html_body || '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:6px 10px;background-color:#fff5f5;border-left:3px solid #e74c3c;border-radius:0 6px 6px 0;"><div style="font-size:10px;font-weight:700;color:#c0392b;letter-spacing:0.5px;margin-bottom:4px;">&#9888;&#65039; NEGATIVE FEEDBACK &middot; ' || v_negative_total::VARCHAR || '</div><div style="font-size:11px;color:#333;line-height:1.6;"><div><strong>' || v_neg_topic_1 || '</strong> <span style="color:#c0392b;font-weight:600;">' || v_neg_topic_1_pct || '%</span></div><div><strong>' || v_neg_topic_2 || '</strong> <span style="color:#c0392b;font-weight:600;">' || v_neg_topic_2_pct || '%</span></div><div><strong>' || v_neg_topic_3 || '</strong> <span style="color:#c0392b;font-weight:600;">' || v_neg_topic_3_pct || '%</span></div></div></td></tr></table></div><!--[if mso]></td></tr></table><![endif]--></td></tr>';
+    v_html_body := v_html_body || '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:6px 10px;background-color:#fff5f5;border-left:3px solid #e74c3c;border-radius:0 6px 6px 0;"><div style="font-size:10px;font-weight:700;color:#c0392b;letter-spacing:0.5px;margin-bottom:4px;">&#9888;&#65039; NEGATIVE FEEDBACK &middot; ' || v_negative_total::VARCHAR || ' (' || v_negative_pct || '%)</div><div style="font-size:11px;color:#333;line-height:1.6;"><div><strong>' || v_neg_topic_1 || '</strong> <span style="color:#c0392b;font-weight:600;">' || v_neg_topic_1_pct || '%</span></div><div><strong>' || v_neg_topic_2 || '</strong> <span style="color:#c0392b;font-weight:600;">' || v_neg_topic_2_pct || '%</span></div><div><strong>' || v_neg_topic_3 || '</strong> <span style="color:#c0392b;font-weight:600;">' || v_neg_topic_3_pct || '%</span></div></div></td></tr></table></div><!--[if mso]></td></tr></table><![endif]--></td></tr>';
 
     -- DIVIDER
     v_html_body := v_html_body || '<tr><td style="padding:14px 24px;"><hr style="border:none;border-top:2px solid #e8eaed;margin:0;"></td></tr>';
 
     -- SECTION 3: QUANTITATIVE SUMMARY with natural language (3+3 takeaways)
-    v_html_body := v_html_body || '<tr><td style="padding:0 24px 20px 24px;"><div style="font-size:10px;letter-spacing:1.5px;color:#092C5C;font-weight:700;margin-bottom:10px;">&#127919; QUANTITATIVE SUMMARY <span style="font-weight:400;color:#888;letter-spacing:0;">&mdash; Game vs season average (35 metrics)</span></div>';
+    v_html_body := v_html_body || '<tr><td style="padding:0 24px 20px 24px;"><div style="font-size:10px;letter-spacing:1.5px;color:#092C5C;font-weight:700;margin-bottom:10px;">&#127919; QUANTITATIVE SUMMARY <span style="font-weight:400;color:#888;letter-spacing:0;">&mdash; Game vs season average (~30 metrics)</span></div>';
 
     -- Positive takeaways (3 items, natural language, no departments)
-    v_html_body := v_html_body || '<div style="padding:10px 14px;background-color:#f0fff4;border-left:3px solid #2ecc71;border-radius:0 6px 6px 0;margin-bottom:8px;"><div style="font-size:10px;font-weight:700;color:#1a7431;letter-spacing:0.5px;margin-bottom:5px;">POSITIVE TAKEAWAYS</div><div style="font-size:12px;color:#333;line-height:1.8;"><div>&#9650; Fans satisfied with <strong>' || v_best1_label || '</strong> was <span style="color:#1a7431;font-weight:700;">' || v_best1_delta || v_best1_suffix || '</span> than the season average</div><div>&#9650; Fans satisfied with <strong>' || v_best2_label || '</strong> was <span style="color:#1a7431;font-weight:700;">' || v_best2_delta || v_best2_suffix || '</span> than the season average</div><div>&#9650; Fans satisfied with <strong>' || v_best3_label || '</strong> was <span style="color:#1a7431;font-weight:700;">' || v_best3_delta || v_best3_suffix || '</span> than the season average</div></div></div>';
+    v_html_body := v_html_body || '<div style="padding:10px 14px;background-color:#f0fff4;border-left:3px solid #2ecc71;border-radius:0 6px 6px 0;margin-bottom:8px;"><div style="font-size:10px;font-weight:700;color:#1a7431;letter-spacing:0.5px;margin-bottom:5px;">POSITIVE TAKEAWAYS</div><div style="font-size:12px;color:#333;line-height:1.8;"><div>&#9650; Fans highly satisfied with <strong>' || v_best1_label || '</strong> was <span style="color:#1a7431;font-weight:700;">' || v_best1_delta || v_best1_suffix || '</span> than the season average</div><div>&#9650; Fans highly satisfied with <strong>' || v_best2_label || '</strong> was <span style="color:#1a7431;font-weight:700;">' || v_best2_delta || v_best2_suffix || '</span> than the season average</div><div>&#9650; Fans highly satisfied with <strong>' || v_best3_label || '</strong> was <span style="color:#1a7431;font-weight:700;">' || v_best3_delta || v_best3_suffix || '</span> than the season average</div></div></div>';
 
     -- Negative takeaways (3 items, natural language, no departments)
-    v_html_body := v_html_body || '<div style="padding:10px 14px;background-color:#fff5f5;border-left:3px solid #e74c3c;border-radius:0 6px 6px 0;margin-bottom:8px;"><div style="font-size:10px;font-weight:700;color:#c0392b;letter-spacing:0.5px;margin-bottom:5px;">NEGATIVE TAKEAWAYS</div><div style="font-size:12px;color:#333;line-height:1.8;"><div>&#9660; Fans satisfied with <strong>' || v_worst1_label || '</strong> was <span style="color:#c0392b;font-weight:700;">' || v_worst1_delta || v_worst1_suffix || '</span> than the season average</div><div>&#9660; Fans satisfied with <strong>' || v_worst2_label || '</strong> was <span style="color:#c0392b;font-weight:700;">' || v_worst2_delta || v_worst2_suffix || '</span> than the season average</div><div>&#9660; Fans satisfied with <strong>' || v_worst3_label || '</strong> was <span style="color:#c0392b;font-weight:700;">' || v_worst3_delta || v_worst3_suffix || '</span> than the season average</div></div></div>';
+    v_html_body := v_html_body || '<div style="padding:10px 14px;background-color:#fff5f5;border-left:3px solid #e74c3c;border-radius:0 6px 6px 0;margin-bottom:8px;"><div style="font-size:10px;font-weight:700;color:#c0392b;letter-spacing:0.5px;margin-bottom:5px;">NEGATIVE TAKEAWAYS</div><div style="font-size:12px;color:#333;line-height:1.8;"><div>&#9660; Fans highly dissatisfied with <strong>' || v_worst1_label || '</strong> was <span style="color:#c0392b;font-weight:700;">' || v_worst1_delta || v_worst1_suffix || '</span> than the season average</div><div>&#9660; Fans highly dissatisfied with <strong>' || v_worst2_label || '</strong> was <span style="color:#c0392b;font-weight:700;">' || v_worst2_delta || v_worst2_suffix || '</span> than the season average</div><div>&#9660; Fans highly dissatisfied with <strong>' || v_worst3_label || '</strong> was <span style="color:#c0392b;font-weight:700;">' || v_worst3_delta || v_worst3_suffix || '</span> than the season average</div></div></div>';
 
     -- Actionable items (AI-generated)
     v_html_body := v_html_body || '<div style="padding:10px 14px;background-color:#f0f7ff;border-left:3px solid #3498db;border-radius:0 6px 6px 0;"><div style="font-size:10px;font-weight:700;color:#2471a3;letter-spacing:0.5px;margin-bottom:4px;">ACTIONABLE ITEMS</div><div style="font-size:12px;color:#333;line-height:1.5;">' || v_action_items || '</div></div></td></tr>';
