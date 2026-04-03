@@ -223,7 +223,7 @@ BEGIN
                     WHEN 'TEX' THEN 'Texas_Rangers.png'
                     WHEN 'TOR' THEN 'Toronto_BlueJays.png'
                     WHEN 'WSH' THEN 'Washington_Nationals.png'
-                    ELSE 'TampaBay_Rays.png'
+                    ELSE 'TB_Full_Color_WHITE_RGB (1).png'
                 END
             )
         )
@@ -237,7 +237,7 @@ BEGIN
 
     -- Embed Rays logo as base64 data URI
     SELECT TBRDP_DW_DEV.IM_RPT.READ_STAGE_FILE_BASE64(
-        BUILD_SCOPED_FILE_URL(@TBRDP_DW_DEV.IM_RPT.MLB_LOGOS_STAGE, 'TampaBay_Rays.png')
+        BUILD_SCOPED_FILE_URL(@TBRDP_DW_DEV.IM_RPT.MLB_LOGOS_STAGE, 'TB_White.png')
     )
     INTO :v_rays_logo_url;
 
@@ -551,6 +551,7 @@ BEGIN
                 ROUND(game_val - season_val, 2) AS improvement
             FROM metrics
             WHERE game_val IS NOT NULL AND season_val IS NOT NULL AND n >= 20
+              AND ROUND(game_val - season_val, 2) > 0
         )
         SELECT metric_label, dept, unit, improvement
         FROM scored ORDER BY improvement DESC LIMIT 3
@@ -769,6 +770,7 @@ BEGIN
                 ROUND(game_val - season_val, 2) AS regression
             FROM metrics
             WHERE game_val IS NOT NULL AND season_val IS NOT NULL AND n >= 20
+              AND ROUND(game_val - season_val, 2) > 0
         )
         SELECT metric_label, dept, unit, regression
         FROM scored ORDER BY regression DESC LIMIT 3
@@ -826,7 +828,7 @@ BEGIN
         ROUND(100.0 * SUM(CASE WHEN v.TEAM_AVIDITY_DESC = '5 (passionate fan)' THEN 1 ELSE 0 END)
               / NULLIF(COUNT(CASE WHEN v.TEAM_AVIDITY_DESC IS NOT NULL THEN 1 END), 0), 1),
         ROUND(AVG(v.AGE), 1),
-        ROUND(AVG(v.HOME_DIST), 1),
+        ROUND(MEDIAN(v.HOME_DIST), 1),
         ROUND(100.0 * SUM(CASE WHEN v.TRAVELTO_METHOD_DESC ILIKE '%car%' OR v.TRAVELTO_METHOD_DESC ILIKE '%vehicle%' THEN 1 ELSE 0 END)
               / NULLIF(COUNT(CASE WHEN v.TRAVELTO_METHOD_DESC IS NOT NULL THEN 1 END), 0), 1),
         ROUND(100.0 * SUM(CASE WHEN v.GAMES_PREV_SEASON_DESC = 'I did not attend any games' THEN 1 ELSE 0 END)
@@ -834,9 +836,9 @@ BEGIN
         -- Operational metrics
         ROUND(100.0 * SUM(CASE WHEN v.CONCESS_WAIT_EXPECT_DESC IN ('Much more than what I expected','Slightly more than what I expected') THEN 1 ELSE 0 END)
               / NULLIF(COUNT(CASE WHEN v.CONCESS_WAIT_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN v.PARKING_TIME_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)
+        ROUND(100.0 * SUM(CASE WHEN v.PARKING_TIME_EXPECT_DESC = 'More than what I expected' THEN 1 ELSE 0 END)
               / NULLIF(COUNT(CASE WHEN v.PARKING_TIME_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
-        ROUND(100.0 * SUM(CASE WHEN v.PARKING_EXIT_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)
+        ROUND(100.0 * SUM(CASE WHEN v.PARKING_EXIT_EXPECT_DESC = 'More than what I expected' THEN 1 ELSE 0 END)
               / NULLIF(COUNT(CASE WHEN v.PARKING_EXIT_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
         ROUND(100.0 * SUM(CASE WHEN v.TRAVELTO_TIME_EXPECT_DESC = 'More than what I expected' THEN 1 ELSE 0 END)
               / NULLIF(COUNT(CASE WHEN v.TRAVELTO_TIME_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
@@ -942,7 +944,7 @@ BEGIN
             COUNT(*),
             ROUND(100.0 * SUM(CASE WHEN v.EXIT_STAGE_DESC IS NOT NULL AND v.EXIT_STAGE_DESC != 'After the final pitch' THEN 1 ELSE 0 END)
                   / NULLIF(COUNT(CASE WHEN v.EXIT_STAGE_DESC IS NOT NULL THEN 1 END), 0), 1),
-            ROUND(100.0 * SUM(CASE WHEN v.EXIT_STAGE_DESC IN ('7th inning or earlier') THEN 1 ELSE 0 END)
+            ROUND(100.0 * SUM(CASE WHEN v.EXIT_STAGE_DESC IN ('7th inning','6th inning','5th inning','4th inning','3rd inning','2nd inning','1st inning') THEN 1 ELSE 0 END)
                   / NULLIF(COUNT(CASE WHEN v.EXIT_STAGE_DESC IS NOT NULL THEN 1 END), 0), 1),
             ROUND(100.0 * SUM(CASE WHEN v.ATTEND_WITH_CATEGORY_YOUNG_KIDS > 0 THEN 1 ELSE 0 END)
                   / NULLIF(COUNT(CASE WHEN v.ATTEND_WITH_CATEGORY_YOUNG_KIDS IS NOT NULL THEN 1 END), 0), 1),
@@ -962,16 +964,16 @@ BEGIN
             ROUND(100.0 * SUM(CASE WHEN v.TEAM_AVIDITY_DESC = '5 (passionate fan)' THEN 1 ELSE 0 END)
                   / NULLIF(COUNT(CASE WHEN v.TEAM_AVIDITY_DESC IS NOT NULL THEN 1 END), 0), 1),
             ROUND(AVG(v.AGE), 1),
-            ROUND(AVG(v.HOME_DIST), 1),
+            ROUND(MEDIAN(v.HOME_DIST), 1),
             ROUND(100.0 * SUM(CASE WHEN v.TRAVELTO_METHOD_DESC ILIKE '%car%' OR v.TRAVELTO_METHOD_DESC ILIKE '%vehicle%' THEN 1 ELSE 0 END)
                   / NULLIF(COUNT(CASE WHEN v.TRAVELTO_METHOD_DESC IS NOT NULL THEN 1 END), 0), 1),
             ROUND(100.0 * SUM(CASE WHEN v.GAMES_PREV_SEASON_DESC = 'I did not attend any games' THEN 1 ELSE 0 END)
                   / NULLIF(COUNT(CASE WHEN v.GAMES_PREV_SEASON_DESC IS NOT NULL THEN 1 END), 0), 1),
             ROUND(100.0 * SUM(CASE WHEN v.CONCESS_WAIT_EXPECT_DESC IN ('Much more than what I expected','Slightly more than what I expected') THEN 1 ELSE 0 END)
                   / NULLIF(COUNT(CASE WHEN v.CONCESS_WAIT_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
-            ROUND(100.0 * SUM(CASE WHEN v.PARKING_TIME_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)
+            ROUND(100.0 * SUM(CASE WHEN v.PARKING_TIME_EXPECT_DESC = 'More than what I expected' THEN 1 ELSE 0 END)
                   / NULLIF(COUNT(CASE WHEN v.PARKING_TIME_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
-            ROUND(100.0 * SUM(CASE WHEN v.PARKING_EXIT_EXPECT_DESC = 'Longer than expected' THEN 1 ELSE 0 END)
+            ROUND(100.0 * SUM(CASE WHEN v.PARKING_EXIT_EXPECT_DESC = 'More than what I expected' THEN 1 ELSE 0 END)
                   / NULLIF(COUNT(CASE WHEN v.PARKING_EXIT_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
             ROUND(100.0 * SUM(CASE WHEN v.TRAVELTO_TIME_EXPECT_DESC = 'More than what I expected' THEN 1 ELSE 0 END)
                   / NULLIF(COUNT(CASE WHEN v.TRAVELTO_TIME_EXPECT_DESC IS NOT NULL THEN 1 END), 0), 1),
@@ -1059,9 +1061,13 @@ BEGIN
         ' QUALITATIVE (top sentence-level topics):' ||
         ' - Positive: ' || v_pos_topic_1 || ' (' || v_pos_topic_1_pct::VARCHAR || '%), ' || v_pos_topic_2 || ' (' || v_pos_topic_2_pct::VARCHAR || '%), ' || v_pos_topic_3 || ' (' || v_pos_topic_3_pct::VARCHAR || '%)' ||
         ' - Negative: ' || v_neg_topic_1 || ' (' || v_neg_topic_1_pct::VARCHAR || '%), ' || v_neg_topic_2 || ' (' || v_neg_topic_2_pct::VARCHAR || '%), ' || v_neg_topic_3 || ' (' || v_neg_topic_3_pct::VARCHAR || '%)' ||
+        ' RULES:' ||
+        ' - Each insight must be exactly 2-3 sentences. Be concise and efficient — every word should add value.' ||
+        ' - IMPORTANT: Every sentence must be complete. Never leave a thought unfinished.' ||
+        ' - Never compare a metric to 0%. If a benchmark value is 0%, omit that comparison entirely.' ||
         ' FORMAT (output ONLY these two divs, nothing else): <div>&#9989; [positive insight with specific data]</div> <div>&#128640; [improvement insight with specific data]</div>';
 
-    SELECT AI_COMPLETE('claude-sonnet-4-6', :v_action_prompt, {'temperature': 0.3, 'max_tokens': 500})
+    SELECT AI_COMPLETE('claude-sonnet-4-6', :v_action_prompt, {'temperature': 0.3, 'max_tokens': 800})
     INTO :v_action_items;
 
     -- =============================================
@@ -1115,7 +1121,7 @@ BEGIN
     v_html_body := v_html_body || '<div style="padding:10px 14px;background-color:#f0f7ff;border-left:3px solid #3498db;border-radius:0 6px 6px 0;"><div style="font-size:10px;font-weight:700;color:#2471a3;letter-spacing:0.5px;margin-bottom:4px;">ACTIONABLE ITEMS</div><div style="font-size:12px;color:#333;line-height:1.5;">' || v_action_items || '</div></div></td></tr>';
 
     -- FOOTER
-    v_html_body := v_html_body || '<tr><td bgcolor="#092C5C" style="background-color:#092C5C;padding:16px 40px;text-align:center;"><div style="font-size:10px;color:#8FBCE6;line-height:1.5;">Data sourced from post-game VOC survey &nbsp;|&nbsp; ' || v_response_count::VARCHAR || ' responses &nbsp;|&nbsp; ' || v_header_line || '<br>Powered by Snowflake Cortex AI (claude-sonnet-4-6) &nbsp;|&nbsp; Tampa Bay Rays Strategy &amp; Analytics</div></td></tr>';
+    v_html_body := v_html_body || '<tr><td bgcolor="#092C5C" style="background-color:#092C5C;padding:16px 40px;text-align:center;"><div style="font-size:10px;color:#8FBCE6;line-height:1.5;">Data sourced from post-game VOC survey &nbsp;|&nbsp; ' || v_response_count::VARCHAR || ' responses &nbsp;|&nbsp; ' || v_header_line || '<br>Powered by Snowflake Cortex AI &nbsp;|&nbsp; Tampa Bay Rays Strategy &amp; Analytics<br>Click <a href="https://prod-useast-b.online.tableau.com/#/site/tampabayrays/projects/2280468" style="color:#ffffff;">here</a> for further dashboard insights<br>Click <a href="https://ai.snowflake.com/east-us-2.azure/hta92307/#/ai/chat/new?db=SNOWFLAKE_INTELLIGENCE&amp;schema=AGENTS&amp;agent=VOC_INSIGHTS_AGENT" style="color:#ffffff;">here</a> for the VOC Insights Agent</div></td></tr>';
 
     v_html_body := v_html_body || '</table></td></tr></table></body></html>';
 
