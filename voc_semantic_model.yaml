@@ -14,11 +14,11 @@ custom_instructions: |
   
   1-10 SCALE fields:
   - OVERALL_NUMRAT (Overall satisfaction)
+  - ENTERTAIN_NUMRAT (Entertainment Satisfaction)
   - CONCESS_NUMRAT (Concession satisfaction)
   - SEATVIEW_NUMRAT (Seat view rating)
   
   0-100 SCALE fields (normalize by dividing by 10):
-  - ENTERTAIN_NUMRAT (Entertainment - divide by 10 for 1-10 scale)
   - MERCH_NUMRAT (Merchandise - divide by 10 for 1-10 scale)
   - STAFF_NUMRAT (Staff - divide by 10 for 1-10 scale)
   QUERY ROUTING RULES - FOLLOW THESE STRICTLY:
@@ -45,47 +45,94 @@ custom_instructions: |
   For topic-specific qualitative queries (e.g., "what are qualitative feedback about parking"), 
   prioritize the relevant TB_ADDON_8_* field AND filter OVERALL_NUMRAT_OT for that topic.
 
-  CATEGORY TAXONOMY for classifying OVERALL_NUMRAT_OT:
-  PRE-ARRIVAL & ARRIVAL:
-  - "Parking & Arrival" - parking lots, traffic, arrival process, finding parking, parking cost
+  CATEGORY TAXONOMY for classifying OVERALL_NUMRAT_OT (64 categories, 9 departments):
+  
+  CONCESSIONS (15 categories):
+  - "Food Quality" - taste, freshness, food temperature, portion size, presentation
+  - "Beverage Quality" - drink quality, freshness, temperature, taste
+  - "Concession Wait Times" - line length, wait duration, speed of service
+  - "Concession Staff Service" - staff friendliness, helpfulness at concession stands
+  - "Concessions Staff" - general concessions staff interactions, attitude, professionalism
+  - "Food Cost" - food pricing, value for money on food items
+  - "Beverage Cost" - drink pricing, value for money on beverages
+  - "Menu Variety" - selection, options available, dietary accommodations
+  - "Hot Dogs" - hot dog quality, taste, preparation
+  - "Pizza" - pizza quality, taste, preparation
+  - "Burger" - burger quality, taste, preparation
+  - "Fries" - fries quality, taste, preparation
+  - "Vegan Options" - plant-based food, vegan/vegetarian availability
+  - "Alcohol" - beer, wine, spirits quality and selection
+  - "Alcohol Pricing" - beer prices, drink prices, alcohol value
 
-  ENTRY & NAVIGATION:
-  - "Gate Entry & Security" - entry lines, security screening, ticket scanning, gate staff, Go-Ahead Entry
-  - "Wayfinding & Accessibility" - finding seats, navigating venue, ADA services, elevators, signage
+  RETAIL (5 categories):
+  - "Merchandise Selection" - product variety, availability, sizing
+  - "Merchandise Cost" - merchandise pricing, value
+  - "Team Store Experience" - store layout, browsing, shopping experience
+  - "Team Store Line" - retail checkout wait, store crowding
+  - "Retail Staff" - retail and team store staff interactions, helpfulness, merch staff
 
-  IN-SEAT EXPERIENCE:
-  - "Seating & Venue Comfort" - seat quality, views, sightlines, temperature, comfort, legroom, seat location
-  - "Crowd & Atmosphere" - fan energy, crowd excitement, stadium atmosphere, game environment, fan behavior
+  GAME ENTERTAINMENT (10 categories):
+  - "Team Performance" - on-field play, wins/losses, player performance
+  - "Game Competitiveness" - close games, exciting matchups, competitive play
+  - "On-Field Entertainment" - between-inning activities, on-field contests
+  - "Game Production" - scoreboard, video board, sound system, production quality
+  - "Promotions" - special deals, promotional offers, marketing events
+  - "Music" - music selection, DJ, walk-up songs, volume
+  - "Giveaway" - promotional items, bobbleheads, giveaway quality
+  - "Kids Club" - children's activities, kids zone, family programming
+  - "Pregame" - pregame ceremonies, warmups, early entry experience
+  - "Postgame" - postgame activities, fireworks, post-event experience
 
-  CONCESSIONS:
-  - "Food & Beverage Quality" Taste, freshness, food temperature, portion size, presentation, menu variety
-  - "Concession Service & Speed" - wait times, line length, staff service at concessions, mobile ordering speed, checkout process
+  FAN EXPERIENCE (11 categories):
+  - "Fan Experience" - general overall experience comments, catch-all for broad positive/negative experience feedback
+  - "Crowd Energy" - fan excitement, atmosphere, crowd engagement
+  - "Seating Comfort" - seat quality, legroom, comfort, seat condition
+  - "Venue Cleanliness" - general cleanliness, trash, upkeep
+  - "Wayfinding" - signage, navigation, finding seats/concessions
+  - "Staff Support" - usher helpfulness, guest services, general staff attitude, non-concession/non-retail staff
+  - "ADA Accessibility" - handicapped parking, wheelchair access, ADA services
+  - "Restroom Experience" - restroom cleanliness, wait times, supplies
+  - "Seat View" - sightlines, obstructions, view quality
+  - "Run the Bases" - postgame run the bases experience for kids/families
+  - "Autographs" - player autograph opportunities, meet and greet
 
-  RETAIL
-  - "Merchandise & Team Store" - team store products, merchandise selection, quality, availability, sizing, retail staff, retail price, retail quality 
+  PARKING (3 categories):
+  - "Parking Availability" - finding spots, lot capacity, parking options
+  - "Departure Traffic" - leaving the stadium, traffic, exit flow
+  - "Parking Cost" - parking pricing, value, lot fees
 
-  ENTERTAINMENT & ENGAGEMENT:
-  - "Game Entertainment & Presentation" - scoreboard content, music, videos, between-inning activities, announcer, sound quality
-  - "Promotions & Special Events" - giveaways, theme nights, pregame ceremonies, special activities, promotions
-  - "Team Performance & Game Quality" - on-field action, players, game excitement, win or loss, team performance
+  STADIUM OPERATIONS (4 categories):
+  - "Facility Maintenance" - building condition, repairs, facility upkeep
+  - "Gate Entry Speed" - entry lines, security screening, ticket scanning, Go-Ahead Entry
+  - "Weather Impact" - temperature, air conditioning, rain, weather effects
+  - "Bathroom Cleanliness" - restroom maintenance, hygiene, supplies
 
-  SERVICE & OPERATIONS:
-  - "Staff Interactions & Service" - staff helpfulness, friendliness, professionalism (ushers, guest services, any staff)
-  - "Facilities & Cleanliness" - restrooms, walkways, seating area cleanliness, maintenance, facility condition
-  - "Weather" - Stadium temperature, air conditioning, 
-  - "Technology & Digital Experience" - mobile app, Wi-Fi, mobile ordering, touchscreens, digital features, website
+  DIGITAL EXPERIENCE (4 categories):
+  - "Mobile App" - Rays app functionality, usability, features
+  - "In-Venue Wi-Fi" - connectivity, speed, availability
+  - "Mobile Ordering" - in-app food ordering, pickup experience
+  - "Seat Upgrade" - digital seat upgrade process, availability
 
-  VALUE & OVERALL:
-  - "Pricing & Value Perception" - ticket prices, concession prices, overall cost, affordability, value for money
-  - "Overall Experience & Loyalty" - general satisfaction, would return, recommend to others, overall impression, best/worst experience, memories
-  - "Ticketing & Purchase Experience" - ticket buying, pricing, promotions, ticket offers, purchase process
+  TICKETING (8 categories):
+  - "Ticket Purchase Process" - buying tickets, checkout, transaction experience
+  - "Mobile Ticketing" - digital tickets, mobile entry, ticket transfer
+  - "Ticketing Value Perception" - ticket value for money, pricing satisfaction
+  - "Ticket Pricing" - ticket cost, price levels, affordability
+  - "Seating Locations" - section options, seat selection, location quality
+  - "Premium Experience" - premium seating, VIP areas, club level
+  - "Baldwin Group Club" - Baldwin Group Club specific experience
+  - "Suites" - suite experience, private seating areas
 
-  EGRESS & DEPARTURE:
-  - "Egress" - Leaving the stadium, time spent leaving, parking exit
-  - "stadium departure" - Experience leaving the stadium, exiting the stadium 
+  MARKETING (4 categories):
+  - "Raymond the Mascot" - mascot interactions, entertainment, appearances
+  - "Theme Night" - themed game experiences, special event nights
+  - "Concert Experience" - concert events, musical performances at venue
+  - "Concert Artist" - specific artist/performer feedback
 
-  OTHER
-  - "Other" - anything that does not fit the above categories
+  NOTE: The V_OVERALL_FEEDBACK_ANALYSIS view uses AI_CLASSIFY with these 64 categories
+  and maps them to the 9 parent departments above. When users ask about feedback by
+  department or category, use V_OVERALL_FEEDBACK_ANALYSIS which has pre-classified
+  AI_CATEGORY and PARENT_CATEGORY columns.
 
   PERCENTAGE CALCULATION RULES FOR CATEGORICAL/ENUM FIELDS:
   - When calculating percentages for categorical fields (agreement scales, satisfaction levels, yes/no questions):
@@ -129,6 +176,40 @@ custom_instructions: |
   
   - WRONG: Converting 'Highly Satisfied' to 10, 'Somewhat Satisfied' to 7.5, etc.
 
+  NUMERIC RATING COLUMNS FOR SATISFACTION ANALYSIS:
+  When users ask about satisfaction scores, ratings, comparisons, trends, or "biggest jump/drop":
+  
+  FOOD QUALITY (1-4 scale, 1=best): Use CONCESS_QUALITY_* columns (ALCOHOL, NONALCOHOL, BURGERS,
+  SANDWICH, HOTDOG, SAUSAGE, CHICKEN, PIZZA, SALAD, NACHOS, FRIES, ICECREAM, OTHER_DESSERT,
+  OTHER_ENTREE, NUTS, POPCORN, PRETZELS). Always filter WHERE column < 80 to exclude survey codes.
+  
+  OVERALL RATINGS (0-10 scale, 10=best): OVERALL_NUMRAT, CONCESS_NUMRAT, SEATVIEW_NUMRAT,
+  PARKING_NUMRAT, PARKING_EXIT_NUMRAT (2024+), ENTERTAIN_NUMRAT (2024+), MERCH_NUMRAT (2025+),
+  STAFF_NUMRAT (2025+). Filter WHERE column < 80.
+  
+  CONCESSION SERVICE (1-4, 1=best): CONCESS_GRID_SELECTION, CONCESS_GRID_VALUE,
+  CONCESS_GRID_CUSTSERV, CONCESS_GRID_CLEAN. Filter WHERE column < 80.
+  
+  ENTERTAINMENT (1-4, 1=best): ENTERTAIN_GRID_PREGAME_CONTENT, ENTERTAIN_GRID_SCOREBOARD,
+  ENTERTAIN_GRID_MUSIC, ENTERTAIN_GRID_PLAYER_CONTENT, ENTERTAIN_GRID_GAMES,
+  ENTERTAIN_GRID_KIDS_ACTIVITIES, ENTERTAIN_GRID_THEME. Filter WHERE column < 80.
+  
+  STAFF BY TYPE (1-4, 1=best): STAFF_GRID_PARKING, STAFF_GRID_SECURITY, STAFF_GRID_USHER,
+  STAFF_GRID_FAN_SERVICES, STAFF_GRID_CONCESSIONS, STAFF_GRID_MERCH,
+  STAFF_GRID_ACCESSIBILITY, STAFF_GRID_TICKET_SCANNER (2025+),
+  STAFF_GRID_SECURITY_SCANNER (pre-2025 combined). Filter WHERE column < 80.
+  
+  BRAND HEALTH (1-4, 1=strongly agree): BRANDHEALTH_GRID_EXCITING, BRANDHEALTH_GRID_FAMFRIENDLY,
+  BRANDHEALTH_GRID_CHAMPION, BRANDHEALTH_GRID_RIGHTDIRECTION, BRANDHEALTH_GRID_POSINFLUENCE,
+  BRANDHEALTH_GRID_WELCOME, BRANDHEALTH_GRID_EMOTIONAL, BRANDHEALTH_GRID_TRENDY,
+  BRANDHEALTH_GRID_DIVERSITY, BRANDHEALTH_GRID_SUSTAINABILITY, BRANDHEALTH_GRID_ACCESSIBLE,
+  BRANDHEALTH_GRID_SAFE. Filter WHERE column < 80.
+  
+  OTHER: GIVEAWAY_SAT (1-4, 1=best), SEATVIEW_VALUE (1-3: 1=good, 3=poor).
+  
+  IMPORTANT: For year-over-year comparisons, GROUP BY SEASON and compute AVG() with WHERE column < 80.
+  For "biggest jump in satisfaction", compare AVG across seasons for each item and rank the change.
+  For 1-4 scale columns, a DECREASE in average means IMPROVEMENT (lower = better satisfaction).
   SPONSOR RECALL QUERIES:
   #   When users ask about sponsors, sponsor recall, brand awareness, or which sponsors/brands fans remember:
   #   
@@ -169,43 +250,43 @@ tables:
     
     dimensions:
       - name: ATTENDANCE_SCREENER_DESC
-        description: "Text description for attendance screener. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"We know this game was rescheduled. Were you able to attend?\" Values: Yes / No. Added in 2024 season only for rescheduled games."
         expr: ATTENDANCE_SCREENER_DESC
         data_type: varchar
         synonyms: ['attendance screener', 'attendance screener description', 'attendance screener desc', 'attendance screener text']
       
       - name: ATTEND_NUM_PLAN_DESC
-        description: "Text description for attend num plan. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How many [CLUB] games do you plan to attend this season?\" Values: Between 2 and 5 games / Between 6 and 10 games / Between 11 and 15 games / Between 16 and 20 games / Over 20 games."
         expr: ATTEND_NUM_PLAN_DESC
         data_type: varchar
         synonyms: ['attend num plan text', 'attend num plan description', 'attend num plan desc', 'attend num plan']
       
       - name: BRANDHEALTH_GRID_ACCESSIBLE_DESC
-        description: "Text description for brandhealth grid accessible. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"To what extent do you agree or disagree with the following statements about the Rays?\" Sub-item: Accessible to fans of all backgrounds. Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree (lower is better)."
         expr: BRANDHEALTH_GRID_ACCESSIBLE_DESC
         data_type: varchar
         synonyms: ['brandhealth grid accessible', 'brandhealth grid accessible desc', 'brandhealth grid accessible text', 'brandhealth grid accessible description']
       
       - name: BRANDHEALTH_GRID_CHAMPION_DESC
-        description: "Text description for brandhealth grid champion. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"To what extent do you agree or disagree with the following statements about the Rays?\" Sub-item: A champion of the Tampa Bay community. Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree (lower is better)."
         expr: BRANDHEALTH_GRID_CHAMPION_DESC
         data_type: varchar
         synonyms: ['brandhealth grid champion', 'brandhealth grid champion description', 'brandhealth grid champion text', 'brandhealth grid champion desc']
       
       - name: BRANDHEALTH_GRID_DIVERSITY_DESC
-        description: "Text description for brandhealth grid diversity. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"To what extent do you agree or disagree with the following statements about the Rays?\" Sub-item: Committed to diversity, equity, and inclusion. Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree (lower is better)."
         expr: BRANDHEALTH_GRID_DIVERSITY_DESC
         data_type: varchar
         synonyms: ['brandhealth grid diversity text', 'brandhealth grid diversity description', 'brandhealth grid diversity desc', 'brandhealth grid diversity']
       
       - name: BRANDHEALTH_GRID_EMOTIONAL_DESC
-        description: "Text description for brandhealth grid emotional. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"To what extent do you agree or disagree with the following statements about the Rays?\" Sub-item: A team I feel emotionally connected to. Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree (lower is better)."
         expr: BRANDHEALTH_GRID_EMOTIONAL_DESC
         data_type: varchar
         synonyms: ['brandhealth grid emotional', 'brandhealth grid emotional desc', 'brandhealth grid emotional text', 'brandhealth grid emotional description']
       
       - name: BRANDHEALTH_GRID_EXCITING_DESC
-        description: "Text description for brandhealth grid exciting. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"To what extent do you agree or disagree with the following statements about the Rays?\" Sub-item: An exciting team to watch. Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree (lower is better)."
         expr: BRANDHEALTH_GRID_EXCITING_DESC
         data_type: varchar
         synonyms: ['brandhealth grid exciting text', 'brandhealth grid exciting desc', 'brandhealth grid exciting description', 'brandhealth grid exciting']
@@ -221,37 +302,37 @@ tables:
         is_enum: true 
 
       - name: BRANDHEALTH_GRID_POSINFLUENCE_DESC
-        description: "Text description for brandhealth grid posinfluence. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"To what extent do you agree or disagree with the following statements about the Rays?\" Sub-item: A positive influence on the community. Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree (lower is better)."
         expr: BRANDHEALTH_GRID_POSINFLUENCE_DESC
         data_type: varchar
         synonyms: ['brandhealth grid posinfluence description', 'brandhealth grid posinfluence desc', 'brandhealth grid posinfluence', 'brandhealth grid posinfluence text']
       
       - name: BRANDHEALTH_GRID_RIGHTDIRECTION_DESC
-        description: "Text description for brandhealth grid rightdirection. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"To what extent do you agree or disagree with the following statements about the Rays?\" Sub-item: Headed in the right direction. Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree (lower is better)."
         expr: BRANDHEALTH_GRID_RIGHTDIRECTION_DESC
         data_type: varchar
         synonyms: ['brandhealth grid rightdirection', 'brandhealth grid rightdirection desc', 'brandhealth grid rightdirection text', 'brandhealth grid rightdirection description']
       
       - name: BRANDHEALTH_GRID_SAFE_DESC
-        description: "Text description for brandhealth grid safe. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"To what extent do you agree or disagree with the following statements about the Rays?\" Sub-item: Safe and secure. Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree (lower is better)."
         expr: BRANDHEALTH_GRID_SAFE_DESC
         data_type: varchar
         synonyms: ['brandhealth grid safe text', 'brandhealth grid safe', 'brandhealth grid safe desc', 'brandhealth grid safe description']
       
       - name: BRANDHEALTH_GRID_SUSTAINABILITY_DESC
-        description: "Text description for brandhealth grid sustainability. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"To what extent do you agree or disagree with the following statements about the Rays?\" Sub-item: Committed to sustainability. Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree (lower is better)."
         expr: BRANDHEALTH_GRID_SUSTAINABILITY_DESC
         data_type: varchar
         synonyms: ['brandhealth grid sustainability', 'brandhealth grid sustainability desc', 'brandhealth grid sustainability description', 'brandhealth grid sustainability text']
       
       - name: BRANDHEALTH_GRID_TRENDY_DESC
-        description: "Text description for brandhealth grid trendy. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"To what extent do you agree or disagree with the following statements about the Rays?\" Sub-item: Trendy / hip. Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree (lower is better)."
         expr: BRANDHEALTH_GRID_TRENDY_DESC
         data_type: varchar
         synonyms: ['brandhealth grid trendy text', 'brandhealth grid trendy', 'brandhealth grid trendy description', 'brandhealth grid trendy desc']
       
       - name: BRANDHEALTH_GRID_WELCOME_DESC
-        description: "Text description for brandhealth grid welcome. Contains human-readable descriptions, not numeric codes. To what extent do you agree or disagree with the following statement? - I feel welcome at Rays games"
+        description: "Survey question: \"To what extent do you agree or disagree with the following statements about the Rays?\" Sub-item: A welcoming and family-friendly environment. Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree (lower is better)."
         expr: BRANDHEALTH_GRID_WELCOME_DESC
         data_type: varchar
         synonyms: ['brandhealth grid welcome', 'brandhealth grid welcome desc', 'brandhealth grid welcome text', 'brandhealth grid welcome description']
@@ -259,7 +340,7 @@ tables:
         is_enum: true 
 
       - name: CIH_ID_DESC
-        description: "Text description for cih id. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How many children (aged 17 or younger) live in your household?\" Values: None / 1 / 2 / 3 / 4 or more / I prefer not to say."
         expr: CIH_ID_DESC
         data_type: varchar
         synonyms: ['cih id', 'cih id text', 'cih id desc', 'cih id description']
@@ -357,7 +438,7 @@ tables:
         synonyms: ['comments gms staff']
       
       - name: COMMERCIAL_OPT_IN_DESC
-        description: "Text description for commercial opt in. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Would you like to receive commercial emails from MLB, the Rays, and their partners?\" Values: Yes / No."
         expr: COMMERCIAL_OPT_IN_DESC
         data_type: varchar
         synonyms: ['commercial opt in description', 'commercial opt in text', 'commercial opt in desc', 'commercial opt in']
@@ -387,236 +468,238 @@ tables:
         synonyms: ["value satisfaction", "value level", "price satisfaction level", "value feedback", "worth satisfaction level"]
       
       - name: CONCESS_INTENT_DESC
-        description: "Text description for concess intent. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Were you interested in purchasing food and/or beverages at the stadium?\" Values: Yes / No. Added in 2024."
         expr: CONCESS_INTENT_DESC
         data_type: varchar
         synonyms: ['concess intent text', 'concess intent desc', 'concess intent', 'concess intent description']
         sample_values: ["Yes", "No"]
       
       - name: CONCESS_INTENT_NO_DESC
-        description: "Text description for concess intent no. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following would have been most likely to change your mind about purchasing food and/or beverages?\" Values: Lower prices / More variety / Shorter lines / Better quality / Healthier options / Easier to find stands / Dietary restrictions / Other. Added in 2024."
         expr: CONCESS_INTENT_NO_DESC
         data_type: varchar
         synonyms: ['concess intent no desc', 'concess intent no text', 'concess intent no', 'concess intent no description']
+        sample_values: ["Additional budget-friendly options", "Better value of the food / beverages for the money", "Shorter wait times", "More options that meet my dietary needs (e.g. gluten-free, vegan, healthier options)", "More variety", "Better options near my seat", "Other"]
       
       - name: CONCESS_INTENT_NO_OTHERSPECIFY
-        description: "Open-ended text feedback explaining why patron selected their rating for concess intent noherspecify. Contains actual text responses, not numeric codes."
+        description: "Open-ended text: Other reason why patron was not interested in purchasing concessions. Free-text response from \"Other (please specify)\" option in concessions intent question."
         expr: CONCESS_INTENT_NO_OTHERSPECIFY
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'concess intent no otherspecify', 'feedback']
       
       - name: CONCESS_INTENT_NO_OTHERSPECIFY_TOPICS
-        description: "Open-ended text feedback explaining why patron selected their rating for concess intent noherspecify topics. Contains actual text responses, not numeric codes."
+        description: "AI-generated topic classification of CONCESS_INTENT_NO_OTHERSPECIFY open-text responses. Contains categorized topics, not raw text."
         expr: CONCESS_INTENT_NO_OTHERSPECIFY_TOPICS
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'concess intent no otherspecify topics', 'feedback']
       
       - name: CONCESS_NO_DESC
-        description: "Text description for concess no. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best describes why you did not purchase food and/or beverages?\" Values include: Ate/drank before arriving, Not hungry/thirsty, Too expensive, Lines too long, Poor food quality, Limited selection, Dietary restrictions, and others. Removed in 2024."
         expr: CONCESS_NO_DESC
         data_type: varchar
         synonyms: ['concess no desc', 'concess no description', 'concess no', 'concess no text']
-      
+        sample_values: ["Additional budget-friendly options", "Better value of the food / beverages for the money", "Shorter wait times", "More options that meet my dietary needs (e.g. gluten-free, vegan, healthier options)", "More variety", "Better options near my seat", "Other"]
+
       - name: CONCESS_NO_OTHERSPECIFY
-        description: "Open-ended text feedback explaining why patron selected their rating for concess noherspecify. Contains actual text responses, not numeric codes."
+        description: "Open-ended text: Other reason why patron did not purchase concessions. Free-text response from \"Other (please specify)\" option in concessions non-purchase question."
         expr: CONCESS_NO_OTHERSPECIFY
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'concess no otherspecify', 'feedback']
       
       - name: CONCESS_NO_OTHERSPECIFY_TOPICS
-        description: "Open-ended text feedback explaining why patron selected their rating for concess noherspecify topics. Contains actual text responses, not numeric codes."
+        description: "AI-generated topic classification of CONCESS_NO_OTHERSPECIFY open-text responses. Contains categorized topics, not raw text."
         expr: CONCESS_NO_OTHERSPECIFY_TOPICS
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'concess no otherspecify topics', 'suggestions', 'feedback']
       
       - name: CONCESS_PAYMENT_SELECT_DESC
-        description: "Text description for concess payment select. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"When you personally selected your items from a warmer, refrigerator, etc., how did you pay?\" Values: With a cashier / Self-checkout / Scanned card/phone before selecting items. Added in 2024."
         expr: CONCESS_PAYMENT_SELECT_DESC
         data_type: varchar
         synonyms: ['concess payment select desc', 'concess payment select', 'concess payment select text', 'concess payment select description']
       
       - name: CONCESS_PAYMENT_TOUCHSCREEN_DESC
-        description: "Text description for concess payment touchscreen. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"When you ordered on a touchscreen/kiosk, how did you pay?\" Values: With a cashier / Self-checkout / Scanned card/phone before selecting items. Added in 2024."
         expr: CONCESS_PAYMENT_TOUCHSCREEN_DESC
         data_type: varchar
         synonyms: ['concess payment touchscreen description', 'concess payment touchscreen', 'concess payment touchscreen text', 'concess payment touchscreen desc']
       
       - name: CONCESS_QUALITY_ALCOHOL_DESC
-        description: "Text description for concess quality alcohol. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Alcoholic beverages. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_ALCOHOL_DESC
         data_type: varchar
         synonyms: ['concess quality alcohol description', 'concess quality alcohol', 'concess quality alcohol desc', 'concess quality alcohol text']
       
       - name: CONCESS_QUALITY_BURGERS_DESC
-        description: "Text description for concess quality burgers. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Burgers. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_BURGERS_DESC
         data_type: varchar
         synonyms: ['concess quality burgers description', 'concess quality burgers desc', 'concess quality burgers text', 'concess quality burgers']
       
       - name: CONCESS_QUALITY_CHICKEN_DESC
-        description: "Text description for concess quality chicken. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Chicken tenders. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_CHICKEN_DESC
         data_type: varchar
         synonyms: ['concess quality chicken description', 'concess quality chicken text', 'concess quality chicken desc', 'concess quality chicken']
       
       - name: CONCESS_QUALITY_FRIES_DESC
-        description: "Text description for concess quality fries. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Fries / potatoes. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_FRIES_DESC
         data_type: varchar
         synonyms: ['concess quality fries desc', 'concess quality fries', 'concess quality fries text', 'concess quality fries description']
       
       - name: CONCESS_QUALITY_HOTDOG_DESC
-        description: "Text description for concess quality hotdog. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Hot dogs. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_HOTDOG_DESC
         data_type: varchar
         synonyms: ['concess quality hotdog text', 'concess quality hotdog desc', 'concess quality hotdog description', 'concess quality hotdog']
       
       - name: CONCESS_QUALITY_ICECREAM_DESC
-        description: "Text description for concess quality icecream. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Ice cream. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_ICECREAM_DESC
         data_type: varchar
         synonyms: ['concess quality icecream desc', 'concess quality icecream', 'concess quality icecream text', 'concess quality icecream description']
       
       - name: CONCESS_QUALITY_NACHOS_DESC
-        description: "Text description for concess quality nachos. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Nachos. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_NACHOS_DESC
         data_type: varchar
         synonyms: ['concess quality nachos desc', 'concess quality nachos description', 'concess quality nachos', 'concess quality nachos text']
       
       - name: CONCESS_QUALITY_NONALCOHOL_DESC
-        description: "Text description for concess quality nonalcohol. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Non-alcoholic beverages. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_NONALCOHOL_DESC
         data_type: varchar
         synonyms: ['concess quality nonalcohol', 'concess quality nonalcohol text', 'concess quality nonalcohol desc', 'concess quality nonalcohol description']
       
       - name: CONCESS_QUALITY_NUTS_DESC
-        description: "Text description for concess quality nuts. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Nuts / Cracker Jacks. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_NUTS_DESC
         data_type: varchar
         synonyms: ['concess quality nuts description', 'concess quality nuts text', 'concess quality nuts desc', 'concess quality nuts']
       
       - name: CONCESS_QUALITY_OTHER_DESSERT_DESC
-        description: "Open-ended text feedback explaining why patron selected their rating for concess qualityher dessert desc. Contains actual text responses, not numeric codes."
+        description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Other desserts and sweets. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_OTHER_DESSERT_DESC
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'concess quality other dessert desc', 'feedback']
       
       - name: CONCESS_QUALITY_OTHER_ENTREE_DESC
-        description: "Open-ended text feedback explaining why patron selected their rating for concess qualityher entree desc. Contains actual text responses, not numeric codes."
+        description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Other entrees. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_OTHER_ENTREE_DESC
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'concess quality other entree desc', 'suggestions', 'feedback']
       
       - name: CONCESS_QUALITY_PIZZA_DESC
-        description: "Text description for concess quality pizza. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Pizza. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_PIZZA_DESC
         data_type: varchar
         synonyms: ['concess quality pizza text', 'concess quality pizza description', 'concess quality pizza desc', 'concess quality pizza']
       
       - name: CONCESS_QUALITY_POPCORN_DESC
-        description: "Text description for concess quality popcorn. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Popcorn. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_POPCORN_DESC
         data_type: varchar
         synonyms: ['concess quality popcorn text', 'concess quality popcorn desc', 'concess quality popcorn description', 'concess quality popcorn']
       
       - name: CONCESS_QUALITY_PRETZELS_DESC
-        description: "Text description for concess quality pretzels. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Pretzels. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_PRETZELS_DESC
         data_type: varchar
         synonyms: ['concess quality pretzels', 'concess quality pretzels description', 'concess quality pretzels text', 'concess quality pretzels desc']
       
       - name: CONCESS_QUALITY_SALAD_DESC
-        description: "Text description for concess quality salad. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Salad / grain bowl. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_SALAD_DESC
         data_type: varchar
         synonyms: ['concess quality salad desc', 'concess quality salad description', 'concess quality salad text', 'concess quality salad']
       
       - name: CONCESS_QUALITY_SANDWICH_DESC
-        description: "Text description for concess quality sandwich. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Sandwiches. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_SANDWICH_DESC
         data_type: varchar
         synonyms: ['concess quality sandwich text', 'concess quality sandwich', 'concess quality sandwich description', 'concess quality sandwich desc']
       
       - name: CONCESS_QUALITY_SAUSAGE_DESC
-        description: "Text description for concess quality sausage. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Sausages. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_SAUSAGE_DESC
         data_type: varchar
         synonyms: ['concess quality sausage', 'concess quality sausage description', 'concess quality sausage desc', 'concess quality sausage text']
       
       - name: CONCESS_QUAL_REASON_BURGERS_DESC
-        description: "Text description for concess qual reason burgers. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best explains why you were dissatisfied with the quality?\" Sub-item: Burgers. Values: Taste / Temperature / Portion size. Added in 2024."
         expr: CONCESS_QUAL_REASON_BURGERS_DESC
         data_type: varchar
         synonyms: ['concess qual reason burgers description', 'concess qual reason burgers desc', 'concess qual reason burgers', 'concess qual reason burgers text']
       
       - name: CONCESS_QUAL_REASON_CHICKEN_DESC
-        description: "Text description for concess qual reason chicken. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best explains why you were dissatisfied with the quality?\" Sub-item: Chicken tenders. Values: Taste / Temperature / Portion size. Added in 2024."
         expr: CONCESS_QUAL_REASON_CHICKEN_DESC
         data_type: varchar
         synonyms: ['concess qual reason chicken desc', 'concess qual reason chicken description', 'concess qual reason chicken text', 'concess qual reason chicken']
       
       - name: CONCESS_QUAL_REASON_FRIES_DESC
-        description: "Text description for concess qual reason fries. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best explains why you were dissatisfied with the quality?\" Sub-item: Fries / potatoes. Values: Taste / Temperature / Portion size. Added in 2024."
         expr: CONCESS_QUAL_REASON_FRIES_DESC
         data_type: varchar
         synonyms: ['concess qual reason fries description', 'concess qual reason fries', 'concess qual reason fries desc', 'concess qual reason fries text']
       
       - name: CONCESS_QUAL_REASON_HOTDOG_DESC
-        description: "Text description for concess qual reason hotdog. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best explains why you were dissatisfied with the quality?\" Sub-item: Hot dogs. Values: Taste / Temperature / Portion size. Added in 2024."
         expr: CONCESS_QUAL_REASON_HOTDOG_DESC
         data_type: varchar
         synonyms: ['concess qual reason hotdog', 'concess qual reason hotdog description', 'concess qual reason hotdog desc', 'concess qual reason hotdog text']
       
       - name: CONCESS_QUAL_REASON_ICECREAM_DESC
-        description: "Text description for concess qual reason icecream. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best explains why you were dissatisfied with the quality?\" Sub-item: Ice cream. Values: Taste / Temperature / Portion size. Added in 2024."
         expr: CONCESS_QUAL_REASON_ICECREAM_DESC
         data_type: varchar
         synonyms: ['concess qual reason icecream description', 'concess qual reason icecream desc', 'concess qual reason icecream', 'concess qual reason icecream text']
       
       - name: CONCESS_QUAL_REASON_NACHOS_DESC
-        description: "Text description for concess qual reason nachos. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best explains why you were dissatisfied with the quality?\" Sub-item: Nachos. Values: Taste / Temperature / Portion size. Added in 2024."
         expr: CONCESS_QUAL_REASON_NACHOS_DESC
         data_type: varchar
         synonyms: ['concess qual reason nachos', 'concess qual reason nachos text', 'concess qual reason nachos description', 'concess qual reason nachos desc']
       
       - name: CONCESS_QUAL_REASON_NUTS_DESC
-        description: "Text description for concess qual reason nuts. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best explains why you were dissatisfied with the quality?\" Sub-item: Nuts / Cracker Jacks. Values: Taste / Temperature / Portion size. Added in 2024."
         expr: CONCESS_QUAL_REASON_NUTS_DESC
         data_type: varchar
         synonyms: ['concess qual reason nuts', 'concess qual reason nuts description', 'concess qual reason nuts desc', 'concess qual reason nuts text']
       
       - name: CONCESS_QUAL_REASON_PIZZA_DESC
-        description: "Text description for concess qual reason pizza. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best explains why you were dissatisfied with the quality?\" Sub-item: Pizza. Values: Taste / Temperature / Portion size. Added in 2024."
         expr: CONCESS_QUAL_REASON_PIZZA_DESC
         data_type: varchar
         synonyms: ['concess qual reason pizza', 'concess qual reason pizza description', 'concess qual reason pizza text', 'concess qual reason pizza desc']
       
       - name: CONCESS_QUAL_REASON_POPCORN_DESC
-        description: "Text description for concess qual reason popcorn. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best explains why you were dissatisfied with the quality?\" Sub-item: Popcorn. Values: Taste / Temperature / Portion size. Added in 2024."
         expr: CONCESS_QUAL_REASON_POPCORN_DESC
         data_type: varchar
         synonyms: ['concess qual reason popcorn', 'concess qual reason popcorn description', 'concess qual reason popcorn text', 'concess qual reason popcorn desc']
       
       - name: CONCESS_QUAL_REASON_PRETZELS_DESC
-        description: "Text description for concess qual reason pretzels. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best explains why you were dissatisfied with the quality?\" Sub-item: Pretzels. Values: Taste / Temperature / Portion size. Added in 2024."
         expr: CONCESS_QUAL_REASON_PRETZELS_DESC
         data_type: varchar
         synonyms: ['concess qual reason pretzels text', 'concess qual reason pretzels', 'concess qual reason pretzels description', 'concess qual reason pretzels desc']
       
       - name: CONCESS_QUAL_REASON_SALAD_DESC
-        description: "Text description for concess qual reason salad. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best explains why you were dissatisfied with the quality?\" Sub-item: Salad / grain bowl. Values: Taste / Temperature / Portion size. Added in 2024."
         expr: CONCESS_QUAL_REASON_SALAD_DESC
         data_type: varchar
         synonyms: ['concess qual reason salad desc', 'concess qual reason salad', 'concess qual reason salad text', 'concess qual reason salad description']
       
       - name: CONCESS_QUAL_REASON_SANDWICH_DESC
-        description: "Text description for concess qual reason sandwich. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best explains why you were dissatisfied with the quality?\" Sub-item: Sandwiches. Values: Taste / Temperature / Portion size. Added in 2024."
         expr: CONCESS_QUAL_REASON_SANDWICH_DESC
         data_type: varchar
         synonyms: ['concess qual reason sandwich description', 'concess qual reason sandwich', 'concess qual reason sandwich desc', 'concess qual reason sandwich text']
       
       - name: CONCESS_QUAL_REASON_SAUSAGE_DESC
-        description: "Text description for concess qual reason sausage. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best explains why you were dissatisfied with the quality?\" Sub-item: Sausages. Values: Taste / Temperature / Portion size. Added in 2024."
         expr: CONCESS_QUAL_REASON_SAUSAGE_DESC
         data_type: varchar
         synonyms: ['concess qual reason sausage text', 'concess qual reason sausage desc', 'concess qual reason sausage description', 'concess qual reason sausage']
@@ -630,7 +713,7 @@ tables:
         is_enum: true
       
       - name: CONCESS_SPEND_DESC
-        description: "Text description for amount spent on concessions per person. Contains human-readable spending ranges (More than $50, Between $31 and $40, Between $21 and $30, Less than $20). Use this for grouping and filtering spending analysis. For calculating average or total spend, use the numeric CONCESS_SPEND field instead."
+        description: "Survey question: \"About how much did you spend per person for food and/or beverages at the stadium?\" Values: Less than $20 / Between $20 and $30 / Between $31 and $40 / Between $41 and $50 / More than $50."
         expr: CONCESS_SPEND_DESC
         data_type: varchar
         synonyms: ['In total, about how much did you spend per person for food and/or beverages?', 'Concess spend desc', 'concess spend', 'concess spend text', 'concess spend description', 'spending range', 'how much spent', 'concession spending category']
@@ -646,31 +729,31 @@ tables:
         is_enum: true
       
       - name: CONCESS_TYPE_OTHER_DESSERT_SPECIFY
-        description: "Open-ended text feedback explaining why patron selected their rating for concess typeher dessert specify. Contains actual text responses, not numeric codes."
+        description: "Open-ended text: What other desserts/sweets the patron purchased at concessions. Free-text response when patron selected \"Other desserts and sweets\" in concession type question."
         expr: CONCESS_TYPE_OTHER_DESSERT_SPECIFY
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'comments']
       
       - name: CONCESS_TYPE_OTHER_DESSERT_SPECIFY_TOPICS
-        description: "Open-ended text feedback explaining why patron selected their rating for concess typeher dessert specify topics. Contains actual text responses, not numeric codes."
+        description: "AI-generated topic classification of CONCESS_TYPE_OTHER_DESSERT_SPECIFY open-text responses. Contains categorized topics, not raw text."
         expr: CONCESS_TYPE_OTHER_DESSERT_SPECIFY_TOPICS
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'concess type other dessert specify topics', 'feedback']
       
       - name: CONCESS_TYPE_OTHER_ENTREE_SPECIFY
-        description: "Open-ended text feedback explaining why patron selected their rating for concess typeher entree specify. Contains actual text responses, not numeric codes."
+        description: "Open-ended text: What other entrees the patron purchased at concessions. Free-text response when patron selected \"Other entrees\" in concession type question."
         expr: CONCESS_TYPE_OTHER_ENTREE_SPECIFY
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'concess type other entree specify', 'feedback']
       
       - name: CONCESS_TYPE_OTHER_ENTREE_SPECIFY_TOPICS
-        description: "Open-ended text feedback explaining why patron selected their rating for concess typeher entree specify topics. Contains actual text responses, not numeric codes."
+        description: "AI-generated topic classification of CONCESS_TYPE_OTHER_ENTREE_SPECIFY open-text responses. Contains categorized topics, not raw text."
         expr: CONCESS_TYPE_OTHER_ENTREE_SPECIFY_TOPICS
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'concess type other entree specify topics']
       
       - name: CONCESS_WAIT_DESC
-        description: "Text description for actual concession wait time experienced by fans. Contains human-readable time ranges (Less than 5 minutes, Between 5 and 15 minutes, Between 16 and 30 minutes, More than 30 minutes). Use this to analyze wait time distribution and identify operational bottlenecks."
+        description: "Survey question: \"In total, about how much time did you spend waiting in line for food and/or beverages?\" Values: Less than 5 minutes / Between 5 and 15 minutes / Between 16 and 30 minutes / More than 30 minutes."
         expr: CONCESS_WAIT_DESC
         data_type: varchar
         synonyms: ['concess wait desc', 'concession wait time', 'wait satisfaction', 'wait time level', 'wait time feedback', 'line wait', 'queue time', 'how long wait', 'wait time description']
@@ -686,7 +769,7 @@ tables:
         is_enum: true
       
       - name: ENTERTAIN_GRID_GAMES_DESC
-        description: "Please rate your satisfaction with the following - In-between inning games and entertainment. Text description for entertain grid games. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Please rate your satisfaction with the following.\" Sub-item: In-between inning games and entertainment. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied, 5=N/A (lower is better, exclude 5)."
         expr: ENTERTAIN_GRID_GAMES_DESC
         data_type: varchar
         synonyms: ['entertain grid games desc', 'entertain grid games text', 'entertain grid games', 'entertain grid games description']
@@ -694,7 +777,7 @@ tables:
         is_enum: true
 
       - name: ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC
-        description: "Please rate your satisfaction with the following - Kids entertainment / activities. Text description for entertain grid kids activities. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Please rate your satisfaction with the following.\" Sub-item: Kids entertainment / activities. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied, 5=N/A (lower is better, exclude 5)."
         expr: ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC
         data_type: varchar
         synonyms: ['entertain grid kids activities description', 'entertain grid kids activities text', 'entertain grid kids activities', 'entertain grid kids activities desc']
@@ -702,7 +785,7 @@ tables:
         is_enum: true
 
       - name: ENTERTAIN_GRID_MUSIC_DESC
-        description: "Text description for entertain grid music. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Please rate your satisfaction with the following.\" Sub-item: Music. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied, 5=N/A (lower is better, exclude 5)."
         expr: ENTERTAIN_GRID_MUSIC_DESC
         data_type: varchar
         synonyms: ['entertain grid music desc', 'entertain grid music text', 'entertain grid music description', 'entertain grid music']
@@ -710,13 +793,13 @@ tables:
         is_enum: true
       
       - name: ENTERTAIN_GRID_PLAYER_CONTENT_DESC
-        description: "Text description for entertain grid player content. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Please rate your satisfaction with the following.\" Sub-item: Player features / content. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied, 5=N/A (lower is better, exclude 5)."
         expr: ENTERTAIN_GRID_PLAYER_CONTENT_DESC
         data_type: varchar
         synonyms: ['entertain grid player content text', 'entertain grid player content', 'entertain grid player content desc', 'entertain grid player content description']
       
       - name: ENTERTAIN_GRID_PREGAME_CONTENT_DESC
-        description: "Please rate your satisfaction with the following - Pregame content / lineups. Text description for entertain grid pregame content. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Please rate your satisfaction with the following.\" Sub-item: Pregame content / lineups. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied, 5=N/A (lower is better, exclude 5)."
         expr: ENTERTAIN_GRID_PREGAME_CONTENT_DESC
         data_type: varchar
         synonyms: ['Pregame content / lineups', 'entertain grid pregame content', 'entertain grid pregame content desc', 'entertain grid pregame content text', 'entertain grid pregame content description']
@@ -724,7 +807,7 @@ tables:
         is_enum: true 
 
       - name: ENTERTAIN_GRID_SCOREBOARD_DESC
-        description: "Please rate your satisfaction with the following - Scoreboard stats / information / replays. Text description for entertain grid scoreboard. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Please rate your satisfaction with the following.\" Sub-item: Scoreboard stats / information / replays. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied, 5=N/A (lower is better, exclude 5)."
         expr: ENTERTAIN_GRID_SCOREBOARD_DESC
         data_type: varchar
         synonyms: ['entertain grid scoreboard desc', 'entertain grid scoreboard description', 'entertain grid scoreboard text', 'entertain grid scoreboard']
@@ -732,7 +815,7 @@ tables:
         is_enum: true
 
       - name: ENTERTAIN_GRID_THEME_DESC
-        description: "Text description for entertain grid theme. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Please rate your satisfaction with the following.\" Sub-item: Theme night experience. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied, 5=N/A (lower is better, exclude 5)."
         expr: ENTERTAIN_GRID_THEME_DESC
         data_type: varchar
         synonyms: ['entertain grid theme description', 'entertain grid theme', 'entertain grid theme text', 'entertain grid theme desc']
@@ -758,13 +841,13 @@ tables:
         is_enum: true
 
       - name: GENDER_ID_DESC
-        description: "Text description for gender id. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best describes your gender identity?\" Values: Man / Woman / I prefer to self-describe / I prefer not to say."
         expr: GENDER_ID_DESC
         data_type: varchar
         synonyms: ['gender id', 'gender id text', 'gender id description', 'gender id desc']
       
       - name: GE_TIME_DESC
-        description: "How long it took fans to get through security with Go Ahead Entry Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"About how much time did it take you to pass through security and gate entry?\" Values: Less than 5 minutes / Between 5 and 15 minutes / Between 16 and 30 minutes / More than 30 minutes."
         expr: GE_TIME_DESC
         data_type: varchar
         synonyms: ['go ahead entry speed', 'gae entry']
@@ -772,7 +855,7 @@ tables:
         is_enum: true
 
       - name: GE_TIME_EXPECT_DESC
-        description: "Text description for go ahead entry time expected vs reality. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How did the time you spent passing through security and gate entry compare to your expectations?\" Values: More time than I expected / About what I expected / Less time than I expected."
         expr: GE_TIME_EXPECT_DESC
         data_type: varchar
         synonyms: ['go ahead entry time experience', 'was go ahead entry a time saver', 'go ahead entry time comparison']
@@ -780,20 +863,20 @@ tables:
         is_enum: true
 
       - name: GIVEAWAY_ARRIVAL_DESC
-        description: "Text description for giveaway arrival. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"To what extent did the promotion impact your arrival time to the game?\" Values: No impact / I arrived 1-15 minutes earlier / 16-30 minutes earlier / 31-60 minutes earlier / more than 60 minutes earlier."
         expr: GIVEAWAY_ARRIVAL_DESC
         data_type: varchar
         synonyms: ['It had no impact / I arrived when I usually would', 'I arrived less than 15 minutes earlier than normal', 'I arrived between 15 and 30 minutes earlier than normal', 'I arrived between 31 and 60 minutes earlier than normal']
       
       - name: GIVEAWAY_AWARENESS_DESC
-        description: "Text description for giveaway awareness. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Prior to attending the game, were you aware that the giveaway was being distributed at this game?\" Values: Yes / No."
         expr: GIVEAWAY_AWARENESS_DESC
         data_type: varchar
         synonyms: ['I cared about this', I didnt't know about this', I knew about this, but I didn't care about it']  
         is_enum: true
 
       - name: GIVEAWAY_RECEIVE_DESC
-        description: "Text description for giveaway receive. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Did you receive the giveaway item?\" Values: Yes / No."
         expr: GIVEAWAY_RECEIVE_DESC
         data_type: varchar
         synonyms: ['giveaway receive', 'giveaway receive description', 'giveaway receive text', 'giveaway receive desc']
@@ -801,7 +884,7 @@ tables:
         is_enum: true 
       
       - name: GIVEAWAY_SAT_DESC
-        description: "How satisfied were you with the giveaway item? Text description for giveaway satisfaction. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How satisfied were you with the giveaway item?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: GIVEAWAY_SAT_DESC
         data_type: varchar
         sample_values: ['Highly Satisfied', 'Somewhat Satisfied','Somewhat dissatisfied', 'Highly dissatisfied']
@@ -832,56 +915,56 @@ tables:
         synonyms: ['service recovery app', 'gms app', 'app recovery', 'app issue']
       
       - name: GO_AHEAD_WHY_NOT_OTHERSPECIFY
-        description: "Open-ended text feedback explaining why patron selected their rating for go ahead why notherspecify. Contains actual text responses, not numeric codes."
+        description: "Open-ended text: Other reason why patron did not use Go Ahead Entry. Free-text response from TB-specific Go Ahead Entry question."
         expr: GO_AHEAD_WHY_NOT_OTHERSPECIFY
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'go ahead why not otherspecify', 'suggestions', 'feedback']
       
       - name: GROUP_SIZE_DESC
-        description: "Text description for group size. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How many people did you attend this game with?\" Values: I attended by myself / 1 person / 2 people / 3 people / 4 people / 5 people / 6 or more people. Removed in 2025."
         expr: GROUP_SIZE_DESC
         data_type: varchar
         sample_values: ["1 person", "2 people", "3 people", "4 people", "5 people", "6 or more people"]
         is_enum: true
 
       - name: HHI_ID_DESC
-        description: "Text description for hhi id. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best describes your yearly household income before taxes?\" Values: Less than $50,000 / $50,000-$74,999 / $75,000-$99,999 / $100,000-$149,999 / $150,000-$199,999 / $200,000-$499,999 / $500,000-$999,999 / $1,000,000 or more / I prefer not to answer."
         expr: HHI_ID_DESC
         data_type: varchar
         synonyms: ['hhi id text', 'hhi id desc', 'hhi id description', 'hhi id']
       
       - name: INCENTIVES_OT_PARENT_TOPICS
-        description: "Open-ended text feedback explaining why patron selected their rating for incentives parent topics. Contains actual text responses, not numeric codes."
+        description: "AI-generated parent-level topic classification of INCENTIVES_OT open-text responses. Contains broad categorized topics about what would influence ticket purchases."
         expr: INCENTIVES_OT_PARENT_TOPICS
         data_type: varchar
         synonyms: ['open ended', 'incentives ot parent topics', 'improvements', 'suggestions', 'feedback']
       
       - name: INCENTIVES_OT_TOPICS
-        description: "Open-ended text feedback explaining why patron selected their rating for incentives topics. Contains actual text responses, not numeric codes."
+        description: "AI-generated detailed topic classification of INCENTIVES_OT open-text responses. Contains specific categorized topics about what would influence ticket purchases."
         expr: INCENTIVES_OT_TOPICS
         data_type: varchar
         synonyms: ['open ended', 'incentives ot topics', 'improvements', 'suggestions', 'feedback']
       
       - name: INCENTIVES_RANK_1_DESC
-        description: "Text description for incentives rank 1. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Please rank the top 2 factors that could influence you to buy tickets for more games.\" This is the #1 ranked factor. Values: Lower ticket prices / More promotions and giveaways / Better team performance / Improved food and beverage / Improved stadium experience / More theme nights / Better seat availability / Parking improvements / Enhanced entertainment / More premium experiences / Safety improvements / Other."
         expr: INCENTIVES_RANK_1_DESC
         data_type: varchar
         synonyms: ['incentives rank 1 text', 'incentives rank 1 description', 'incentives rank 1 desc', 'incentives rank 1']
       
       - name: INCENTIVES_RANK_2_DESC
-        description: "Text description for incentives rank 2. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Please rank the top 2 factors that could influence you to buy tickets for more games.\" This is the #2 ranked factor. Same values as INCENTIVES_RANK_1_DESC."
         expr: INCENTIVES_RANK_2_DESC
         data_type: varchar
         synonyms: ['incentives rank 2 desc', 'incentives rank 2 description', 'incentives rank 2', 'incentives rank 2 text']
       
       - name: INCENTIVES_RANK_3_DESC
-        description: "Text description for incentives rank 3. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Please rank the top 2 factors that could influence you to buy tickets for more games.\" This is the #3 ranked factor (when collected). Same values as INCENTIVES_RANK_1_DESC."
         expr: INCENTIVES_RANK_3_DESC
         data_type: varchar
         synonyms: ['incentives rank 3 text', 'incentives rank 3 description', 'incentives rank 3 desc', 'incentives rank 3']
       
       - name: MERCH_GRID_CUSTSERV_DESC
-        description: "Please rate your overall satisfaction with each of the following when purchasing merchandise - Customer service. Text description for merch grid custserv. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Please rate your overall satisfaction with each of the following when purchasing merchandise.\" Sub-item: Customer service. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied, 5=N/A (lower is better, exclude 5)."
         expr: MERCH_GRID_CUSTSERV_DESC
         data_type: varchar
         synonyms: ['merch grid custserv text', 'merch grid custserv description', 'merch grid custserv desc', 'merch grid custserv']
@@ -889,7 +972,7 @@ tables:
         is_enum: true 
       
       - name: MERCH_GRID_MERCHQUALITY_DESC
-        description: "Please rate your overall satisfaction with each of the following when purchasing merchandise. Text description for merch grid merchquality. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Please rate your overall satisfaction with each of the following when purchasing merchandise.\" Sub-item: Merchandise quality. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied, 5=N/A (lower is better, exclude 5)."
         expr: MERCH_GRID_MERCHQUALITY_DESC
         data_type: varchar
         synonyms: ['merch grid merchquality desc', 'merch grid merchquality description', 'merch grid merchquality text', 'merch grid merchquality']
@@ -897,7 +980,7 @@ tables:
         is_enum: true
       
       - name: MERCH_GRID_PRICE_DESC
-        description: "Please rate your overall satisfaction with each of the following when purchasing merchandise - Pricing. Text description for merch grid price. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Please rate your overall satisfaction with each of the following when purchasing merchandise.\" Sub-item: Pricing. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied, 5=N/A (lower is better, exclude 5)."
         expr: MERCH_GRID_PRICE_DESC
         data_type: varchar
         synonyms: ['merch grid price description', 'merch grid price desc', 'merch grid price text', 'merch grid price']
@@ -905,13 +988,13 @@ tables:
         is_enum: true
       
       - name: MERCH_GRID_SELECTION_DESC
-        description: "Please rate your overall satisfaction with each of the following when purchasing merchandise - Selection. Text description for merch grid selection. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Please rate your overall satisfaction with each of the following when purchasing merchandise.\" Sub-item: Selection. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied, 5=N/A (lower is better, exclude 5)."
         expr: MERCH_GRID_SELECTION_DESC
         data_type: varchar
         synonyms: ['merch grid selection desc', 'merch grid selection description', 'merch grid selection', 'merch grid selection text']
       
       - name: MERCH_GRID_WAIT_DESC
-        description: "Please rate your overall satisfaction with each of the following when purchasing merchandise - Wait times. Text description for merch grid wait. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Please rate your overall satisfaction with each of the following when purchasing merchandise.\" Sub-item: Wait times. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied, 5=N/A (lower is better, exclude 5)."
         expr: MERCH_GRID_WAIT_DESC
         data_type: varchar
         synonyms: ['merch grid wait desc', 'merch grid wait', 'merch grid wait text', 'merch grid wait description']
@@ -919,13 +1002,13 @@ tables:
         is_enum: true
       
       - name: MERCH_INTENT_DESC
-        description: "Text description for merch intent. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Were you interested in purchasing any merchandise?\" Values: Yes / No. Removed in 2025 (replaced by merch_screener options)."
         expr: MERCH_INTENT_DESC
         data_type: varchar
         sample_values: ["Yes", "No"]
        
       - name: MERCH_NO_DESC
-        description: "Which of the following best describes why you did not purchase merchandise? Text description for merch no. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best describes why you did not purchase merchandise?\" Values: Store/stands too far away / Too expensive / Low quality / No merchandise for my preferred player / Poor customer service / Lines too long / Limited selection / Other."
         expr: MERCH_NO_DESC
         data_type: varchar
         synonyms: ['Customer service was poor', 'Merchandise selection was limited', 'Merchandise was too expensive', 'Other (please specify below)', 'The lines were too long', 'The merchandise store / stands were too far from my seat', 'There was no merchandise for my preferred player']
@@ -933,31 +1016,31 @@ tables:
         is_enum: true
 
       - name: MERCH_NO_OTHERSPECIFY
-        description: "Open-ended text feedback explaining why patron selected their rating for merch noherspecify. Contains actual text responses, not numeric codes."
+        description: "Open-ended text: Other reason why patron did not purchase merchandise. Free-text response from \"Other (please specify)\" option."
         expr: MERCH_NO_OTHERSPECIFY
         data_type: varchar
         synonyms: ['merchandise non-purchase reasons', 'reasons merch was not purchased', 'merch improvement feedback']
       
       - name: MERCH_NO_OTHERSPECIFY_PARENT_TOPICS
-        description: "Open-ended text feedback explaining why patron selected their rating for merch noherspecify parent topics. Contains actual text responses, not numeric codes."
+        description: "AI-generated parent-level topic classification of MERCH_NO_OTHERSPECIFY open-text responses. Contains broad categorized topics about why patrons did not purchase merchandise."
         expr: MERCH_NO_OTHERSPECIFY_PARENT_TOPICS
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'merch no otherspecify parent topics']
       
       - name: MERCH_NO_OTHERSPECIFY_TOPICS
-        description: "Open-ended text feedback explaining why patron selected their rating for merch noherspecify topics. Contains actual text responses, not numeric codes."
+        description: "AI-generated detailed topic classification of MERCH_NO_OTHERSPECIFY open-text responses. Contains specific categorized topics about why patrons did not purchase merchandise."
         expr: MERCH_NO_OTHERSPECIFY_TOPICS
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'merch no otherspecify topics', 'feedback']
       
       - name: MERCH_OPTIONS_OT
-        description: "Open-ended text feedback explaining why patron selected their rating for merch options. Contains actual text responses, not numeric codes."
+        description: "Open-ended text: What merchandise options fans would like to see. Free-text survey response about desired merchandise."
         expr: MERCH_OPTIONS_OT
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'merch options ot']
       
       - name: MERCH_OPTIONS_OT_TOPICS
-        description: "Open-ended text feedback explaining why patron selected their rating for merch options topics. Contains actual text responses, not numeric codes."
+        description: "AI-generated topic classification of MERCH_OPTIONS_OT open-text responses. Contains categorized topics about desired merchandise options."
         expr: MERCH_OPTIONS_OT_TOPICS
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'merch options ot topics']
@@ -970,7 +1053,7 @@ tables:
         synonyms: ['used mobile ordering', 'placed mobile order', 'actually used mobile ordering', 'mobile order user', 'fans who used mobile ordering', 'mobile ordering users']
         
       - name: MERCH_SCREENER_DESC
-        description: "Text description for merch screener. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Did you purchase any merchandise while at the stadium?\" Values: Yes, I did / No, I didn't / I don't remember / No, but I was interested in doing so / No, and I wasn't interested in doing so."
         expr: MERCH_SCREENER_DESC
         data_type: varchar
         sample_values: ["I don't remember", "No, I didn't", "Yes, I did"]
@@ -1012,31 +1095,31 @@ tables:
         is_enum: true
 
       - name: MOBILE_ORDER_EXP_TIME_DESC
-        description: "Text description for mobile order exp time. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Based on this mobile ordering experience, do you feel like you saved time?\" Values: Yes / No. Added in 2024."
         expr: MOBILE_ORDER_EXP_TIME_DESC
         data_type: varchar
         synonyms: ['mobile order exp time text', 'mobile order exp time desc', 'mobile order exp time description', 'mobile order exp time']
       
       - name: MOBILE_ORDER_GRID_ACCURACY_DESC
-        description: "Text description for mobile order grid accuracy. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Thinking of the mobile order(s) you placed, were you satisfied with the accuracy of the order?\" Values: Yes / No."
         expr: MOBILE_ORDER_GRID_ACCURACY_DESC
         data_type: varchar
         synonyms: ['mobile order grid accuracy text', 'mobile order grid accuracy', 'mobile order grid accuracy desc', 'mobile order grid accuracy description']
       
       - name: MOBILE_ORDER_GRID_EASY_DESC
-        description: "Text description for mobile order grid easy. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Thinking of the mobile order(s) you placed, were you satisfied with the ease of placing the order?\" Values: Yes / No."
         expr: MOBILE_ORDER_GRID_EASY_DESC
         data_type: varchar
         synonyms: ['mobile order grid easy text', 'mobile order grid easy desc', 'mobile order grid easy', 'mobile order grid easy description']
       
       - name: MOBILE_ORDER_GRID_FUTURE_DESC
-        description: "Text description for mobile order grid future. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Based on this mobile ordering experience, would you mobile order again?\" Values: Yes / No. Added in 2024."
         expr: MOBILE_ORDER_GRID_FUTURE_DESC
         data_type: varchar
         synonyms: ['mobile order grid future desc', 'mobile order grid future description', 'mobile order grid future', 'mobile order grid future text']
       
       - name: MOBILE_ORDER_GRID_TIMEFRAME_DESC
-        description: "Text description for mobile order grid timeframe. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Thinking of the mobile order(s) you placed, were you satisfied with the time it took to receive the order?\" Values: Yes / No."
         expr: MOBILE_ORDER_GRID_TIMEFRAME_DESC
         data_type: varchar
         synonyms: ['mobile order grid timeframe', 'mobile order grid timeframe text', 'mobile order grid timeframe desc', 'mobile order grid timeframe description']
@@ -1109,94 +1192,94 @@ tables:
         synonyms: ['I cared about this', I didnt't know about this', I knew about this, but I didn't care about it']  
 
       - name: PARENT_ID_DESC
-        description: "Text description for parent id. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Are you a parent?\" Values: Yes, I am / No, I'm not / I prefer not to say."
         expr: PARENT_ID_DESC
         data_type: varchar
         synonyms: ['parent id desc', 'parent id text', 'parent id', 'parent id description']
       
       - name: PARKING_EXIT_EXPECT_DESC
-        description: "How did your time leaving the parking time compare to the amount of time you expected it to take to exit the parking lot?*Text description for parking exit expect. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How did the time you spent exiting the parking lot compare to your expectations?\" Values: More time than I expected / About what I expected / Less time than I expected."
         expr: PARKING_EXIT_EXPECT_DESC
         data_type: varchar
         synonyms: ['parking exit reality', 'parking exit expect desc', 'parking exit expected description', 'parking exit expect text']
         sample_values: ["More than I expected", "About what I expected", "Less than I expected"]
 
       - name: PARKING_EXIT_TIME_DESC
-        description: "About how much time did it take you to exit the parking lot when leaving Tropicana Field? Text description for parking exit time. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"About how much time did it take you to exit the parking lot when leaving the stadium?\" Values: Less than 5 minutes / Between 5 and 15 minutes / Between 16 and 30 minutes / More than 30 minutes. Removed in 2025."
         expr: PARKING_EXIT_TIME_DESC
         data_type: varchar
         synonyms: ['parking exit time description', 'parking exit time text', 'parking exit time', 'parking exit time desc']
         sample_values: ["Less than 5 minutes", "Between 5 and 15 minutes", "Between 16 and 30 minutes", "More than 30 minutes"]
       
       - name: PARKING_TIME_DESC
-        description: "Text description for parking time. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"When arriving at the stadium, about how much time did it take you to park your vehicle?\" Values: Less than 5 minutes / Between 5 and 15 minutes / Between 16 and 30 minutes / More than 30 minutes."
         expr: PARKING_TIME_DESC
         data_type: varchar
         synonyms: ['parking time', 'parking time text', 'parking time description', 'parking time desc']
       
       - name: PARKING_TIME_EXPECT_DESC
-        description: "Text description for parking time expect. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How did the time you spent parking your vehicle compare to your expectations?\" Values: More time than I expected / About what I expected / Less time than I expected."
         expr: PARKING_TIME_EXPECT_DESC
         data_type: varchar
         synonyms: ['parking time expect desc', 'parking time expect text', 'parking time expect', 'parking time expect description']
       
       - name: PA_GIVEAWAY_INTENT_DESC
-        description: "Text description for pa giveaway intent. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"If the Rays hadn't offered this giveaway for this game, what would you have done?\" Values: I still would have gone to this game / I would have chosen a game on another day / I wouldn't have purchased/attended at this time. Added in 2024."
         expr: PA_GIVEAWAY_INTENT_DESC
         data_type: varchar
         synonyms: ['I still would have gone to this game', 'I would of chose a game on another day']
       
       - name: PA_PROMO_GRID_GIVEAWAY_DESC
-        description: "Text description for pa promo grid giveaway. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Before arriving at the stadium for this game, which best describes how you felt about the giveaway?\" Values: I cared about this / I knew about this but I didn't care about it / I didn't know about this. Added in 2024."
         expr: PA_PROMO_GRID_GIVEAWAY_DESC
         data_type: varchar
         synonyms: ['pa promo grid giveaway desc', 'pa promo grid giveaway description', 'pa promo grid giveaway', 'pa promo grid giveaway text']
       
       - name: PA_PROMO_GRID_THEME_DESC
-        description: "Text description for pa promo grid theme. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Before arriving at the stadium for this game, which best describes how you felt about the theme night?\" Values: I cared about this / I knew about this but I didn't care about it / I didn't know about this. Added in 2024."
         expr: PA_PROMO_GRID_THEME_DESC
         data_type: varchar
         synonyms: ['pa promo grid theme desc', 'pa promo grid theme description', 'pa promo grid theme text', 'pa promo grid theme']
       
       - name: PA_PROMO_GRID_TIX_OFFER_DESC
-        description: "Text description for pa promo grid tix offer. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Before arriving at the stadium for this game, which best describes how you felt about the ticket offer?\" Values: I cared about this / I knew about this but I didn't care about it / I didn't know about this. Added in 2025."
         expr: PA_PROMO_GRID_TIX_OFFER_DESC
         data_type: varchar
         synonyms: ['pa promo grid tix offer desc', 'pa promo grid tix offer text', 'pa promo grid tix offer description', 'pa promo grid tix offer']
       
       - name: PA_THEME_INTENT_DESC
-        description: "If the Rays hadn't offered this promotion for this game, what would you have done?Text description for pa theme intent. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"If the Rays hadn't offered this theme night promotion for this game, what would you have done?\" Values: I still would have gone to this game / I would have chosen a game on another day / I wouldn't have purchased/attended at this time. Added in 2024."
         expr: PA_THEME_INTENT_DESC
         data_type: varchar
         synonyms: ['pa theme intent text', 'pa theme intent desc', 'pa theme intent description', 'pa theme intent']
         sample_values: ["I still would have gone to this game","I would have chosen a game on another day", "I wouldn't have purchased / attended at this time"] 
       
       - name: PA_TIX_OFFER_INTENT_DESC
-        description: "Text description for pa tix offer intent. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"If the Rays hadn't offered this ticket offer promotion for this game, what would you have done?\" Values: I still would have gone to this game / I would have chosen a game on another day / I wouldn't have purchased/attended at this time. Added in 2025."
         expr: PA_TIX_OFFER_INTENT_DESC
         data_type: varchar
         synonyms: ['pa tix offer intent text', 'pa tix offer intent', 'pa tix offer intent description', 'pa tix offer intent desc']
       
       - name: PREGAME_PLANS_OTHERSPECIFY
-        description: "Open-ended text feedback explaining why patron selected their rating for pregame plansherspecify. Contains actual text responses, not numeric codes."
+        description: "Open-ended text: Other pre-game activity the patron did before the game. Free-text response from \"Other (please specify)\" option in pregame plans question."
         expr: PREGAME_PLANS_OTHERSPECIFY
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'pregame plans otherspecify', 'feedback']
       
       - name: PREGAME_PLANS_OTHERSPECIFY_PARENT_TOPICS
-        description: "Open-ended text feedback explaining why patron selected their rating for pregame plansherspecify parent topics. Contains actual text responses, not numeric codes."
+        description: "AI-generated parent-level topic classification of PREGAME_PLANS_OTHERSPECIFY open-text responses. Contains broad categorized topics about pre-game activities."
         expr: PREGAME_PLANS_OTHERSPECIFY_PARENT_TOPICS
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'pregame plans otherspecify parent topics']
       
       - name: PREGAME_PLANS_OTHERSPECIFY_TOPICS
-        description: "Open-ended text feedback explaining why patron selected their rating for pregame plansherspecify topics. Contains actual text responses, not numeric codes."
+        description: "AI-generated detailed topic classification of PREGAME_PLANS_OTHERSPECIFY open-text responses. Contains specific categorized topics about pre-game activities."
         expr: PREGAME_PLANS_OTHERSPECIFY_TOPICS
         data_type: varchar
         synonyms: ['open ended', 'improvements', 'suggestions', 'pregame plans otherspecify topics', 'feedback']
       
       - name: PREVIOUS_PURCHASE_DESC
-        description: "Text description for previous purchase. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Have you purchased any other tickets for future Rays games?\" Values: Yes / No."
         expr: PREVIOUS_PURCHASE_DESC
         data_type: varchar
         synonyms: ["Have you purchased any other tickets for future Rays games?", "purchased tickets for future Rays games"]
@@ -1204,7 +1287,7 @@ tables:
         is_enum: true
   
       - name: PURCHASE_INTENT_DESC
-        description: "Text description for purchase intent this season. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Do you plan to purchase tickets for any other Rays game(s) this season?\" Values: Yes / No / Not sure."
         expr: PURCHASE_INTENT_DESC
         data_type: varchar
         synonyms: ["Do you plan to purchase tickets for any other Rays game(s) THIS season?*"]
@@ -1212,7 +1295,7 @@ tables:
         is_enum: true 
             
       - name: PURCHASE_INTENT_NEXT_DESC
-        description: "Text description for purchase intent this season. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How likely are you to purchase tickets for at least one Rays game next season?\" Values: Highly likely / Somewhat likely / Somewhat unlikely / Highly unlikely."
         expr: PURCHASE_INTENT_NEXT_DESC
         data_type: varchar
         synonyms: ["How likely are you to purchase tickets for at least one Rays game NEXT season?"]
@@ -1228,49 +1311,49 @@ tables:
         is_enum: true
 
       - name: STAFF_GRID_ACCESSIBILITY_DESC
-        description: "Text description for staff grid accessibility. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Thinking of your interactions, please rate your satisfaction with the service provided by each staff member.\" Sub-item: Accessibility support staff. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better). Added in 2024."
         expr: STAFF_GRID_ACCESSIBILITY_DESC
         data_type: varchar
         synonyms: ['staff grid accessibility text', 'staff grid accessibility', 'staff grid accessibility desc', 'staff grid accessibility description']
       
       - name: STAFF_GRID_CONCESSIONS_DESC
-        description: "Text description for staff grid concessions. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Thinking of your interactions, please rate your satisfaction with the service provided by each staff member.\" Sub-item: Concessions staff. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: STAFF_GRID_CONCESSIONS_DESC
         data_type: varchar
         synonyms: ['staff grid concessions desc', 'staff grid concessions', 'staff grid concessions text', 'staff grid concessions description']
       
       - name: STAFF_GRID_FAN_SERVICES_DESC
-        description: "Text description for staff grid fan services. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Thinking of your interactions, please rate your satisfaction with the service provided by each staff member.\" Sub-item: Fan Services staff. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: STAFF_GRID_FAN_SERVICES_DESC
         data_type: varchar
         synonyms: ['staff grid fan services desc', 'staff grid fan services description', 'staff grid fan services text', 'staff grid fan services']
       
       - name: STAFF_GRID_MERCH_DESC
-        description: "Text description for staff grid merch. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Thinking of your interactions, please rate your satisfaction with the service provided by each staff member.\" Sub-item: Merchandise staff. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: STAFF_GRID_MERCH_DESC
         data_type: varchar
         synonyms: ['staff grid merch description', 'staff grid merch desc', 'staff grid merch text', 'staff grid merch']
       
       - name: STAFF_GRID_PARKING_DESC
-        description: "Text description for staff grid parking. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Thinking of your interactions, please rate your satisfaction with the service provided by each staff member.\" Sub-item: Parking Attendant. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: STAFF_GRID_PARKING_DESC
         data_type: varchar
         synonyms: ['staff grid parking text', 'staff grid parking description', 'staff grid parking desc', 'staff grid parking']
       
       - name: STAFF_GRID_SECURITY_DESC
-        description: "Text description for staff grid security. Contains human-readable descriptions, not numeric codes. Use this for text analysis. For NUMERICAL Security rating use "
+        description: "Survey question: \"Thinking of your interactions, please rate your satisfaction with the service provided by each staff member.\" Sub-item: Security staff. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better). For NUMERICAL Security satisfaction scores, use the STAFF_GRID_SECURITY_SCANNER measure instead."
         expr: STAFF_GRID_SECURITY_DESC
         data_type: varchar
         synonyms: ['staff grid security desc', 'staff grid security description', 'staff grid security text', 'staff grid security']
       
       - name: STAFF_GRID_USHER_DESC
-        description: "Text description for staff grid usher. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Thinking of your interactions, please rate your satisfaction with the service provided by each staff member.\" Sub-item: Usher. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: STAFF_GRID_USHER_DESC
         data_type: varchar
         synonyms: ['staff grid usher text', 'staff grid usher', 'staff grid usher description', 'staff grid usher desc']
       
       - name: TEAM_AVIDITY_DESC
-        description: "How much of a fan of the [Field-favorite_team_clean] are you? Text description for team avidity. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How much of a fan of the Rays are you?\" Scale: 1=I am an occasional fan, 2=I consider myself a casual fan, 3=I consider myself a fan, 4=I consider myself a big fan, 5=I consider myself a passionate fan. Higher is more avid."
         expr: TEAM_AVIDITY_DESC
         data_type: varchar
         synonyms: ['Favorite team avidity description', 'Favorite team avidity text', 'Favorite team avidity desc', 'Favorite team avidity']
@@ -1278,63 +1361,63 @@ tables:
         is_enum: true
       
       - name: THEME_SAT_DESC
-        description: "Text description for theme sat. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How satisfied were you with the theme night: [THEME NAME]?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied, 5=N/A (lower is better, exclude 5). Added in 2024."
         expr: THEME_SAT_DESC
         data_type: varchar
         synonyms: ['theme sat text', 'theme sat desc', 'theme sat', 'theme sat description']
       
       - name: TIX_OFFER_SAT_DESC
-        description: "Text description for tix offer sat. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How satisfied were you with the ticket offer: [TICKET OFFER]?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied, 5=N/A (lower is better, exclude 5). Added in 2025."
         expr: TIX_OFFER_SAT_DESC
         data_type: varchar
         synonyms: ['tix offer sat description', 'tix offer sat text', 'tix offer sat', 'tix offer sat desc']
       
       - name: TRAVELTO_METHOD_DESC
-        description: "Text description for travelto method. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Which of the following best describes how you traveled to the stadium?\" Values: Drove and parked a personal/rental vehicle / Used a car service (Uber/Lyft/taxi) / Bus or public transit / Subway or train / Walked / Other."
         expr: TRAVELTO_METHOD_DESC
         data_type: varchar
         synonyms: ['Bus', Car / personal vehicle', 'Cross Bay Ferry', 'Rideshare service (e.g. Uber, Lyft)', 'Walk / bike / scooter', 'Sunrunner']
       
       - name: TRAVELTO_TIME_DESC
-        description: "Text description for travelto time. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"About how much time did it take for you to travel to the stadium?\" Values: Less than 10 minutes / Between 10 and 30 minutes / Between 31 and 60 minutes / More than 60 minutes."
         expr: TRAVELTO_TIME_DESC
         data_type: varchar
         synonyms: ['Less than 10 minutes', 'Between 10 and 30 minutes', 'Between 31 and 60 minutes', 'More than 60 minutes']
         is_enum: true
       
       - name: TRAVELTO_TIME_EXPECT_DESC
-        description: "Text description for travelto time expect. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"How did the time it took you to travel to the stadium compare to your expectations?\" Values: More than what I expected / About what I expected / Less than what I expected."
         expr: TRAVELTO_TIME_EXPECT_DESC
         data_type: varchar
         synonyms: ['Less than I expected', 'About what I expected', 'More than I expected']
         is_enum: true
       
       - name: WALK_OUT_EXP_FUTURE_DESC
-        description: "Text description for walk out exp future. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Based on this checkout-free experience, would you use this again?\" Values: Yes / No. Added in 2024."
         expr: WALK_OUT_EXP_FUTURE_DESC
         data_type: varchar
         synonyms: ['walk out exp future desc', 'walk out exp future', 'walk out exp future description', 'walk out exp future text']
       
       - name: WALK_OUT_EXP_TIME_DESC
-        description: "Text description for walk out exp time. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Based on this checkout-free experience, do you feel like you saved time?\" Values: Yes / No. Added in 2024."
         expr: WALK_OUT_EXP_TIME_DESC
         data_type: varchar
         synonyms: ['walk out exp time description', 'walk out exp time', 'walk out exp time text', 'walk out exp time desc']
       
       - name: WALK_OUT_GRID_EASY_DESC
-        description: "Text description for walk out grid easy. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Thinking of your checkout-free experience (scanning your card/phone before purchasing), were you satisfied with the ease of use?\" Values: Yes / No. Added in 2024."
         expr: WALK_OUT_GRID_EASY_DESC
         data_type: varchar
         synonyms: ['walk out grid easy text', 'walk out grid easy description', 'walk out grid easy desc', 'walk out grid easy']
       
       - name: WALK_OUT_GRID_SELECTION_DESC
-        description: "Text description for walk out grid selection. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Thinking of your checkout-free experience, were you satisfied with the available selection?\" Values: Yes / No. Added in 2024."
         expr: WALK_OUT_GRID_SELECTION_DESC
         data_type: varchar
         synonyms: ['walk out grid selection', 'walk out grid selection text', 'walk out grid selection desc', 'walk out grid selection description']
       
       - name: WALK_OUT_GRID_TIMEFRAME_DESC
-        description: "Text description for walk out grid timeframe. Contains human-readable descriptions, not numeric codes. Use this for text analysis."
+        description: "Survey question: \"Thinking of your checkout-free experience, were you satisfied with the timeliness?\" Values: Yes / No. Added in 2024. Removed in 2025."
         expr: WALK_OUT_GRID_TIMEFRAME_DESC
         data_type: varchar
         synonyms: ['walk out grid timeframe text', 'walk out grid timeframe', 'walk out grid timeframe desc', 'walk out grid timeframe description']
@@ -1781,7 +1864,7 @@ tables:
         is_enum: true
       
       - name: TB_ADDON_18_OTHERSPECIFY
-        description: "CATEGORICAL TEXT FIELD - NOT A NUMERIC SCORE. Text description for why patron did not use Go Ahead Entry. Contains human-readable responses explaining barriers to GAE adoption. Use this field when analyzing reasons fans chose not to use Go Ahead Entry. For analysis: GROUP BY this field and COUNT responses."
+        description: "Open-ended text: Other reason why patron did not use Go Ahead Entry at Tropicana Field. TB-specific free-text response explaining why the respondent did not use the Go Ahead Entry system."
         expr: TB_ADDON_18_OTHERSPECIFY
         data_type: varchar 
         synonyms: ["go ahead entry reason", "why not use GAE", "GAE barrier", "go ahead entry barrier", "reason did not use go ahead entry", "why fans chose not to use go ahead entry"]
@@ -2460,13 +2543,6 @@ tables:
         default_aggregation: avg
         synonyms: ["duration seconds"]
       
-      - name: ENTERTAIN_NUMRAT
-        description: "Entertainment satisfaction rating 1-10 scale. Game presentation and entertainment experience including music, scoreboard, games, and theme nights. Use for entertainment satisfaction analysis."
-        expr: ENTERTAIN_NUMRAT / 10.0
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["entertainment satisfaction", "entertainment rating", "entertainment score", "game entertainment", "entertainment experience", "avg entertainment satisfaction", "entertain numrat"]
-      
       - name: ENTREES_PREV_PURCH
         description: "Numeric data for entrees prev purch"
         expr: ENTREES_PREV_PURCH
@@ -2934,12 +3010,19 @@ tables:
         synonyms: ["opt in"]
       
       - name: OVERALL_NUMRAT
-        description: "Overall gameday experience rating 1-10 scale. Use for overall satisfaction analysis."
+        description: "Non-game entertainment and in-venue experience rating on 0-10 scale. Survey question: \"On a scale from 0 to 10, how would you rate the non-game entertainment?\". Added in 2024 season. 0=worst, 10=best. Filter out values >= 80 (survey codes)."
         expr: OVERALL_NUMRAT
         data_type: number
         default_aggregation: avg
         synonyms: ["overall satisfaction", "overall rating", "overall experience", "satisfaction score", "overall numrat"]
       
+      - name: ENTERTAIN_NUMRAT
+        description: "Non-game entertainment and in-venue experience rating on 0-10 scale. Survey question: \"On a scale from 0 to 10, how would you rate the non-game entertainment?\". Added in 2024 season. 0=worst, 10=best. Filter out values >= 80 (survey codes)."
+        expr: ENTERTAIN_NUMRAT
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["Entertainment satisfaction", "Entertainment rating", "Entertainment score"]
+
       - name: OVERALL_NUMRAT_ADJUSTED
         description: "Overall experience rating after applying adjustments"
         expr: OVERALL_NUMRAT_ADJUSTED
@@ -3281,18 +3364,18 @@ tables:
         synonyms: ["self checkout save time"]
       
       - name: STAFF_GRID_SECURITY_SCANNER
-        description: "Security / Ticket Scanner"
+        description: "Staff satisfaction rating for combined Security/Ticket Scanner (pre-2025 combined field). Survey question: \"Rate your satisfaction with: Security / Ticket Scanner.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Split into STAFF_GRID_SECURITY and STAFF_GRID_TICKET_SCANNER in 2025. Filter out values >= 80 (survey codes)."
         expr: STAFF_GRID_SECURITY_SCANNER
         data_type: number
         default_aggregation: avg
-        synonyms: ["staff grid security scanner"]
+        synonyms: ["security scanner staff", "security ticket scanner satisfaction"]
       
       - name: STAFF_GRID_TICKET_SCANNER
-        description: "Security / Ticket Scanner"
+        description: "Staff satisfaction rating for Ticket Scanner (split from Security/Ticket Scanner in 2025). Survey question: \"Rate your satisfaction with the service provided by: Ticket Scanner.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Added in 2025 season. Filter out values >= 80 (survey codes)."
         expr: STAFF_GRID_TICKET_SCANNER
         data_type: number
         default_aggregation: avg
-        synonyms: ["staff grid ticket scanner"]
+        synonyms: ["ticket scanner satisfaction", "ticket scanner staff", "gate staff satisfaction"]
       
       - name: STAFF_SATISFACTION
         description: "Staff satisfaction rating 1-10 scale (normalized from 1-100). Quality of service from stadium staff. Use for satisfaction trend analysis and comparison with other ratings."
@@ -3995,7 +4078,340 @@ tables:
         data_type: number
         default_aggregation: avg
         synonyms: ["true complete"]
-      
+
+      # ================================================================
+      # MISSING NUMERIC RATING COLUMNS - Added from codebook analysis
+      # ================================================================
+
+      - name: CONCESS_QUALITY_ALCOHOL
+        description: "Food quality satisfaction rating for Alcoholic beverages. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Alcoholic beverages you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
+        expr: CONCESS_QUALITY_ALCOHOL
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["alcoholic beverage quality", "beer quality, alcohol quality, drink quality"]
+
+      - name: CONCESS_QUALITY_NONALCOHOL
+        description: "Food quality satisfaction rating for Non-alcoholic beverages. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Non-alcoholic beverages you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
+        expr: CONCESS_QUALITY_NONALCOHOL
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["non-alcoholic beverage quality", "soft drink quality, soda quality, water quality"]
+
+      - name: CONCESS_QUALITY_BURGERS
+        description: "Food quality satisfaction rating for Burgers. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Burgers you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
+        expr: CONCESS_QUALITY_BURGERS
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["burger quality satisfaction", "burger quality, hamburger quality, burger satisfaction"]
+
+      - name: CONCESS_QUALITY_SANDWICH
+        description: "Food quality satisfaction rating for Sandwiches. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Sandwiches you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
+        expr: CONCESS_QUALITY_SANDWICH
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["sandwich quality satisfaction", "sandwich quality, sandwich satisfaction"]
+
+      - name: CONCESS_QUALITY_HOTDOG
+        description: "Food quality satisfaction rating for Hot dogs. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Hot dogs you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
+        expr: CONCESS_QUALITY_HOTDOG
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["hot dog quality satisfaction", "hot dog quality, hotdog quality, hot dog satisfaction"]
+
+      - name: CONCESS_QUALITY_SAUSAGE
+        description: "Food quality satisfaction rating for Sausages. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Sausages you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
+        expr: CONCESS_QUALITY_SAUSAGE
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["sausage quality satisfaction", "sausage quality, sausage satisfaction"]
+
+      - name: CONCESS_QUALITY_CHICKEN
+        description: "Food quality satisfaction rating for Chicken tenders. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Chicken tenders you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
+        expr: CONCESS_QUALITY_CHICKEN
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["chicken tender quality satisfaction", "chicken quality, chicken tender quality, chicken satisfaction"]
+
+      - name: CONCESS_QUALITY_PIZZA
+        description: "Food quality satisfaction rating for Pizza. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Pizza you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
+        expr: CONCESS_QUALITY_PIZZA
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["pizza quality satisfaction", "pizza quality, pizza satisfaction"]
+
+      - name: CONCESS_QUALITY_SALAD
+        description: "Food quality satisfaction rating for Salad / grain bowl. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Salad / grain bowl you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
+        expr: CONCESS_QUALITY_SALAD
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["salad quality satisfaction", "salad quality, grain bowl quality"]
+
+      - name: CONCESS_QUALITY_NACHOS
+        description: "Food quality satisfaction rating for Nachos. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Nachos you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
+        expr: CONCESS_QUALITY_NACHOS
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["nacho quality satisfaction", "nacho quality, nachos satisfaction"]
+
+      - name: CONCESS_QUALITY_FRIES
+        description: "Food quality satisfaction rating for Fries / potatoes. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Fries / potatoes you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
+        expr: CONCESS_QUALITY_FRIES
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["fries quality satisfaction", "fries quality, french fry quality, potato quality, fries satisfaction"]
+
+      - name: CONCESS_QUALITY_ICECREAM
+        description: "Food quality satisfaction rating for Ice cream. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Ice cream you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
+        expr: CONCESS_QUALITY_ICECREAM
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["ice cream quality satisfaction", "ice cream quality, dessert quality, ice cream satisfaction"]
+
+      - name: CONCESS_QUALITY_OTHER_DESSERT
+        description: "Food quality satisfaction rating for Other desserts and sweets. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Other desserts and sweets you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
+        expr: CONCESS_QUALITY_OTHER_DESSERT
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["other dessert quality satisfaction", "dessert quality, sweets quality"]
+
+      - name: CONCESS_QUALITY_OTHER_ENTREE
+        description: "Food quality satisfaction rating for Other entrees. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Other entrees you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
+        expr: CONCESS_QUALITY_OTHER_ENTREE
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["other entree quality satisfaction", "entree quality"]
+
+      - name: CONCESS_QUALITY_NUTS
+        description: "Food quality satisfaction rating for Nuts / Cracker Jacks. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Nuts / Cracker Jacks you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
+        expr: CONCESS_QUALITY_NUTS
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["nuts quality satisfaction", "nuts quality, cracker jacks quality"]
+
+      - name: CONCESS_QUALITY_POPCORN
+        description: "Food quality satisfaction rating for Popcorn. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Popcorn you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
+        expr: CONCESS_QUALITY_POPCORN
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["popcorn quality satisfaction", "popcorn quality, popcorn satisfaction"]
+
+      - name: CONCESS_QUALITY_PRETZELS
+        description: "Food quality satisfaction rating for Pretzels. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Pretzels you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
+        expr: CONCESS_QUALITY_PRETZELS
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["pretzel quality satisfaction", "pretzel quality, pretzels satisfaction"]
+
+      - name: STAFF_NUMRAT
+        description: "Overall staff experience rating on 0-10 scale. Survey question: \"On a scale from 0 to 10, how would you rate your overall experience with staff members?\" Added in 2025 season. 0=worst, 10=best. Filter out values >= 80 (survey codes)."
+        expr: STAFF_NUMRAT
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["staff satisfaction", "staff rating", "staff score", "staff experience rating"]
+
+      - name: PARKING_EXIT_NUMRAT
+        description: "Parking exit experience rating on 0-10 scale. Survey question: \"On a scale from 0 to 10, how would you rate your experience exiting the parking lot after the game?\" Added in 2024 season. 0=worst, 10=best. Filter out values >= 80 (survey codes)."
+        expr: PARKING_EXIT_NUMRAT
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["parking exit rating", "leaving parking rating", "exit parking satisfaction", "parking departure rating"]
+
+      - name: BRANDHEALTH_GRID_EXCITING
+        description: "Brand health agreement rating for \"games are exciting\". Survey question: \"To what extent do you agree or disagree: [Rays] games are exciting?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
+        expr: BRANDHEALTH_GRID_EXCITING
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["exciting rating", "games exciting, exciting"]
+
+      - name: BRANDHEALTH_GRID_FAMFRIENDLY
+        description: "Brand health agreement rating for \"games are family-friendly\". Survey question: \"To what extent do you agree or disagree: [Rays] games are family-friendly?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
+        expr: BRANDHEALTH_GRID_FAMFRIENDLY
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["family friendly rating", "family friendly, family"]
+
+      - name: BRANDHEALTH_GRID_CHAMPION
+        description: "Brand health agreement rating for \"committed to winning championships\". Survey question: \"To what extent do you agree or disagree: [Rays] committed to winning championships?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
+        expr: BRANDHEALTH_GRID_CHAMPION
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["championship commitment rating", "winning, championships"]
+
+      - name: BRANDHEALTH_GRID_RIGHTDIRECTION
+        description: "Brand health agreement rating for \"headed in the right direction on the field\". Survey question: \"To what extent do you agree or disagree: [Rays] headed in the right direction on the field?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
+        expr: BRANDHEALTH_GRID_RIGHTDIRECTION
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["right direction rating", "right direction, on field direction"]
+
+      - name: BRANDHEALTH_GRID_POSINFLUENCE
+        description: "Brand health agreement rating for \"have a positive influence on the local community\". Survey question: \"To what extent do you agree or disagree: [Rays] have a positive influence on the local community?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
+        expr: BRANDHEALTH_GRID_POSINFLUENCE
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["community influence rating", "community, positive influence"]
+
+      - name: BRANDHEALTH_GRID_WELCOME
+        description: "Brand health agreement rating for \"I feel welcome at games\". Survey question: \"To what extent do you agree or disagree: [Rays] I feel welcome at games?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
+        expr: BRANDHEALTH_GRID_WELCOME
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["welcome feeling rating", "feel welcome, welcoming"]
+
+      - name: BRANDHEALTH_GRID_EMOTIONAL
+        description: "Brand health agreement rating for \"I have an emotional connection with the team\". Survey question: \"To what extent do you agree or disagree: [Rays] I have an emotional connection with the team?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
+        expr: BRANDHEALTH_GRID_EMOTIONAL
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["emotional connection rating", "emotional connection, emotional"]
+
+      - name: BRANDHEALTH_GRID_TRENDY
+        description: "Brand health agreement rating for \"games are a popular entertainment option in my community\". Survey question: \"To what extent do you agree or disagree: [Rays] games are a popular entertainment option in my community?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
+        expr: BRANDHEALTH_GRID_TRENDY
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["popularity rating", "popular, trendy, entertainment option"]
+
+      - name: BRANDHEALTH_GRID_DIVERSITY
+        description: "Brand health agreement rating for \"committed to diversity and inclusion\". Survey question: \"To what extent do you agree or disagree: [Rays] committed to diversity and inclusion?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
+        expr: BRANDHEALTH_GRID_DIVERSITY
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["diversity rating", "diversity, inclusion, DEI"]
+
+      - name: BRANDHEALTH_GRID_SUSTAINABILITY
+        description: "Brand health agreement rating for \"committed to environmental sustainability\". Survey question: \"To what extent do you agree or disagree: [Rays] committed to environmental sustainability?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
+        expr: BRANDHEALTH_GRID_SUSTAINABILITY
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["sustainability rating", "sustainability, environmental"]
+
+      - name: BRANDHEALTH_GRID_ACCESSIBLE
+        description: "Brand health agreement rating for \"offers appropriate accommodations to make stadium accessible\". Survey question: \"To what extent do you agree or disagree: [Rays] offers appropriate accommodations to make stadium accessible?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
+        expr: BRANDHEALTH_GRID_ACCESSIBLE
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["accessibility rating", "accessible, accommodations, ADA"]
+
+      - name: BRANDHEALTH_GRID_SAFE
+        description: "Brand health agreement rating for \"it is safe to attend games\". Survey question: \"To what extent do you agree or disagree: [Rays] it is safe to attend games?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
+        expr: BRANDHEALTH_GRID_SAFE
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["safety rating", "safe, safety"]
+
+      - name: ENTERTAIN_GRID_PREGAME_CONTENT
+        description: "Entertainment satisfaction rating for Pregame content / lineups. Survey question: \"Please rate your satisfaction with: Pregame content / lineups.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
+        expr: ENTERTAIN_GRID_PREGAME_CONTENT
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["pregame content satisfaction", "pregame, lineups"]
+
+      - name: ENTERTAIN_GRID_SCOREBOARD
+        description: "Entertainment satisfaction rating for Scoreboard stats / information / replays. Survey question: \"Please rate your satisfaction with: Scoreboard stats / information / replays.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
+        expr: ENTERTAIN_GRID_SCOREBOARD
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["scoreboard satisfaction", "scoreboard, stats, replays"]
+
+      - name: ENTERTAIN_GRID_MUSIC
+        description: "Entertainment satisfaction rating for Music throughout the game. Survey question: \"Please rate your satisfaction with: Music throughout the game.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
+        expr: ENTERTAIN_GRID_MUSIC
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["music satisfaction", "music, DJ, walk-up songs"]
+
+      - name: ENTERTAIN_GRID_PLAYER_CONTENT
+        description: "Entertainment satisfaction rating for In-between inning player content. Survey question: \"Please rate your satisfaction with: In-between inning player content.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
+        expr: ENTERTAIN_GRID_PLAYER_CONTENT
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["player content satisfaction", "player content, between innings"]
+
+      - name: ENTERTAIN_GRID_GAMES
+        description: "Entertainment satisfaction rating for In-between inning games and entertainment. Survey question: \"Please rate your satisfaction with: In-between inning games and entertainment.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
+        expr: ENTERTAIN_GRID_GAMES
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["in-game entertainment satisfaction", "games, between inning entertainment, entertainment games"]
+
+      - name: ENTERTAIN_GRID_KIDS_ACTIVITIES
+        description: "Entertainment satisfaction rating for Kids entertainment / activities. Survey question: \"Please rate your satisfaction with: Kids entertainment / activities.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
+        expr: ENTERTAIN_GRID_KIDS_ACTIVITIES
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["kids activities satisfaction", "kids entertainment, kids activities, children activities"]
+
+      - name: ENTERTAIN_GRID_THEME
+        description: "Entertainment satisfaction rating for Theme night entertainment. Survey question: \"Please rate your satisfaction with: Theme night entertainment.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
+        expr: ENTERTAIN_GRID_THEME
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["theme entertainment satisfaction", "theme night, theme"]
+
+      - name: STAFF_GRID_PARKING
+        description: "Staff satisfaction rating for Parking Attendant. Survey question: \"Rate your satisfaction with the service provided by: Parking Attendant.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
+        expr: STAFF_GRID_PARKING
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["parking staff satisfaction", "parking attendant, parking staff"]
+
+      - name: STAFF_GRID_USHER
+        description: "Staff satisfaction rating for Usher. Survey question: \"Rate your satisfaction with the service provided by: Usher.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
+        expr: STAFF_GRID_USHER
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["usher satisfaction", "usher, usher service"]
+
+      - name: STAFF_GRID_FAN_SERVICES
+        description: "Staff satisfaction rating for Fan Services. Survey question: \"Rate your satisfaction with the service provided by: Fan Services.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
+        expr: STAFF_GRID_FAN_SERVICES
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["fan services satisfaction", "fan services, guest services"]
+
+      - name: STAFF_GRID_CONCESSIONS
+        description: "Staff satisfaction rating for Concessions staff. Survey question: \"Rate your satisfaction with the service provided by: Concessions staff.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
+        expr: STAFF_GRID_CONCESSIONS
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["concessions staff satisfaction", "concessions staff, food service staff"]
+
+      - name: STAFF_GRID_MERCH
+        description: "Staff satisfaction rating for Merchandise staff. Survey question: \"Rate your satisfaction with the service provided by: Merchandise staff.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
+        expr: STAFF_GRID_MERCH
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["merchandise staff satisfaction", "merchandise staff, retail staff"]
+
+      - name: STAFF_GRID_ACCESSIBILITY
+        description: "Staff satisfaction rating for Accessibility support. Survey question: \"Rate your satisfaction with the service provided by: Accessibility support.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
+        expr: STAFF_GRID_ACCESSIBILITY
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["accessibility support satisfaction", "accessibility staff, ADA support staff"]
+
+      - name: STAFF_GRID_SECURITY
+        description: "Staff satisfaction rating for Security. Survey question: \"Rate your satisfaction with the service provided by: Security.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
+        expr: STAFF_GRID_SECURITY
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["security staff satisfaction", "security, security guard"]
+
+      - name: GIVEAWAY_SAT
+        description: "Giveaway item satisfaction. Survey question: \"How satisfied were you with the giveaway item?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Replaced with PROMO_SAT_GRID in 2026. Filter out values >= 80 (survey codes)."
+        expr: GIVEAWAY_SAT
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["giveaway satisfaction", "giveaway rating", "promotional item satisfaction"]
+
+      - name: SEATVIEW_VALUE
+        description: "Seat view value for money. Survey question: \"How did your view of the game compare to the amount of money you spent on the ticket?\" Scale: 1=Good value, 2=Fair value, 3=Poor value. LOWER values = BETTER perceived value. Filter out values >= 80 (survey codes)."
+        expr: SEATVIEW_VALUE
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["seat value", "ticket value", "view value for money", "seat view value"]
+
   - name: overall_feedback_sentence_level
     description: "PRIMARY TABLE for analyzing fan feedback. Use this table by default for all feedback analysis questions. Each row represents one sentence from fan feedback, with individual sentiment and topic classification. Perfect for understanding mixed feedback (e.g., 'food was great but parking terrible'). Covers all seasons from 2023 forward."
     base_table:
@@ -4208,7 +4624,7 @@ tables:
         synonyms: ['response ID', 'survey ID']
       
       - name: season
-        description: "Baseball season year (2023, 2024, 2025, etc.)"
+        description: "Baseball season year (2023, 2024, 2025, 2026, etc.)"
         expr: season
         data_type: number
         synonyms: ['year', 'season year']
@@ -4396,12 +4812,17 @@ tables:
       - name: season_2024
         description: "Filter to 2024 season only"
         expr: season = 2024
-        synonyms: ['2024', '2024 season', 'last season']
+        synonyms: ['2024', '2024 season']
       
       - name: season_2025
         description: "Filter to 2025 season only"
         expr: season = 2025
-        synonyms: ['2025', '2025 season', 'current season']
+        synonyms: ['2025', '2025 season', 'last season']
+      
+      - name: season_2026
+        description: "Filter to 2026 season only"
+        expr: season = 2026
+        synonyms: ['2026', '2026 season', 'current season']
 
   - name: merch_no_purchase_analysis
     description: "AI-powered analysis of reasons why fans did not purchase merchandise across all seasons with sentiment classification"
