@@ -1,18 +1,26 @@
 """
 VOC Insights Agent — Azure Function proxy
 =========================================
-Bridges the Tableau-embedded chat widget to Snowflake Cortex AI.
+Streams questions to the Snowflake Cortex Agents REST endpoint and aggregates
+the SSE response into a single JSON payload the widget can render.
+
+The stored agent (SNOWFLAKE_INTELLIGENCE.AGENTS.VOC_INSIGHTS_AGENT) owns its
+orchestrator model (claude-opus-4-6), tools (voc_analyst Cortex Analyst +
+voc_feedback_search Cortex Search), and instructions. The Function is a thin
+auth + aggregation layer.
 
 Endpoints
 ---------
-POST /api/chat    — main chat endpoint (routes to Cortex Analyst or Cortex Search)
-GET  /api/health  — liveness probe (used to warm cold starts on widget load)
+POST /api/chat    — one call, returns final text + last data + suggestions
+GET  /api/health  — liveness probe
+POST /api/summary — no-op kept for backwards compatibility with the old frontend
 
 Required App Settings
 ---------------------
-SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PRIVATE_KEY,
-SNOWFLAKE_ROLE, SNOWFLAKE_WAREHOUSE, SNOWFLAKE_DATABASE, SNOWFLAKE_SCHEMA
+SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PRIVATE_KEY
 (Optional) SNOWFLAKE_PRIVATE_KEY_PASSPHRASE if the .p8 file is encrypted.
+SNOWFLAKE_ROLE, SNOWFLAKE_WAREHOUSE, SNOWFLAKE_DATABASE, SNOWFLAKE_SCHEMA
+(used only by the legacy direct-SQL fallback)
 """
 
 from __future__ import annotations
@@ -23,19 +31,16 @@ import json
 import logging
 import os
 import re
-import tempfile
 import threading
 import time
 from datetime import date, datetime
 from decimal import Decimal
-from pathlib import Path
 from typing import Any
 
 import azure.functions as func
 import jwt
 import requests
 import snowflake.connector
-import yaml
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
@@ -51,41 +56,25 @@ SF_SCHEMA    = os.environ["SNOWFLAKE_SCHEMA"]
 SF_PRIVATE_KEY_PEM        = os.environ["SNOWFLAKE_PRIVATE_KEY"]
 SF_PRIVATE_KEY_PASSPHRASE = os.environ.get("SNOWFLAKE_PRIVATE_KEY_PASSPHRASE")
 
-SEMANTIC_MODEL          = "@TBRDP_DW_PROD.LOAD.CORTEX_SEMANTIC_MODELS/voc_semantic_model.yaml"
-SEMANTIC_MODEL_FILE     = "voc_semantic_model.yaml"
-# Optional local path (set as App Setting / local.settings.json). When present, we
-# read the YAML from disk instead of downloading from the stage — useful for testing.
-SEMANTIC_MODEL_LOCAL    = os.environ.get("SEMANTIC_MODEL_LOCAL_PATH")
-ANALYST_PATH            = "/api/v2/cortex/analyst/message"
+# Stored agent fully-qualified name. Owns the orchestrator model + tools + instructions.
+AGENT_DATABASE = "SNOWFLAKE_INTELLIGENCE"
+AGENT_SCHEMA   = "AGENTS"
+AGENT_NAME     = "VOC_INSIGHTS_AGENT"
 
-# Cortex Complete model used to summarize SQL results into natural language.
-# claude-haiku-4-5: fast Claude (~2.6s on this account), good quality prose.
-# Bump to claude-sonnet-4-5 for slightly better prose at +~1s latency.
-# Non-Claude alternate: llama3.1-70b (~2.5s) similar quality at lower cost.
-COMPLETE_MODEL = "claude-haiku-4-5"
+# Agent runs can take 20-60s (multi-step planning + 2-4 SQL queries). Be generous.
+AGENT_TIMEOUT_SEC = 90
 
-MAX_HISTORY   = 10
-SQL_ROW_LIMIT = 200
-
-def _summarize_sample_size(kind: str, total_rows: int) -> int:
-    """Dynamic row budget for Cortex Complete by result type.
-    Feedback needs more rows for theme coverage; chart/metric can show all up to cap."""
-    if kind == "feedback":
-        return min(total_rows, 20)
-    return min(total_rows, 15)
+MAX_HISTORY = 10
 
 # ─── RESPONSE CACHE (15-minute TTL) ──────────────────────────────────────────
-# Identical questions within the same session hit cache instead of Cortex Analyst.
-# Keyed on (normalized question + last 4 history turns). Max 200 entries; expired
-# entries are evicted lazily on each write.
 
 _RESPONSE_CACHE: dict = {}
-_CACHE_TTL    = 900   # seconds
+_CACHE_TTL    = 900
 _CACHE_LOCK   = threading.Lock()
 
 def _cache_key(question: str, history: list) -> str:
-    norm_q  = re.sub(r"\s+", " ", question.strip().lower())
-    recent  = json.dumps(history[-4:], sort_keys=True) if history else ""
+    norm_q = re.sub(r"\s+", " ", question.strip().lower())
+    recent = json.dumps(history[-4:], sort_keys=True) if history else ""
     return hashlib.md5(f"{norm_q}|{recent}".encode()).hexdigest()
 
 def _cache_get(key: str):
@@ -108,7 +97,7 @@ def _cache_set(key: str, value: dict) -> None:
 
 logger = logging.getLogger("voc-agent")
 
-# ─── PRIVATE KEY (loaded once per cold start) ────────────────────────────────
+# ─── PRIVATE KEY + JWT (unchanged from the Analyst-era implementation) ───────
 
 def _load_private_key():
     pwd = SF_PRIVATE_KEY_PASSPHRASE.encode("utf-8") if SF_PRIVATE_KEY_PASSPHRASE else None
@@ -126,7 +115,6 @@ PRIVATE_KEY_DER = PRIVATE_KEY.private_bytes(
 )
 
 def _account_locator() -> str:
-    # JWT iss/sub uses the account identifier without region/cloud suffix.
     return SF_ACCOUNT.split(".")[0].upper()
 
 def _public_key_fingerprint() -> str:
@@ -150,59 +138,7 @@ def _make_jwt(lifetime_sec: int = 3600) -> str:
     }
     return jwt.encode(payload, PRIVATE_KEY, algorithm="RS256")
 
-# ─── CORTEX ANALYST ──────────────────────────────────────────────────────────
-
-VERBOSE_MARKERS = (
-    "The following SQL expressions",
-    "The SQL generated initially",
-    "Your semantic model is larger",
-    "The following synonyms are duplicated",
-    "ℹ️ The following SQL expressions",
-)
-
-def _split_analyst_text(raw: str) -> tuple:
-    cut = len(raw)
-    for marker in VERBOSE_MARKERS:
-        idx = raw.find(marker)
-        if 0 < idx < cut:
-            cut = idx
-    return raw[:cut].strip(), raw[cut:].strip()
-
-def _parse_analyst(data: dict) -> tuple:
-    text, sql, suggestions = "", None, []
-    for block in data.get("message", {}).get("content", []):
-        t = block.get("type")
-        if t == "text":
-            text = block.get("text", "")
-        elif t == "sql":
-            sql = block.get("statement", "")
-        elif t == "suggestions":
-            suggestions = block.get("suggestions", [])
-    warnings = [w.get("message", "") for w in data.get("warnings", [])]
-    return text, sql, suggestions, warnings
-
-def call_analyst(question: str, history: list) -> dict:
-    hist = list(history[-MAX_HISTORY * 2:])
-    hist.append({
-        "role": "user",
-        "content": [{"type": "text", "text": question}],
-    })
-    url = f"https://{SF_ACCOUNT}.snowflakecomputing.com{ANALYST_PATH}"
-    headers = {
-        "Authorization": f"Bearer {_make_jwt()}",
-        "X-Snowflake-Authorization-Token-Type": "KEYPAIR_JWT",
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    }
-    body = {"messages": hist, "semantic_model_file": SEMANTIC_MODEL}
-    resp = requests.post(url, headers=headers, json=body, timeout=45)
-    if resp.status_code != 200:
-        raise RuntimeError(
-            f"Cortex Analyst HTTP {resp.status_code}: {resp.text[:500]}"
-        )
-    return resp.json()
-
-# ─── SNOWFLAKE CONNECTOR (for SQL execution + Cortex Complete) ───────────────
+# ─── SNOWFLAKE CONNECTOR (kept for any direct-SQL fallbacks; mostly unused) ──
 
 def _connect():
     return snowflake.connector.connect(
@@ -217,9 +153,6 @@ def _connect():
         session_parameters={"QUERY_TAG": "VOC_AZURE_PROXY"},
     )
 
-# Module-level connection cache. Saves ~2-3s/request after the first by avoiding
-# the Snowflake auth handshake every time. Azure Function workers reuse module
-# state between invocations, so the cache survives across requests.
 _CONN_LOCK = threading.Lock()
 _CONN = None
 
@@ -238,140 +171,13 @@ def _reset_connection():
             except Exception: pass
             _CONN = None
 
-def _jsonable(v: Any) -> Any:
-    if v is None or isinstance(v, (bool, int, str)):
-        return v
-    if isinstance(v, float):
-        return round(v, 2)
-    if isinstance(v, Decimal):
-        return round(float(v), 2)
-    if isinstance(v, (datetime, date)):
-        return v.isoformat()
-    return str(v)
-
-def run_sql(cur, sql: str) -> dict:
-    clean = sql.strip().rstrip(";")
-    if "limit" not in clean.lower():
-        clean = f"SELECT * FROM ({clean}) _r LIMIT {SQL_ROW_LIMIT}"
-    cur.execute(clean)
-    cols = [c[0] for c in cur.description]
-    rows = [[_jsonable(v) for v in row] for row in cur.fetchall()]
-    return {"columns": cols, "rows": rows}
-
-# ─── SEMANTIC MODEL METADATA (column descriptions for summary prompt) ───────
-# Cortex Complete only sees raw SQL result numbers. Without the YAML's column
-# descriptions, it can't know things like "scale: 1=satisfied … 4=dissatisfied
-# (lower is better)" and will produce dangerously wrong summaries. Here we load
-# the YAML once, build a {column_name: description} dict, and feed the relevant
-# entries into the summary prompt at query time.
-
-_YAML_COLUMNS_CACHE = None
-_YAML_LOCK = threading.Lock()
-
-def _extract_column_descriptions(model: dict) -> dict:
-    """Walk all tables → dimensions/facts/measures/time_dimensions and pull out
-    {NAME (uppercase): enriched description}. Uppercase keys make SQL string matching easy.
-    sample_values and is_enum are appended to the description so Cortex Complete gets
-    full context on categorical fields (valid values, scale orientation) without
-    changing the rest of the pipeline."""
-    out = {}
-    for table in (model or {}).get("tables", []) or []:
-        for category in ("dimensions", "facts", "measures", "time_dimensions", "metrics"):
-            for col in (table.get(category) or []):
-                name = (col.get("name") or "").strip().upper()
-                desc = (col.get("description") or "").strip()
-                if not name or not desc:
-                    continue
-                sample_values = col.get("sample_values") or []
-                is_enum = col.get("is_enum", False)
-                if is_enum and sample_values:
-                    desc = f"{desc} Valid values: {', '.join(str(v) for v in sample_values)}."
-                elif sample_values:
-                    desc = f"{desc} Example values: {', '.join(str(v) for v in sample_values[:5])}."
-                out[name] = desc
-    return out
-
-def _download_yaml_from_stage(cur) -> dict:
-    tmpdir   = tempfile.mkdtemp(prefix="voc_yaml_")
-    file_uri = "file://" + tmpdir.replace("\\", "/").rstrip("/") + "/"
-    cur.execute(f"GET {SEMANTIC_MODEL} '{file_uri}'")
-    # Snowflake may auto-gzip on PUT; handle both .yaml and .yaml.gz
-    yaml_path = Path(tmpdir) / SEMANTIC_MODEL_FILE
-    gz_path   = yaml_path.with_name(yaml_path.name + ".gz")
-    if gz_path.exists():
-        import gzip
-        with gzip.open(gz_path, "rt", encoding="utf-8") as f:
-            return yaml.safe_load(f) or {}
-    with open(yaml_path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
-
-def _get_yaml_columns() -> dict:
-    """Lazy-loaded column-description cache. Tries local file first (if env var
-    SEMANTIC_MODEL_LOCAL_PATH is set), else downloads from the Snowflake stage."""
-    global _YAML_COLUMNS_CACHE
-    with _YAML_LOCK:
-        if _YAML_COLUMNS_CACHE is not None:
-            return _YAML_COLUMNS_CACHE
-        try:
-            if SEMANTIC_MODEL_LOCAL and Path(SEMANTIC_MODEL_LOCAL).exists():
-                with open(SEMANTIC_MODEL_LOCAL, "r", encoding="utf-8") as f:
-                    model = yaml.safe_load(f) or {}
-                logger.info("Loaded semantic model from local: %s", SEMANTIC_MODEL_LOCAL)
-            else:
-                conn = _get_connection()
-                with conn.cursor() as cur:
-                    model = _download_yaml_from_stage(cur)
-                logger.info("Loaded semantic model from Snowflake stage: %s", SEMANTIC_MODEL)
-            _YAML_COLUMNS_CACHE = _extract_column_descriptions(model)
-            logger.info("Cached %d column descriptions from semantic model", len(_YAML_COLUMNS_CACHE))
-        except Exception as e:
-            logger.warning("Could not load semantic model YAML, summaries will lack scale context: %s", e)
-            _YAML_COLUMNS_CACHE = {}
-        return _YAML_COLUMNS_CACHE
-
-def _relevant_column_descriptions(sql: str) -> dict:
-    """Return {col: description} for every YAML column whose name appears in the SQL."""
-    all_cols = _get_yaml_columns()
-    if not sql or not all_cols:
-        return {}
-    sql_upper = sql.upper()
-    # Word-boundary match so 'GAME_DATE' doesn't accidentally match 'GAME_DATE_ID' etc.
-    return {
-        name: desc
-        for name, desc in all_cols.items()
-        if re.search(rf"\b{re.escape(name)}\b", sql_upper)
-    }
-
-def _prewarm():
-    """Load YAML + open Snowflake connection in the background at module load.
-    Eliminates cold-start latency on the first /api/chat and /api/summary calls."""
-    try:
-        _get_connection()
-        logger.info("Background pre-warm: Snowflake connection ready")
-    except Exception as e:
-        logger.warning("Background pre-warm (connection) failed: %s", e)
-    try:
-        _get_yaml_columns()
-        logger.info("Background pre-warm: YAML column cache ready")
-    except Exception as e:
-        logger.warning("Background pre-warm (YAML) failed: %s", e)
-
-threading.Thread(target=_prewarm, daemon=True, name="voc-prewarm").start()
-
-# ─── DATA-SHAPE DETECTION ────────────────────────────────────────────────────
+# ─── DATA-SHAPE DETECTION (drives chart/feedback/hero rendering in frontend) ──
 
 TEXT_COLUMN_HINTS = {
     "SENTENCE_TEXT", "FEEDBACK_TEXT", "COMMENT", "COMMENTS", "FREE_TEXT",
     "VERBATIM", "OVERALL_NUMRAT_OT", "OVERALL_FEEDBACK",
 }
-
-# Prefix patterns for Qualtrics-style numbered open-text questions (TB_ADDON_8_1 … _11).
 TEXT_COLUMN_PREFIXES = ("TB_ADDON_8_",)
-
-# Suffix patterns covering Qualtrics-style free-text columns.
-# NOTE: _DESC is intentionally excluded — those columns hold short categorical enum
-# values (e.g. "Highly Satisfied"), not free-form prose. Including _DESC caused
-# satisfaction-distribution queries to render as feedback cards instead of charts.
 TEXT_COLUMN_SUFFIXES = (
     "_FEEDBACK", "_COMMENT", "_COMMENTS", "_TEXT",
     "_SPECIFY", "_VERBATIM", "_NUMRAT_OT",
@@ -385,21 +191,13 @@ def _has_text_column(cols_upper: list) -> bool:
     return any(c.endswith(s) for c in cols_upper for s in TEXT_COLUMN_SUFFIXES)
 
 def _data_kind(data: dict) -> str:
-    """Classify SQL result shape so the frontend + summarizer can react.
-    Returns one of: 'feedback' (free-text rows), 'chart' (categorical x numeric),
-    'metric' (everything else — table or single value)."""
+    """Classify SQL result shape: 'feedback' | 'chart' | 'metric'."""
     if not data or not data.get("rows"):
         return "metric"
     cols = [c.upper() for c in data.get("columns", [])]
     rows = data.get("rows", [])
-
-    # 1. Free-text column present → qualitative feedback
     if _has_text_column(cols):
         return "feedback"
-
-    # 2. >=2 cols, 2-25 rows, first column categorical (string/date), second numeric → chartable.
-    #    Extra trailing columns (e.g. total_responses) are kept in the data for the table view,
-    #    but the bar chart only uses the first two.
     if len(cols) >= 2 and 2 <= len(rows) <= 25:
         first  = [r[0] for r in rows if r and len(r) > 0]
         second = [r[1] for r in rows if r and len(r) > 1]
@@ -409,182 +207,205 @@ def _data_kind(data: dict) -> str:
         ) and any(isinstance(v, (int, float)) for v in second)
         if first_categorical and second_numeric:
             return "chart"
-
     return "metric"
 
-# ─── CORTEX COMPLETE (natural-language summary of SQL results) ───────────────
+# ─── CORTEX AGENTS REST CLIENT ───────────────────────────────────────────────
 
-def _markdown_table(data: dict, max_rows: int = 15) -> str:
-    cols = data.get("columns", [])
-    rows = data.get("rows", [])[:max_rows]
-    if not cols:
-        return ""
-    out = ["| " + " | ".join(cols) + " |",
-           "|" + "|".join(["---"] * len(cols)) + "|"]
-    for r in rows:
-        out.append("| " + " | ".join("" if v is None else str(v) for v in r) + " |")
-    return "\n".join(out)
-
-def _column_metadata_block(descriptions: dict) -> str:
-    """Render the column descriptions section of the summary prompt."""
-    if not descriptions:
-        return ""
-    lines = ["", "Column definitions (READ CAREFULLY — these are authoritative):"]
-    for col, desc in descriptions.items():
-        lines.append(f"- {col}: {desc}")
-    return "\n".join(lines) + "\n"
-
-def _data_context_block(data: dict) -> str:
-    """Inject SEASON and date-range context into the summary prompt so Cortex
-    Complete knows which time period it's describing without us having to ask."""
-    if not data:
-        return ""
-    cols_upper = [c.upper() for c in data.get("columns", [])]
-    rows       = data.get("rows", [])
-    if not rows:
-        return ""
-    parts = []
-    if "SEASON" in cols_upper:
-        idx     = cols_upper.index("SEASON")
-        seasons = sorted({r[idx] for r in rows if r and len(r) > idx and r[idx] is not None})
-        if seasons:
-            parts.append(
-                f"Season: {seasons[0]}" if len(seasons) == 1
-                else f"Seasons covered: {', '.join(str(s) for s in seasons)}"
-            )
-    for col_name in ("GAME_DATE", "SURVEY_DATE"):
-        if col_name in cols_upper:
-            idx   = cols_upper.index(col_name)
-            dates = sorted({r[idx] for r in rows if r and len(r) > idx and r[idx] is not None})
-            if dates:
-                parts.append(
-                    f"Date: {dates[0]}" if len(dates) == 1
-                    else f"Date range: {dates[0]} to {dates[-1]}"
-                )
-            break
-    return ("\nData context: " + " | ".join(parts) + "\n") if parts else ""
-
-NPS_HINT = (
-    "NPS context: NPS_SCORE is 0-10. Promoters=9-10, Passives=7-8, Detractors=0-6. "
-    "Net Promoter Score = %Promoters − %Detractors (range: −100 to +100). Higher is better.\n"
-)
-
-def _detect_result_patterns(data: dict, sql: str) -> list:
-    """Return extra hint strings to append to the summary prompt when special
-    column patterns are detected (NPS, multi-season comparisons)."""
-    hints      = []
-    cols_upper = [c.upper() for c in (data or {}).get("columns", [])]
-    if any(c in cols_upper for c in ("NPS_SCORE", "NPS_SEGMENT", "TB_ADDON_9_NPS_GROUP")):
-        hints.append(NPS_HINT)
-    if "SEASON" in cols_upper:
-        idx     = cols_upper.index("SEASON")
-        rows    = (data or {}).get("rows", [])
-        seasons = {r[idx] for r in rows if r and len(r) > idx and r[idx] is not None}
-        if len(seasons) > 1:
-            hints.append(
-                "Multi-season comparison: call out which season scored higher/lower "
-                "and the magnitude of change.\n"
-            )
-    return hints
-
-# This block goes at the top of every prompt. It is the most important
-# instruction we send — without it, summaries can confidently invert the meaning
-# of "lower is better" scales.
-SCALE_GUARDRAIL = (
-    "CRITICAL INSTRUCTIONS — read the column definitions carefully before writing:\n"
-    "1. Each numeric column has a defined SCALE and ORIENTATION. Some scales are "
-    '"higher is better" (e.g., 0-10 satisfaction) and some are "lower is better" '
-    '(e.g., 1=Highly Satisfied → 4=Highly Dissatisfied). Match your language to the '
-    "scale orientation in the column definition. Re-read the definition before "
-    "characterizing values as 'high', 'good', 'low', 'poor', etc.\n"
-    "2. If a column definition says 'lower is better', then a LOWER average is GOOD "
-    "and a HIGHER average is BAD — say so. Do not describe a 3.4 on a 1-4 "
-    "'lower-is-better' scale as 'high satisfaction'; it is mostly dissatisfied.\n"
-    "3. If a column does not have a clear scale in the definitions below, do NOT "
-    "invent one. Describe the number as the raw value.\n"
-)
-
-def _summarize_prompt(question: str, interpretation: str, data: dict,
-                      kind: str, descriptions: dict, sql: str = "") -> str:
-    total_rows   = len(data.get("rows", []))
-    sample_size  = _summarize_sample_size(kind, total_rows)
-    shown        = sample_size
-    table_md     = _markdown_table(data, max_rows=sample_size)
-    meta_block   = _column_metadata_block(descriptions)
-    ctx_block    = _data_context_block(data)
-    pattern_hints = "".join(_detect_result_patterns(data, sql))
-
-    if kind == "feedback":
-        return (
-            "You are a Voice-of-Customer analytics assistant for the Tampa Bay Rays. "
-            "Summarize the key themes and overall sentiment from these fan comments.\n\n"
-            + SCALE_GUARDRAIL
-            + pattern_hints
-            + meta_block
-            + ctx_block
-            + f"\nUser question: {question}\n\n"
-            + f"Fan comments ({total_rows} total"
-            + (f", showing first {shown}" if total_rows > shown else "")
-            + "):\n"
-            + table_md
-            + "\n\nWrite 2 to 4 sentences. Lead with the dominant sentiment or theme. "
-            "Mention 1-3 specific recurring topics or phrases from the comments. "
-            "Conversational tone. Do NOT repeat the question. Do NOT add preambles "
-            "like 'Based on the comments' or apologies. Just give the summary. "
-            "Number format: write percentages as at most 2 decimal places, dropping "
-            "trailing zeros — e.g., 80%, 80.1%, 80.23%. Never write long decimals."
-        )
-
+def _agent_url() -> str:
+    """Stored-agent invocation endpoint (NOT /api/v2/cortex/agent:run — that's inline only)."""
     return (
-        "You are a Voice-of-Customer analytics assistant for the Tampa Bay Rays "
-        "baseball team. Write a brief, direct natural-language answer to the user's "
-        "question based on the SQL results below.\n\n"
-        + SCALE_GUARDRAIL
-        + pattern_hints
-        + meta_block
-        + ctx_block
-        + f"\nUser question: {question}\n\n"
-        + f"How the system interpreted the question: {interpretation}\n\n"
-        + f"Results ({total_rows} row(s) total"
-        + (f", showing first {shown}" if total_rows > shown else "")
-        + "):\n"
-        + table_md
-        + "\n\nWrite 1 to 3 sentences. Be specific with numbers AND with what those "
-        "numbers mean on each column's scale. Use a conversational, professional tone. "
-        "Do NOT repeat the question. Do NOT add disclaimers or preambles like 'Based "
-        "on the data'. Just give the answer. "
-        "Number format: write percentages as at most 2 decimal places, dropping "
-        "trailing zeros — e.g., 80%, 80.1%, 80.23%. Never write long decimals."
+        f"https://{SF_ACCOUNT}.snowflakecomputing.com"
+        f"/api/v2/databases/{AGENT_DATABASE}/schemas/{AGENT_SCHEMA}/agents/{AGENT_NAME}:run"
     )
 
-def _is_single_value(data: dict) -> bool:
-    """1 row x 1 column → the value itself is the answer; frontend renders a hero
-    number, so we skip Cortex Complete entirely (saves ~5-10s)."""
-    rows = data.get("rows", [])
-    cols = data.get("columns", [])
-    return len(rows) == 1 and len(cols) == 1
+def _coerce_numeric(v: Any) -> Any:
+    """Snowflake returns numeric column values as strings in the JSON result set
+    (e.g. "9.18" instead of 9.18). Coerce for the data-shape classifier."""
+    if not isinstance(v, str):
+        return v
+    s = v.strip()
+    if not s or s.lower() in ("null", "none"):
+        return None
+    # Avoid coercing date strings or anything with letters
+    if re.match(r"^-?\d+(\.\d+)?$", s):
+        try:
+            f = float(s)
+            return int(f) if f.is_integer() else round(f, 2)
+        except ValueError:
+            return v
+    return v
 
-def summarize(cur, question: str, interpretation: str, data: dict, kind: str,
-              sql: str = "") -> str:
-    """Use Cortex Complete to write a natural-language answer based on SQL results.
-    Pulls column descriptions from the semantic-model YAML so the model knows each
-    column's scale and orientation (critical for "lower is better" metrics)."""
-    if not data or not data.get("rows"):
-        return ""
-    if _is_single_value(data):
-        return ""  # the hero number IS the answer; no summary needed
-    descriptions = _relevant_column_descriptions(sql)
-    prompt = _summarize_prompt(question, interpretation, data, kind, descriptions, sql)
+def _extract_columns(result_set: dict, sql: str = "") -> list:
+    """Pull column names from Snowflake's resultSetMetaData. Falls back to
+    parsing the SELECT clause or generic col_N labels."""
+    meta = (result_set or {}).get("resultSetMetaData") or {}
+    row_type = meta.get("rowType") or []
+    if row_type:
+        return [(rt.get("name") or f"col_{i}") for i, rt in enumerate(row_type)]
+    # Fallback: try to pull aliases from the SQL (best-effort, won't always work)
+    if sql:
+        m = re.search(r"^\s*SELECT\s+(.+?)\s+FROM\s", sql, re.IGNORECASE | re.DOTALL)
+        if m:
+            parts = [p.strip() for p in m.group(1).split(",")]
+            names = []
+            for p in parts:
+                alias_m = re.search(r"\bAS\s+([A-Za-z_][A-Za-z0-9_]*)\s*$", p, re.IGNORECASE)
+                if alias_m:
+                    names.append(alias_m.group(1).upper())
+                else:
+                    last = re.split(r"\s+", p)[-1]
+                    names.append(re.sub(r"[^A-Za-z0-9_]", "", last).upper() or f"col_{len(names)}")
+            if names:
+                return names
+    # Last resort — infer column count from the first row
+    rows = (result_set or {}).get("data") or []
+    n = len(rows[0]) if rows else 0
+    return [f"col_{i}" for i in range(n)]
+
+def _extract_rows(result_set: dict) -> list:
+    raw = (result_set or {}).get("data") or []
+    out = []
+    for row in raw:
+        out.append([_coerce_numeric(v) for v in row])
+    return out
+
+def _build_messages(question: str, history: list) -> list:
+    """Build the messages array for the agent. Trims history to MAX_HISTORY turns."""
+    msgs = list(history[-MAX_HISTORY * 2:]) if history else []
+    msgs.append({
+        "role": "user",
+        "content": [{"type": "text", "text": question}],
+    })
+    return msgs
+
+class AgentRunResult:
+    """Aggregated output from one /agents/<name>:run SSE stream."""
+    def __init__(self):
+        self.text_parts: list[str]    = []
+        self.thinking_parts: list[str] = []
+        self.tool_uses: list[dict]     = []   # ALL tool invocations
+        self.tool_results: list[dict]  = []   # ALL tool results, paired with tool_use_id
+        self.suggestions: list[str]    = []
+        self.status_messages: list[str] = []
+        self.error: str | None         = None
+
+    @property
+    def final_text(self) -> str:
+        return "".join(self.text_parts).strip()
+
+    @property
+    def thinking(self) -> str:
+        return "".join(self.thinking_parts).strip()
+
+    @property
+    def last_sql_tool_use(self) -> dict | None:
+        """The last system_execute_sql tool call — its SQL is what produced the answer."""
+        for tu in reversed(self.tool_uses):
+            if tu.get("type") == "system_execute_sql" or tu.get("name") == "system_execute_sql":
+                return tu
+        return None
+
+    @property
+    def last_sql_result(self) -> dict | None:
+        """The last system_execute_sql tool result with rows. Earlier results are exploratory."""
+        for tr in reversed(self.tool_results):
+            if tr.get("type") == "system_execute_sql" or tr.get("tool_type") == "system_execute_sql":
+                payload = (tr.get("content") or [{}])[0]
+                rs = (payload.get("json") or {}).get("result_set") or {}
+                if rs.get("data"):
+                    return tr
+        return None
+
+
+def _parse_sse_event(event_name: str, raw_data: str, out: AgentRunResult) -> None:
+    """Mutate `out` based on one SSE event line. Tolerates unknown event types."""
     try:
-        cur.execute(
-            "SELECT SNOWFLAKE.CORTEX.COMPLETE(%s, %s)",
-            (COMPLETE_MODEL, prompt),
+        ev = json.loads(raw_data)
+    except json.JSONDecodeError:
+        return  # ignore malformed event payloads
+
+    if event_name == "response.text.delta":
+        txt = ev.get("text") or ev.get("delta") or ""
+        if txt:
+            out.text_parts.append(txt)
+    elif event_name == "response.text":
+        # Full aggregate of text deltas — ignore so we don't double-count
+        pass
+    elif event_name == "response.thinking.delta":
+        txt = ev.get("text") or ""
+        if txt:
+            out.thinking_parts.append(txt)
+    elif event_name == "response.thinking":
+        # Full aggregate — ignore
+        pass
+    elif event_name == "response.tool_use":
+        out.tool_uses.append(ev)
+    elif event_name == "response.tool_result":
+        out.tool_results.append(ev)
+    elif event_name == "response.status":
+        msg = ev.get("message")
+        if msg:
+            out.status_messages.append(msg)
+    elif event_name == "response.suggested_queries":
+        for q in (ev.get("suggested_queries") or []):
+            if q.get("query"):
+                out.suggestions.append(q["query"])
+    elif event_name == "error":
+        out.error = ev.get("message", "unknown error")
+    # response, response.tool_result.status, done — ignored on purpose
+
+
+def call_agent(question: str, history: list) -> AgentRunResult:
+    """POST to the stored-agent endpoint, parse SSE, return aggregated result."""
+    url = _agent_url()
+    headers = {
+        "Authorization": f"Bearer {_make_jwt()}",
+        "X-Snowflake-Authorization-Token-Type": "KEYPAIR_JWT",
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+    }
+    body = {"messages": _build_messages(question, history)}
+
+    out = AgentRunResult()
+
+    try:
+        resp = requests.post(
+            url, headers=headers, json=body, stream=True, timeout=AGENT_TIMEOUT_SEC,
         )
-        row = cur.fetchone()
-        return (row[0] or "").strip() if row else ""
+    except requests.RequestException as e:
+        out.error = f"network error: {e}"
+        return out
+
+    if resp.status_code != 200:
+        out.error = f"agent:run HTTP {resp.status_code}: {resp.text[:500]}"
+        return out
+
+    current_event = None
+    for raw in resp.iter_lines(decode_unicode=True):
+        if not raw:
+            continue
+        if raw.startswith("event: "):
+            current_event = raw[len("event: "):].strip()
+        elif raw.startswith("data: ") and current_event:
+            payload = raw[len("data: "):]
+            if payload.strip() == "[DONE]":
+                break
+            _parse_sse_event(current_event, payload, out)
+            current_event = None
+        # ":keep-alive" comments and other lines are ignored
+
+    return out
+
+# ─── PRE-WARM (best-effort, runs once per cold start) ────────────────────────
+
+def _prewarm():
+    try:
+        _get_connection()
+        logger.info("Background pre-warm: Snowflake connection ready")
     except Exception as e:
-        logger.warning("Cortex Complete summarization failed: %s", e)
-        return ""
+        logger.warning("Background pre-warm failed: %s", e)
+
+threading.Thread(target=_prewarm, daemon=True, name="voc-prewarm").start()
 
 # ─── HTTP APP ────────────────────────────────────────────────────────────────
 
@@ -600,7 +421,7 @@ def _json(payload: dict, status: int = 200) -> func.HttpResponse:
 @app.route(route="health", methods=["GET"])
 def health(req: func.HttpRequest) -> func.HttpResponse:
     try:
-        _get_connection()  # pre-warm Snowflake session on widget load
+        _get_connection()
     except Exception as e:
         logger.warning("Health check connection warm-up failed: %s", e)
     return _json({"status": "ok", "account": _account_locator()})
@@ -617,7 +438,6 @@ def chat(req: func.HttpRequest) -> func.HttpResponse:
     if not question:
         return _json({"error": "question is required"}, 400)
 
-    # Return cached result for repeated identical questions (15-min TTL).
     ck = _cache_key(question, history)
     cached = _cache_get(ck)
     if cached is not None:
@@ -625,88 +445,66 @@ def chat(req: func.HttpRequest) -> func.HttpResponse:
         return _json(cached)
 
     try:
-        raw = call_analyst(question, history)
-        text, sql, suggestions, warnings = _parse_analyst(raw)
-        interpretation, details = _split_analyst_text(text)
-
-        data       = None
-        data_kind  = "metric"
-        sql_failed = False
-        # Summary is fetched asynchronously by the frontend from /api/summary so
-        # the data table and interpretation render before Cortex Complete returns.
-
-        if sql:
-            try:
-                conn = _get_connection()
-                with conn.cursor() as cur:
-                    try:
-                        data = run_sql(cur, sql)
-                    except Exception as e:
-                        logger.warning("analyst SQL execution failed: %s", e)
-                        sql_failed = True
-                    if data:
-                        data_kind = _data_kind(data)
-            except snowflake.connector.errors.OperationalError as e:
-                # Cached session expired — drop it so the next request reconnects fresh
-                logger.info("Snowflake session error, dropping cached connection: %s", e)
-                _reset_connection()
-                sql_failed = True
-
-        history_update = [
-            {"role": "user", "content": [{"type": "text", "text": question}]},
-        ]
-        if "message" in raw:
-            history_update.append(raw["message"])
-
-        payload = {
-            "type":           "analyst",
-            "summary":        "",              # filled in by /api/summary (async)
-            "interpretation": interpretation,  # one-liner: how Cortex understood Q
-            "details":        details,         # verbose markers stripped from text
-            "sql":            None if sql_failed else sql,
-            "data":           data,
-            "data_kind":      data_kind,       # 'metric' | 'feedback' | 'chart'
-            "suggestions":    suggestions,
-            "warnings":       warnings,
-            "sql_failed":     sql_failed,
-            "history_update": history_update,
-        }
-        if not sql_failed:
-            _cache_set(ck, payload)
-        return _json(payload)
-
+        result = call_agent(question, history)
     except Exception as e:
-        logger.exception("chat handler failed")
+        logger.exception("agent:run call failed")
         return _json({"error": str(e)[:500]}, 500)
+
+    if result.error:
+        logger.warning("agent:run returned error: %s", result.error)
+        return _json({"error": result.error[:500]}, 502)
+
+    # Extract the last SQL + data — the answer query, not the exploratory ones
+    last_tool_use   = result.last_sql_tool_use
+    last_sql        = ((last_tool_use or {}).get("input") or {}).get("sql") if last_tool_use else None
+    last_tool_res   = result.last_sql_result
+    data            = None
+    if last_tool_res:
+        payload = (last_tool_res.get("content") or [{}])[0]
+        rs      = (payload.get("json") or {}).get("result_set") or {}
+        data    = {
+            "columns": _extract_columns(rs, last_sql or ""),
+            "rows":    _extract_rows(rs),
+        }
+
+    data_kind  = _data_kind(data) if data else "metric"
+    sql_failed = data is None and last_sql is not None  # tool ran but produced no rows
+
+    # Payload shape kept backwards-compatible with the existing frontend:
+    # `interpretation` is what the bubble displays on first paint, so we put the
+    # agent's final text there. `summary` carries the same string so the old
+    # /api/summary async-swap codepath also lands on the right text if invoked.
+    # `type: "agent"` causes the frontend's willStream check to be false →
+    # no second /api/summary fetch is attempted.
+    payload = {
+        "type":           "agent",
+        "summary":        result.final_text,
+        "interpretation": result.final_text,           # ← shown in chat bubble
+        "details":        result.thinking,             # chain-of-thought (Tech details)
+        "sql":            last_sql,
+        "data":           data,
+        "data_kind":      data_kind,
+        "suggestions":    result.suggestions[:3],
+        "warnings":       [],
+        "sql_failed":     sql_failed,
+        "history_update": [
+            {"role": "user", "content": [{"type": "text", "text": question}]},
+            {"role": "assistant", "content": [{"type": "text", "text": result.final_text}]},
+        ],
+        # Diagnostic — frontend can ignore; useful for debugging the new pipeline
+        "agent_meta": {
+            "status_messages": result.status_messages,
+            "tool_use_count":  len(result.tool_uses),
+        },
+    }
+    _cache_set(ck, payload)
+    return _json(payload)
 
 
 @app.route(route="summary", methods=["POST"])
 def summary_endpoint(req: func.HttpRequest) -> func.HttpResponse:
-    """Streaming-companion endpoint. Frontend calls this immediately after /api/chat
-    so the user sees data instantly while the summary cooks in the background."""
-    try:
-        body = req.get_json()
-    except ValueError:
-        return _json({"error": "invalid JSON body"}, 400)
-
-    question       = (body.get("question") or "").strip()
-    interpretation = body.get("interpretation") or ""
-    data           = body.get("data") or {}
-    data_kind      = body.get("data_kind") or "metric"
-    sql            = body.get("sql") or ""
-
-    if not data or not data.get("rows"):
-        return _json({"summary": ""})
-
-    try:
-        conn = _get_connection()
-        with conn.cursor() as cur:
-            summary = summarize(cur, question, interpretation, data, data_kind, sql)
-        return _json({"summary": summary})
-    except snowflake.connector.errors.OperationalError as e:
-        logger.info("Snowflake session error in /api/summary, resetting: %s", e)
-        _reset_connection()
-        return _json({"error": "session expired"}, 500)
-    except Exception as e:
-        logger.exception("summary handler failed")
-        return _json({"error": str(e)[:500]}, 500)
+    """Backwards-compatibility no-op. The old frontend POSTs here after /api/chat
+    to fetch the prose summary. Under the new agent:run pipeline the summary is
+    already in /api/chat's payload, so this endpoint just returns empty —
+    the frontend already handles an empty summary gracefully."""
+    return _json({"summary": ""})
