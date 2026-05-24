@@ -76,8 +76,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self.path == "/api/summary":
-            # New pipeline: summary is already in /api/chat's response. Return empty
-            # for backwards compat with frontends that still POST here.
+            # No-op for backwards compat (new pipeline returns summary in /api/chat)
             self._json({"summary": ""})
             return
         if self.path != "/api/chat":
@@ -96,6 +95,32 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"error": "question is required"}, 400)
             return
 
+        accept = (self.headers.get("Accept") or "").lower()
+        if "text/event-stream" in accept:
+            self._stream_chat(question, history)
+        else:
+            self._json_chat(question, history)
+
+    def _stream_chat(self, question, history):
+        """Stream upstream SSE through to the browser, then emit a `final` event
+        with the aggregated payload. Mirrors function_app.stream_chat()."""
+        self.send_response(200)
+        self._cors()
+        self.send_header("Content-Type",     "text/event-stream")
+        self.send_header("Cache-Control",    "no-cache")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+
+        try:
+            for chunk in fa.stream_chat(question, history):
+                self.wfile.write(chunk)
+                self.wfile.flush()  # critical for live streaming over BaseHTTPServer
+        except (BrokenPipeError, ConnectionResetError):
+            log.info("client disconnected mid-stream")
+        except Exception:
+            log.exception("stream handler failed")
+
+    def _json_chat(self, question, history):
         try:
             result = fa.call_agent(question, history)
         except Exception as e:
@@ -108,41 +133,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"error": result.error[:500]}, 502)
             return
 
-        last_tool_use = result.last_sql_tool_use
-        last_sql      = ((last_tool_use or {}).get("input") or {}).get("sql") if last_tool_use else None
-        last_tool_res = result.last_sql_result
-        data          = None
-        if last_tool_res:
-            payload = (last_tool_res.get("content") or [{}])[0]
-            rs      = (payload.get("json") or {}).get("result_set") or {}
-            data    = {
-                "columns": fa._extract_columns(rs, last_sql or ""),
-                "rows":    fa._extract_rows(rs),
-            }
-
-        data_kind  = fa._data_kind(data) if data else "metric"
-        sql_failed = data is None and last_sql is not None
-
-        self._json({
-            "type":           "agent",
-            "summary":        result.final_text,
-            "interpretation": result.final_text,    # bubble reads this on first paint
-            "details":        result.thinking,
-            "sql":            last_sql,
-            "data":           data,
-            "data_kind":      data_kind,
-            "suggestions":    result.suggestions[:3],
-            "warnings":       [],
-            "sql_failed":     sql_failed,
-            "history_update": [
-                {"role": "user",      "content": [{"type": "text", "text": question}]},
-                {"role": "assistant", "content": [{"type": "text", "text": result.final_text}]},
-            ],
-            "agent_meta": {
-                "status_messages": result.status_messages,
-                "tool_use_count":  len(result.tool_uses),
-            },
-        })
+        self._json(fa._build_aggregate_payload(result, question))
 
 
 def main():

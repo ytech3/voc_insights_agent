@@ -6,9 +6,8 @@
 // IT-provided Function App URL (no trailing slash):
 const FUNCTION_URL = "https://rays-voc-proxy-dxf8bahjhhbnh4bx.eastus2-01.azurewebsites.net";
 
-const CHAT_ENDPOINT    = FUNCTION_URL + "/api/chat";
-const SUMMARY_ENDPOINT = FUNCTION_URL + "/api/summary";
-const HEALTH_ENDPOINT  = FUNCTION_URL + "/api/health";
+const CHAT_ENDPOINT   = FUNCTION_URL + "/api/chat";
+const HEALTH_ENDPOINT = FUNCTION_URL + "/api/health";
 
 const MAX_HISTORY = 10;
 
@@ -90,6 +89,104 @@ function escapeHtml(s) {
     .replaceAll("'", "&#39;");
 }
 
+// ─── Markdown → HTML (small, covers what the agent actually emits) ─────
+// Handles: ## headings, **bold**, *italic*, `code`, - / * lists, 1. ordered
+// lists, | tables |, paragraphs separated by blank lines. HTML is escaped
+// first so any literal < > in agent output is safe.
+function md2html(text) {
+  if (!text) return "";
+  const safe = escapeHtml(text);
+  return safe.split(/\n\s*\n/).map(_renderBlock).filter(Boolean).join("\n");
+}
+
+function _renderBlock(block) {
+  block = block.trim();
+  if (!block) return "";
+  const lines = block.split("\n");
+
+  // ## Heading on first line — render heading, then recurse on the rest
+  const headMatch = lines[0].match(/^(#{1,4})\s+(.+)$/);
+  if (headMatch) {
+    const level = Math.min(headMatch[1].length + 2, 6);
+    const head  = `<h${level}>${_renderInline(headMatch[2])}</h${level}>`;
+    const rest  = lines.slice(1).join("\n").trim();
+    return rest ? head + _renderBlock(rest) : head;
+  }
+
+  // Markdown table: row 0 starts with |, row 1 is the |---| separator
+  if (lines.length >= 2 && lines[0].trim().startsWith("|") && /^\s*\|[\s\-:|]+\|\s*$/.test(lines[1])) {
+    return _renderTable(lines);
+  }
+
+  // Pure unordered list
+  if (lines.every(l => /^\s*[-*]\s+/.test(l))) {
+    return "<ul>" + lines.map(l =>
+      `<li>${_renderInline(l.replace(/^\s*[-*]\s+/, ""))}</li>`
+    ).join("") + "</ul>";
+  }
+
+  // Pure ordered list
+  if (lines.every(l => /^\s*\d+\.\s+/.test(l))) {
+    return "<ol>" + lines.map(l =>
+      `<li>${_renderInline(l.replace(/^\s*\d+\.\s+/, ""))}</li>`
+    ).join("") + "</ol>";
+  }
+
+  // Label-then-list ("**Foo:**\n- a\n- b") — common in the agent's output
+  const firstListIdx = lines.findIndex(l => /^\s*[-*]\s+/.test(l));
+  if (firstListIdx > 0 && lines.slice(firstListIdx).every(l => /^\s*[-*]\s+/.test(l))) {
+    const label = `<p>${_renderInline(lines.slice(0, firstListIdx).join(" "))}</p>`;
+    const list  = "<ul>" + lines.slice(firstListIdx).map(l =>
+      `<li>${_renderInline(l.replace(/^\s*[-*]\s+/, ""))}</li>`
+    ).join("") + "</ul>";
+    return label + list;
+  }
+
+  // Default: paragraph, collapsing single newlines to spaces
+  return `<p>${_renderInline(lines.join(" "))}</p>`;
+}
+
+function _renderInline(text) {
+  // Order matters: ** before * (otherwise **foo** misreads as *<em>foo*</em>)
+  return text
+    .replace(/\*\*([^*\n]+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, "$1<em>$2</em>")
+    .replace(/`([^`]+?)`/g, "<code>$1</code>");
+}
+
+function _renderTable(lines) {
+  const cells = (line) => line.split("|").slice(1, -1).map(c => c.trim());
+  const head  = cells(lines[0]);
+  const rows  = lines.slice(2).map(cells);
+  let html = '<table class="md-table"><thead><tr>';
+  head.forEach(h => html += `<th>${_renderInline(h)}</th>`);
+  html += "</tr></thead><tbody>";
+  rows.forEach(r => {
+    html += "<tr>";
+    r.forEach(c => html += `<td>${_renderInline(c)}</td>`);
+    html += "</tr>";
+  });
+  html += "</tbody></table>";
+  return html;
+}
+
+// ─── SSE parsing ────────────────────────────────────────────────────────
+// One block = an `event:` line + a `data:` line, separated by blank lines.
+function parseSSEBlock(block) {
+  let event = null, data = "";
+  for (const line of block.split("\n")) {
+    if (line.startsWith("event: ")) event = line.slice(7).trim();
+    else if (line.startsWith("data: ")) data = line.slice(6);
+  }
+  if (!event || data === "") return null;
+  if (data.trim() === "[DONE]") return { event: "_done" };
+  try {
+    return { event, data: JSON.parse(data) };
+  } catch (e) {
+    return null;  // malformed, skip
+  }
+}
+
 function renderMessage(msg) {
   const wrap = document.createElement("div");
   wrap.className = "msg-wrap";
@@ -105,75 +202,18 @@ function renderMessage(msg) {
   if (msg.role === "user") {
     bubble.textContent = msg.content;
   } else {
-    bubble.innerHTML = msg.content || "Here are your results.";
-    if (msg.summaryPending) {
-      const dots = document.createElement("span");
-      dots.className = "summary-pending";
-      dots.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
-      bubble.appendChild(document.createTextNode(" "));
-      bubble.appendChild(dots);
-    }
+    // Agent bubble starts empty for streaming msgs; askQuestion() fills it via
+    // _refreshStreamingBubble() during the stream and _applyFinalEvent() at
+    // the end. For non-streaming msgs (error fallbacks etc.) just render content.
+    bubble.innerHTML = msg.content || "";
   }
   if (msg.id) bubble.dataset.bubbleId = msg.id;
   wrap.appendChild(bubble);
   $messages.appendChild(wrap);
 
-  // Route data renderings: inline in the chat (portrait) OR into the right-hand
-  // data panel that refreshes each turn (landscape). The chat text bubble stays
-  // in the messages column in both modes.
-  const dataTarget = isLandscape() ? $dataPanel : $messages;
-  if (msg.df && isLandscape()) {
-    $dataPanel.innerHTML = "";  // latest-answer-wins: clear previous data
-  }
-  if (msg.df) {
-    if (msg.dataKind === "feedback") {
-      dataTarget.appendChild(renderFeedback(msg.df));
-    } else if (msg.dataKind === "chart") {
-      dataTarget.appendChild(renderBarChart(msg.df));
-    } else if (isSingleNumeric(msg.df)) {
-      dataTarget.appendChild(renderHero(msg.df));
-    } else {
-      dataTarget.appendChild(renderDataframe(msg.df));
-    }
-  }
-
-  // SQL failure note — stays with the bubble in the chat column
-  if (msg.sqlFailed) {
-    const note = document.createElement("div");
-    note.className = "sql-failed-note";
-    note.textContent = "⚠️ I understood your question but couldn't retrieve data. " +
-                       "Try rephrasing, or the field may not be available for this date range.";
-    $messages.appendChild(note);
-  }
-
-  // Technical details (collapsed) — tagged with msg.id so we can update it
-  // when the async summary swap moves the interpretation back into details.
-  if (msg.details || msg.id) {
-    const det = document.createElement("details");
-    det.className = "tech";
-    if (msg.id) det.dataset.forMsg = msg.id;
-    const sum = document.createElement("summary");
-    sum.textContent = "ℹ️ Technical details";
-    det.appendChild(sum);
-    const pre = document.createElement("pre");
-    pre.textContent = (msg.details || "").slice(0, 3000);
-    det.appendChild(pre);
-    if (!msg.details) det.style.display = "none";  // hide until populated
-    $messages.appendChild(det);
-  }
-
-  // Suggestion buttons
-  if (msg.suggestions && msg.suggestions.length) {
-    const sg = document.createElement("div");
-    sg.className = "suggestions";
-    msg.suggestions.slice(0, 3).forEach(text => {
-      const btn = document.createElement("button");
-      btn.textContent = text;
-      btn.addEventListener("click", () => askQuestion(text));
-      sg.appendChild(btn);
-    });
-    $messages.appendChild(sg);
-  }
+  // Note: data table, suggestions, sqlFailed note, and tech-details are NOT
+  // rendered here anymore — they're rendered by _renderFinalArtifacts() once
+  // the `final` SSE event arrives. This avoids double-rendering during streaming.
 }
 
 function renderDataframe(df) {
@@ -463,158 +503,231 @@ async function askQuestion(question) {
   // Drop any prior suggestion buttons (only the latest answer keeps them).
   document.querySelectorAll(".suggestions").forEach(el => el.remove());
 
+  // 1) Render the user's question bubble
   state.messages.push({ role: "user", content: question });
   renderMessage(state.messages[state.messages.length - 1]);
   updateStatus();
   scrollToBottom();
 
-  setBusy(true);
-
-  try {
-    const resp = await fetch(CHAT_ENDPOINT, {
-      method: "POST",
-      mode: "cors",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        question,
-        history: state.apiHistory,
-      }),
-    });
-
-    if (!resp.ok) {
-      const errText = await resp.text();
-      throw new Error(`HTTP ${resp.status}: ${errText.slice(0, 300)}`);
-    }
-
-    const data = await resp.json();
-    const msg  = handleAgentResponse(data, question);
-
-    // Streaming summary: kick off Cortex Complete fetch *after* data renders.
-    // Skip when there's nothing to summarize (no data, single-value hero, or
-    // SQL failed). Result lands in msg.content when ready.
-    if (
-      msg && data.type === "analyst" && data.data
-      && data.data.rows && data.data.rows.length
-      && !isSingleNumeric(data.data)
-      && !data.sql_failed
-    ) {
-      fetchSummaryAsync(msg, question, data);
-    }
-  } catch (err) {
-    state.messages.push({
-      role: "agent",
-      content: `⚠️ Something went wrong: ${escapeHtml(err.message)}`,
-    });
-    renderMessage(state.messages[state.messages.length - 1]);
-  } finally {
-    setBusy(false);
-    updateStatus();
-    scrollToBottom();
-  }
-}
-
-async function fetchSummaryAsync(msg, question, chatData) {
-  try {
-    const resp = await fetch(SUMMARY_ENDPOINT, {
-      method: "POST",
-      mode: "cors",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        question,
-        interpretation: chatData.interpretation || "",
-        data:           chatData.data,
-        data_kind:      chatData.data_kind || "metric",
-        sql:            chatData.sql || "",
-      }),
-    });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const body = await resp.json();
-    const summary = (body.summary || "").trim();
-    msg.summaryPending = false;
-    if (summary) {
-      msg.content = summary;
-      // Pull the interpretation back into details since the summary is now the bubble
-      if (chatData.interpretation && !msg.details.includes("Interpretation:")) {
-        msg.details = ("Interpretation: " + chatData.interpretation + "\n\n" + msg.details).trim();
-      }
-    }
-    updateBubble(msg);
-  } catch (err) {
-    msg.summaryPending = false;
-    updateBubble(msg);
-    console.warn("Summary fetch failed:", err);
-  }
-}
-
-function updateBubble(msg) {
-  const bubble = document.querySelector(`[data-bubble-id="${msg.id}"]`);
-  if (bubble) {
-    bubble.innerHTML = msg.content || "Here are your results.";
-    if (msg.summaryPending) {
-      const dots = document.createElement("span");
-      dots.className = "summary-pending";
-      dots.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
-      bubble.appendChild(document.createTextNode(" "));
-      bubble.appendChild(dots);
-    }
-  }
-  // Update the Technical details expander tied to this message
-  const det = document.querySelector(`details.tech[data-for-msg="${msg.id}"]`);
-  if (det) {
-    det.querySelector("pre").textContent = (msg.details || "").slice(0, 3000);
-    det.style.display = msg.details ? "" : "none";
-  }
-}
-
-function handleAgentResponse(data, question) {
-  // Two-stage rendering for SI-like UX:
-  //   1) Initial render: interpretation + data table/chart/cards shown immediately
-  //      (~5-7s from question submit). User sees the answer materializing.
-  //   2) Async render: when /api/summary returns, the bubble text swaps to the
-  //      natural-language summary and the interpretation tucks into Technical Details.
-  // Single-value answers (hero number) skip the summary fetch entirely — the number
-  // is the answer.
-  const willStream =
-    data.type === "analyst" && data.data && data.data.rows && data.data.rows.length
-    && !isSingleNumeric(data.data) && !data.sql_failed;
-
-  // First-paint bubble text: interpretation if available, fallback to a generic line.
-  const initialBody =
-    data.interpretation ||
-    data.text ||
-    (data.sql_failed ? "Here is what I found." : "Here are your results.");
-
-  const warnings = (data.warnings || []).filter(Boolean);
-  const detailsParts = [];
-  if (data.details) detailsParts.push(data.details);
-  if (warnings.length) {
-    detailsParts.push("--- Cortex warnings ---\n" + warnings.join("\n"));
-  }
-
+  // 2) Pre-render the agent bubble as a placeholder we'll fill via streaming
   const msg = {
-    id:             "m_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7),
-    role:           "agent",
-    content:        initialBody,
-    summaryPending: willStream,
-    df:             data.data || null,
-    dataKind:       data.data_kind || "metric",
-    suggestions:    data.suggestions || [],
-    details:        detailsParts.join("\n\n"),
-    sqlFailed:      !!data.sql_failed,
+    id:          "m_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7),
+    role:        "agent",
+    content:     "",               // becomes the final markdown HTML
+    rawText:     "",               // accumulates text deltas during streaming
+    statusLine:  "Planning…",      // shown in the bubble before first text delta
+    df:          null,
+    dataKind:    "metric",
+    suggestions: [],
+    details:     "",
+    sqlFailed:   false,
+    streaming:   true,
   };
   state.messages.push(msg);
   renderMessage(msg);
+  const bubble = document.querySelector(`[data-bubble-id="${msg.id}"]`);
+  _refreshStreamingBubble(msg, bubble);
+  setBusy(true);
+  scrollToBottom();
 
-  // Append history for follow-up context (mirrors voc_chat_app.py)
+  // 3) Open the SSE stream
+  let resp;
+  try {
+    resp = await fetch(CHAT_ENDPOINT, {
+      method: "POST",
+      mode:   "cors",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept":       "text/event-stream",
+      },
+      body: JSON.stringify({ question, history: state.apiHistory }),
+    });
+  } catch (err) {
+    _failBubble(bubble, `⚠️ Network error: ${escapeHtml(err.message)}`);
+    setBusy(false);
+    return;
+  }
+
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => "");
+    _failBubble(bubble, `⚠️ HTTP ${resp.status}: ${escapeHtml(errText.slice(0, 200))}`);
+    setBusy(false);
+    return;
+  }
+
+  // 4) Read the stream — parse SSE blocks separated by blank lines
+  const reader  = resp.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let blockEnd;
+      while ((blockEnd = buffer.indexOf("\n\n")) !== -1) {
+        const block = buffer.slice(0, blockEnd);
+        buffer = buffer.slice(blockEnd + 2);
+        const evt = parseSSEBlock(block);
+        if (evt) _handleStreamEvent(msg, bubble, evt);
+      }
+    }
+  } catch (err) {
+    console.warn("stream read error:", err);
+  }
+
+  // 5) Finalize — if no `final` event arrived, render whatever raw text we have
+  msg.streaming = false;
+  if (!msg.content && msg.rawText) {
+    msg.content = md2html(msg.rawText);
+    if (bubble) bubble.innerHTML = msg.content;
+  }
+  setBusy(false);
+  updateStatus();
+  scrollToBottom();
+}
+
+function _handleStreamEvent(msg, bubble, evt) {
+  const { event, data } = evt;
+
+  if (event === "response.status") {
+    msg.statusLine = data.message || msg.statusLine;
+    _refreshStreamingBubble(msg, bubble);
+  } else if (event === "response.text.delta") {
+    msg.rawText += data.text || "";
+    _refreshStreamingBubble(msg, bubble);
+  } else if (event === "response.thinking.delta") {
+    msg.details = (msg.details || "") + (data.text || "");
+  } else if (event === "response.suggested_queries") {
+    msg.suggestions = (data.suggested_queries || []).map(q => q.query).filter(Boolean);
+  } else if (event === "final") {
+    _applyFinalEvent(msg, data, bubble);
+  } else if (event === "error") {
+    msg.streaming = false;
+    if (bubble) bubble.innerHTML = `⚠️ ${escapeHtml(data.message || "error")}`;
+  }
+  // response.tool_use, response.tool_result, response.tool_result.status,
+  // response.thinking, response.text, response, _done — intentionally ignored
+  // (final event carries everything we need for the post-stream render).
+}
+
+function _refreshStreamingBubble(msg, bubble) {
+  if (!bubble) return;
+  bubble.innerHTML = "";
+  if (msg.rawText) {
+    // Show streaming raw text so the user sees words arriving live.
+    // Markdown formatting is applied at the end (final event) to avoid flicker
+    // on partial syntax like '**bo'.
+    const span = document.createElement("span");
+    span.className = "stream-text";
+    span.textContent = msg.rawText;
+    bubble.appendChild(span);
+  } else {
+    // Pre-text phase: show the agent's current status as italic text
+    const status = document.createElement("em");
+    status.className = "status-line";
+    status.textContent = msg.statusLine || "Planning…";
+    bubble.appendChild(status);
+    bubble.appendChild(document.createTextNode(" "));
+  }
+  bubble.appendChild(_streamDots());
+  // Also update the static loading line at the bottom of the chat
+  _updateLoadingText(msg.statusLine);
+  scrollToBottom();
+}
+
+function _streamDots() {
+  const dots = document.createElement("span");
+  dots.className = "summary-pending";
+  dots.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+  return dots;
+}
+
+function _applyFinalEvent(msg, data, bubble) {
+  msg.rawText     = data.summary || msg.rawText;
+  msg.content     = md2html(msg.rawText) || "Here are your results.";
+  msg.df          = data.data || null;
+  msg.dataKind    = data.data_kind || "metric";
+  msg.suggestions = data.suggestions || msg.suggestions;
+  // Replace details with the server-side aggregated thinking (more complete than
+  // our streamed accumulation if the stream got interrupted)
+  if (data.details) msg.details = data.details;
+  msg.sqlFailed = !!data.sql_failed;
+  msg.streaming = false;
+
+  // History — server sends user + assistant pair we should append for follow-ups
   if (data.history_update && data.history_update.length) {
     state.apiHistory.push(...data.history_update);
     const cap = MAX_HISTORY * 2;
-    if (state.apiHistory.length > cap) {
-      state.apiHistory = state.apiHistory.slice(-cap);
+    if (state.apiHistory.length > cap) state.apiHistory = state.apiHistory.slice(-cap);
+  }
+
+  // Final bubble render — full markdown
+  if (bubble) bubble.innerHTML = msg.content;
+
+  // Render data, suggestions, tech details below the bubble
+  _renderFinalArtifacts(msg);
+}
+
+function _renderFinalArtifacts(msg) {
+  const dataTarget = isLandscape() ? $dataPanel : $messages;
+  if (msg.df && isLandscape()) {
+    $dataPanel.innerHTML = "";  // latest-answer-wins
+  }
+  if (msg.df) {
+    if (msg.dataKind === "feedback") {
+      dataTarget.appendChild(renderFeedback(msg.df));
+    } else if (msg.dataKind === "chart") {
+      dataTarget.appendChild(renderBarChart(msg.df));
+    } else if (isSingleNumeric(msg.df)) {
+      dataTarget.appendChild(renderHero(msg.df));
+    } else {
+      dataTarget.appendChild(renderDataframe(msg.df));
     }
   }
 
-  return msg;
+  if (msg.sqlFailed) {
+    const note = document.createElement("div");
+    note.className = "sql-failed-note";
+    note.textContent = "⚠️ I understood your question but couldn't retrieve data. " +
+                       "Try rephrasing, or the field may not be available for this date range.";
+    $messages.appendChild(note);
+  }
+
+  if (msg.details) {
+    const det = document.createElement("details");
+    det.className = "tech";
+    det.dataset.forMsg = msg.id;
+    const sum = document.createElement("summary");
+    sum.textContent = "ℹ️ Technical details";
+    det.appendChild(sum);
+    const pre = document.createElement("pre");
+    pre.textContent = msg.details.slice(0, 3000);
+    det.appendChild(pre);
+    $messages.appendChild(det);
+  }
+
+  if (msg.suggestions && msg.suggestions.length) {
+    const sg = document.createElement("div");
+    sg.className = "suggestions";
+    msg.suggestions.slice(0, 3).forEach(text => {
+      const btn = document.createElement("button");
+      btn.textContent = text;
+      btn.addEventListener("click", () => askQuestion(text));
+      sg.appendChild(btn);
+    });
+    $messages.appendChild(sg);
+  }
+}
+
+function _failBubble(bubble, html) {
+  if (bubble) bubble.innerHTML = html;
+}
+
+function _updateLoadingText(text) {
+  const el = document.querySelector("#loading .loading-text");
+  if (el) el.textContent = text || "Analyzing…";
 }
 
 // ─── Clear chat ────────────────────────────────────────────────────────

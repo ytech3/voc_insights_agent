@@ -356,8 +356,9 @@ def _parse_sse_event(event_name: str, raw_data: str, out: AgentRunResult) -> Non
     # response, response.tool_result.status, done — ignored on purpose
 
 
-def call_agent(question: str, history: list) -> AgentRunResult:
-    """POST to the stored-agent endpoint, parse SSE, return aggregated result."""
+def _agent_request(question: str, history: list):
+    """Open the upstream SSE stream against the stored agent. Returns the
+    `requests.Response` if HTTP 200, else an `AgentRunResult` with .error set."""
     url = _agent_url()
     headers = {
         "Authorization": f"Bearer {_make_jwt()}",
@@ -367,20 +368,32 @@ def call_agent(question: str, history: list) -> AgentRunResult:
     }
     body = {"messages": _build_messages(question, history)}
 
-    out = AgentRunResult()
-
     try:
         resp = requests.post(
             url, headers=headers, json=body, stream=True, timeout=AGENT_TIMEOUT_SEC,
         )
     except requests.RequestException as e:
-        out.error = f"network error: {e}"
-        return out
+        err = AgentRunResult()
+        err.error = f"network error: {e}"
+        return err
 
     if resp.status_code != 200:
-        out.error = f"agent:run HTTP {resp.status_code}: {resp.text[:500]}"
-        return out
+        err = AgentRunResult()
+        err.error = f"agent:run HTTP {resp.status_code}: {resp.text[:500]}"
+        return err
 
+    return resp
+
+
+def call_agent(question: str, history: list) -> AgentRunResult:
+    """POST to the stored-agent endpoint, parse SSE, return aggregated result.
+    Used by the JSON (non-streaming) path of /api/chat."""
+    resp_or_err = _agent_request(question, history)
+    if isinstance(resp_or_err, AgentRunResult):
+        return resp_or_err
+    resp = resp_or_err
+
+    out = AgentRunResult()
     current_event = None
     for raw in resp.iter_lines(decode_unicode=True):
         if not raw:
@@ -396,6 +409,92 @@ def call_agent(question: str, history: list) -> AgentRunResult:
         # ":keep-alive" comments and other lines are ignored
 
     return out
+
+
+def _build_aggregate_payload(result: AgentRunResult, question: str) -> dict:
+    """Convert an AgentRunResult into the frontend-facing JSON shape.
+    Shared by the JSON path of /api/chat and the `final` SSE event of streaming."""
+    last_tool_use = result.last_sql_tool_use
+    last_sql      = ((last_tool_use or {}).get("input") or {}).get("sql") if last_tool_use else None
+    last_tool_res = result.last_sql_result
+    data          = None
+    if last_tool_res:
+        payload = (last_tool_res.get("content") or [{}])[0]
+        rs      = (payload.get("json") or {}).get("result_set") or {}
+        data    = {
+            "columns": _extract_columns(rs, last_sql or ""),
+            "rows":    _extract_rows(rs),
+        }
+
+    data_kind  = _data_kind(data) if data else "metric"
+    sql_failed = data is None and last_sql is not None
+
+    return {
+        "type":           "agent",
+        "summary":        result.final_text,
+        "interpretation": result.final_text,
+        "details":        result.thinking,
+        "sql":            last_sql,
+        "data":           data,
+        "data_kind":      data_kind,
+        "suggestions":    result.suggestions[:3],
+        "warnings":       [],
+        "sql_failed":     sql_failed,
+        "history_update": [
+            {"role": "user",      "content": [{"type": "text", "text": question}]},
+            {"role": "assistant", "content": [{"type": "text", "text": result.final_text}]},
+        ],
+        "agent_meta": {
+            "status_messages": result.status_messages,
+            "tool_use_count":  len(result.tool_uses),
+        },
+    }
+
+
+def _sse_format(event_name: str, data_str: str) -> bytes:
+    """Format one SSE event as wire-bytes. SSE protocol: `event: <name>\\ndata: <json>\\n\\n`."""
+    return f"event: {event_name}\ndata: {data_str}\n\n".encode("utf-8")
+
+
+def stream_chat(question: str, history: list):
+    """Generator that yields SSE bytes — relays each upstream event to the
+    browser as it arrives, then emits a final `final` event with the
+    aggregated payload (same shape as the non-streaming JSON path).
+
+    Frontend uses incremental events for live progress, `final` for the
+    consolidated data table + suggestions render."""
+    result = AgentRunResult()
+
+    resp_or_err = _agent_request(question, history)
+    if isinstance(resp_or_err, AgentRunResult):
+        yield _sse_format("error", json.dumps({"message": resp_or_err.error}))
+        yield b"data: [DONE]\n\n"
+        return
+    resp = resp_or_err
+
+    current_event = None
+    for raw in resp.iter_lines(decode_unicode=True):
+        if not raw:
+            continue
+        if raw.startswith("event: "):
+            current_event = raw[len("event: "):].strip()
+        elif raw.startswith("data: ") and current_event:
+            payload = raw[len("data: "):]
+            if payload.strip() == "[DONE]":
+                break
+
+            # 1) Relay the raw upstream event to the browser
+            yield _sse_format(current_event, payload)
+
+            # 2) Also aggregate it for the `final` event below
+            _parse_sse_event(current_event, payload, result)
+
+            current_event = None
+
+    # 3) Emit the consolidated payload as the LAST SSE event before [DONE]
+    final_payload = _build_aggregate_payload(result, question)
+    yield _sse_format("final", json.dumps(final_payload, ensure_ascii=False))
+    yield b"data: [DONE]\n\n"
 
 # ─── PRE-WARM (best-effort, runs once per cold start) ────────────────────────
 
@@ -429,6 +528,13 @@ def health(req: func.HttpRequest) -> func.HttpResponse:
 
 @app.route(route="chat", methods=["POST"])
 def chat(req: func.HttpRequest) -> func.HttpResponse:
+    """Content-negotiated handler:
+    - `Accept: text/event-stream` → stream upstream SSE through to the browser
+      (live status + text deltas + tool events, then a final aggregated event).
+    - Otherwise → aggregated JSON response (the original behavior).
+
+    Both paths use _build_aggregate_payload() for the consolidated shape so
+    the frontend's data table / suggestions / details rendering is identical."""
     try:
         body = req.get_json()
     except ValueError:
@@ -439,6 +545,24 @@ def chat(req: func.HttpRequest) -> func.HttpResponse:
     if not question:
         return _json({"error": "question is required"}, 400)
 
+    accept = (req.headers.get("Accept") or "").lower()
+    wants_stream = "text/event-stream" in accept
+
+    if wants_stream:
+        # Streaming responses bypass the 15-min response cache (the cached value
+        # is the aggregated shape; replaying it as fake SSE events would be a lie
+        # to the UI and a maintenance trap).
+        return func.HttpResponse(
+            stream_chat(question, history),
+            status_code=200,
+            mimetype="text/event-stream",
+            headers={
+                "Cache-Control":      "no-cache",
+                "X-Accel-Buffering":  "no",  # nginx / proxy buffering off
+            },
+        )
+
+    # ── Non-streaming JSON path (kept for backwards compat) ────────────────
     ck = _cache_key(question, history)
     cached = _cache_get(ck)
     if cached is not None:
@@ -455,49 +579,7 @@ def chat(req: func.HttpRequest) -> func.HttpResponse:
         logger.warning("agent:run returned error: %s", result.error)
         return _json({"error": result.error[:500]}, 502)
 
-    # Extract the last SQL + data — the answer query, not the exploratory ones
-    last_tool_use   = result.last_sql_tool_use
-    last_sql        = ((last_tool_use or {}).get("input") or {}).get("sql") if last_tool_use else None
-    last_tool_res   = result.last_sql_result
-    data            = None
-    if last_tool_res:
-        payload = (last_tool_res.get("content") or [{}])[0]
-        rs      = (payload.get("json") or {}).get("result_set") or {}
-        data    = {
-            "columns": _extract_columns(rs, last_sql or ""),
-            "rows":    _extract_rows(rs),
-        }
-
-    data_kind  = _data_kind(data) if data else "metric"
-    sql_failed = data is None and last_sql is not None  # tool ran but produced no rows
-
-    # Payload shape kept backwards-compatible with the existing frontend:
-    # `interpretation` is what the bubble displays on first paint, so we put the
-    # agent's final text there. `summary` carries the same string so the old
-    # /api/summary async-swap codepath also lands on the right text if invoked.
-    # `type: "agent"` causes the frontend's willStream check to be false →
-    # no second /api/summary fetch is attempted.
-    payload = {
-        "type":           "agent",
-        "summary":        result.final_text,
-        "interpretation": result.final_text,           # ← shown in chat bubble
-        "details":        result.thinking,             # chain-of-thought (Tech details)
-        "sql":            last_sql,
-        "data":           data,
-        "data_kind":      data_kind,
-        "suggestions":    result.suggestions[:3],
-        "warnings":       [],
-        "sql_failed":     sql_failed,
-        "history_update": [
-            {"role": "user", "content": [{"type": "text", "text": question}]},
-            {"role": "assistant", "content": [{"type": "text", "text": result.final_text}]},
-        ],
-        # Diagnostic — frontend can ignore; useful for debugging the new pipeline
-        "agent_meta": {
-            "status_messages": result.status_messages,
-            "tool_use_count":  len(result.tool_uses),
-        },
-    }
+    payload = _build_aggregate_payload(result, question)
     _cache_set(ck, payload)
     return _json(payload)
 
