@@ -1,6 +1,16 @@
-azure-functions
+azure-functions>=1.18.0
 snowflake-connector-python>=3.7.0
 pyjwt>=2.8.0
 cryptography>=42.0.0
 requests>=2.31.0
 pyyaml>=6.0
+# fastapi + a3wsgi/asgiref are needed because azure-functions Python v2 sync
+# mode can't stream generators through func.HttpResponse — the gateway's 230s
+# HTTP timeout fires before our materialized SSE response is built. Wrapping
+# routes in a FastAPI app and serving via AsgiFunctionApp gives us real
+# chunked streaming, so the first byte goes out within seconds and keeps the
+# connection alive for the full agent run (up to functionTimeout).
+fastapi>=0.110
+# starlette ships with fastapi; pinned just to be explicit about the version
+# that exposes StreamingResponse and chunked transfer behavior we rely on.
+starlette>=0.36

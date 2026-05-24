@@ -507,69 +507,58 @@ def _prewarm():
 
 threading.Thread(target=_prewarm, daemon=True, name="voc-prewarm").start()
 
-# ─── HTTP APP ────────────────────────────────────────────────────────────────
+# ─── HTTP APP (FastAPI under AsgiFunctionApp for real SSE streaming) ─────────
+# Azure Functions Python sync mode can't pipe generators through
+# func.HttpResponse — materialized responses hit the platform's 230s HTTP
+# gateway timeout before the agent finishes. FastAPI's StreamingResponse does
+# real chunked streaming via ASGI, so the first byte flows out within seconds
+# of the upstream agent emitting events. Connection stays alive until
+# functionTimeout (5 min) is reached.
 
-app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, StreamingResponse
 
-def _json(payload: dict, status: int = 200) -> func.HttpResponse:
-    return func.HttpResponse(
-        json.dumps(payload, ensure_ascii=False),
-        status_code=status,
-        mimetype="application/json",
-    )
+api = FastAPI()
 
-@app.route(route="health", methods=["GET"])
-def health(req: func.HttpRequest) -> func.HttpResponse:
+@api.get("/api/health")
+def health():
     try:
         _get_connection()
     except Exception as e:
         logger.warning("Health check connection warm-up failed: %s", e)
-    return _json({"status": "ok", "account": _account_locator()})
+    return {"status": "ok", "account": _account_locator()}
 
-@app.route(route="chat", methods=["POST"])
-def chat(req: func.HttpRequest) -> func.HttpResponse:
+@api.post("/api/chat")
+async def chat(req: Request):
     """Content-negotiated handler:
-    - `Accept: text/event-stream` → stream upstream SSE through to the browser
-      (live status + text deltas + tool events, then a final aggregated event).
-    - Otherwise → aggregated JSON response (the original behavior).
-
-    Both paths use _build_aggregate_payload() for the consolidated shape so
-    the frontend's data table / suggestions / details rendering is identical."""
+    - Accept: text/event-stream → StreamingResponse with the SSE generator
+      (live progressive bytes — first byte within seconds, keeps the platform
+      gateway alive past 230s for long agent runs).
+    - Otherwise → aggregated JSON response (no streaming, faster end-to-end
+      for short questions because there's no buffering)."""
     try:
-        body = req.get_json()
-    except ValueError:
-        return _json({"error": "invalid JSON body"}, 400)
+        body = await req.json()
+    except Exception:
+        return JSONResponse({"error": "invalid JSON body"}, status_code=400)
 
     question = (body.get("question") or "").strip()
     history  = body.get("history") or []
     if not question:
-        return _json({"error": "question is required"}, 400)
+        return JSONResponse({"error": "question is required"}, status_code=400)
 
-    accept = (req.headers.get("Accept") or "").lower()
+    accept = (req.headers.get("accept") or "").lower()
     wants_stream = "text/event-stream" in accept
 
     if wants_stream:
-        # Azure Functions Python sync runtime doesn't natively stream generators
-        # through func.HttpResponse (the runtime materializes the body before
-        # sending). We collect the SSE events into a single bytes body and send
-        # with text/event-stream content type. The frontend's SSE parser works
-        # unchanged; only the live progressive UX is lost (all events arrive in
-        # one chunk at the end). Markdown rendering and final-event handling
-        # still benefit. Streaming bypasses the response cache for the same
-        # reason the original streaming path did — replaying cached events as
-        # SSE would be a maintenance trap.
-        try:
-            body = b"".join(stream_chat(question, history))
-        except Exception as e:
-            logger.exception("stream_chat failed")
-            return _json({"error": str(e)[:500]}, 500)
-        return func.HttpResponse(
-            body,
-            status_code=200,
-            mimetype="text/event-stream",
+        # StreamingResponse iterates the sync generator in a threadpool and
+        # flushes each yielded bytes to the client as it arrives. The frontend's
+        # SSE parser consumes the events progressively for the live UX.
+        return StreamingResponse(
+            stream_chat(question, history),
+            media_type="text/event-stream",
             headers={
-                "Cache-Control":      "no-cache",
-                "X-Accel-Buffering":  "no",
+                "Cache-Control":     "no-cache",
+                "X-Accel-Buffering": "no",   # turn off proxy buffering
             },
         )
 
@@ -578,27 +567,27 @@ def chat(req: func.HttpRequest) -> func.HttpResponse:
     cached = _cache_get(ck)
     if cached is not None:
         logger.info("Cache hit for question: %.80s", question)
-        return _json(cached)
+        return JSONResponse(cached)
 
     try:
         result = call_agent(question, history)
     except Exception as e:
         logger.exception("agent:run call failed")
-        return _json({"error": str(e)[:500]}, 500)
+        return JSONResponse({"error": str(e)[:500]}, status_code=500)
 
     if result.error:
         logger.warning("agent:run returned error: %s", result.error)
-        return _json({"error": result.error[:500]}, 502)
+        return JSONResponse({"error": result.error[:500]}, status_code=502)
 
     payload = _build_aggregate_payload(result, question)
     _cache_set(ck, payload)
-    return _json(payload)
+    return JSONResponse(payload)
 
+@api.post("/api/summary")
+async def summary_endpoint():
+    """Backwards-compat no-op; new pipeline emits summary inside /api/chat."""
+    return {"summary": ""}
 
-@app.route(route="summary", methods=["POST"])
-def summary_endpoint(req: func.HttpRequest) -> func.HttpResponse:
-    """Backwards-compatibility no-op. The old frontend POSTs here after /api/chat
-    to fetch the prose summary. Under the new agent:run pipeline the summary is
-    already in /api/chat's payload, so this endpoint just returns empty —
-    the frontend already handles an empty summary gracefully."""
-    return _json({"summary": ""})
+# Mount the FastAPI app as the Function App. AsgiFunctionApp registers a
+# catch-all route and forwards every HTTP request to the ASGI handler.
+app = func.AsgiFunctionApp(app=api, http_auth_level=func.AuthLevel.ANONYMOUS)
