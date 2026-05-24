@@ -549,16 +549,27 @@ def chat(req: func.HttpRequest) -> func.HttpResponse:
     wants_stream = "text/event-stream" in accept
 
     if wants_stream:
-        # Streaming responses bypass the 15-min response cache (the cached value
-        # is the aggregated shape; replaying it as fake SSE events would be a lie
-        # to the UI and a maintenance trap).
+        # Azure Functions Python sync runtime doesn't natively stream generators
+        # through func.HttpResponse (the runtime materializes the body before
+        # sending). We collect the SSE events into a single bytes body and send
+        # with text/event-stream content type. The frontend's SSE parser works
+        # unchanged; only the live progressive UX is lost (all events arrive in
+        # one chunk at the end). Markdown rendering and final-event handling
+        # still benefit. Streaming bypasses the response cache for the same
+        # reason the original streaming path did — replaying cached events as
+        # SSE would be a maintenance trap.
+        try:
+            body = b"".join(stream_chat(question, history))
+        except Exception as e:
+            logger.exception("stream_chat failed")
+            return _json({"error": str(e)[:500]}, 500)
         return func.HttpResponse(
-            stream_chat(question, history),
+            body,
             status_code=200,
             mimetype="text/event-stream",
             headers={
                 "Cache-Control":      "no-cache",
-                "X-Accel-Buffering":  "no",  # nginx / proxy buffering off
+                "X-Accel-Buffering":  "no",
             },
         )
 
