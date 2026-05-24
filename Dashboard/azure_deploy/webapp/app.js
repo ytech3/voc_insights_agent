@@ -555,7 +555,25 @@ async function askQuestion(question) {
     return;
   }
 
-  // 4) Read the stream — parse SSE blocks separated by blank lines
+  // 4a) Backwards-compat: if the server returned JSON (e.g., older backend
+  // that doesn't honor Accept: text/event-stream), treat it as one synthetic
+  // `final` event and skip streaming.
+  const contentType = (resp.headers.get("Content-Type") || "").toLowerCase();
+  if (!contentType.includes("text/event-stream")) {
+    try {
+      const data = await resp.json();
+      _applyFinalEvent(msg, data, bubble);
+    } catch (err) {
+      _failBubble(bubble, `⚠️ Bad response: ${escapeHtml(err.message)}`);
+    }
+    msg.streaming = false;
+    setBusy(false);
+    updateStatus();
+    scrollToBottom();
+    return;
+  }
+
+  // 4b) Read the stream — parse SSE blocks separated by blank lines
   const reader  = resp.body.getReader();
   const decoder = new TextDecoder("utf-8");
   let buffer = "";
