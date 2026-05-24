@@ -61,8 +61,9 @@ AGENT_DATABASE = "SNOWFLAKE_INTELLIGENCE"
 AGENT_SCHEMA   = "AGENTS"
 AGENT_NAME     = "VOC_INSIGHTS_AGENT"
 
-# Agent runs can take 20-60s (multi-step planning + 2-4 SQL queries). Be generous.
-AGENT_TIMEOUT_SEC = 90
+# Agent runs can take 1-4 minutes when Cortex Search retries + multi-step SQL chain.
+# Stay under the host.json functionTimeout (5 min) with a safety margin.
+AGENT_TIMEOUT_SEC = 270
 
 MAX_HISTORY = 10
 
