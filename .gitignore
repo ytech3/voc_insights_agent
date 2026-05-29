@@ -1,0 +1,30 @@
+# Credentials — never commit these
+local.settings.json
+*.p8
+*.pem
+*.key
+*.pfx
+.env
+.env.*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.python311/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Azure Functions
+.python_packages/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+*.swp
