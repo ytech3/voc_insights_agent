@@ -6,8 +6,8 @@
 --              deep dive that changes based on data:
 --   1. Quantitative Summary (bar chart, % gap to goal)
 --   2. Qualitative Summary (AI-classified topic ranking)
---   Key Insight: Dynamic Gap Finder across 18+ metrics
---   Deep Dive: Routes to biggest gap area automatically
+--   Key Insight: Dynamic Gap Finder across 36+ metrics
+--   Deep Dive: Routes to biggest gap area automatically (Concessions, Parking, Merchandise, Entertainment, Staff, Food Quality)
 --   3. AI-Generated Action Items (claude-sonnet-4-6)
 -- Version: 2.0
 -- Created: March 2026
@@ -118,6 +118,26 @@ BEGIN
     LET v_dd_row3_gap VARCHAR DEFAULT 'N/A';
     LET v_dd_has_numrat BOOLEAN DEFAULT FALSE;
 
+    -- Staff deep dive variables
+    LET v_staff_promoter_avg FLOAT DEFAULT NULL;
+    LET v_staff_opp_avg FLOAT DEFAULT NULL;
+    LET v_staff_cat_label VARCHAR DEFAULT '';
+    LET v_staff_cat_p FLOAT DEFAULT 0;
+    LET v_staff_cat_o FLOAT DEFAULT 0;
+    LET v_staff_cat_gap FLOAT DEFAULT 0;
+    LET v_staff_rank NUMBER DEFAULT 0;
+
+    -- Food quality deep dive variables
+    LET v_fq_cat_label VARCHAR DEFAULT '';
+    LET v_fq_cat_p FLOAT DEFAULT 0;
+    LET v_fq_cat_o FLOAT DEFAULT 0;
+    LET v_fq_cat_gap FLOAT DEFAULT 0;
+    LET v_fq_rank NUMBER DEFAULT 0;
+
+    -- AI context variables for staff + food quality
+    LET v_staff_context VARCHAR DEFAULT '';
+    LET v_food_quality_context VARCHAR DEFAULT '';
+
     -- AI & email variables
     LET v_action_items VARCHAR DEFAULT '';
     LET v_key_insight VARCHAR DEFAULT '';
@@ -202,17 +222,19 @@ BEGIN
     WHERE GAME_DATE::DATE = :v_target_game_date;
 
     -- Top 3 Promoter topics
-    LET c_promoter_topics CURSOR FOR
-        SELECT ai_category, ROUND(100.0 * COUNT(*) / NULLIF(:v_promoter_count, 0), 2) AS pct
+    LET v_rank NUMBER := 0;
+    LET res_promoter RESULTSET := (
+        SELECT ai_category,
+            ROUND(100.0 * COUNT(*) / NULLIF(SUM(COUNT(*)) OVER (), 0), 2) AS pct
         FROM TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_ANALYSIS
         WHERE GAME_DATE::DATE = :v_target_game_date
           AND nps_segment = 'Promoter'
           AND ai_category IS NOT NULL
         GROUP BY ai_category
         ORDER BY COUNT(*) DESC
-        LIMIT 3;
-
-    LET v_rank NUMBER := 0;
+        LIMIT 3
+    );
+    LET c_promoter_topics CURSOR FOR res_promoter;
     FOR rec IN c_promoter_topics DO
         v_rank := v_rank + 1;
         IF (v_rank = 1) THEN v_promoter_topic_1 := rec.ai_category; v_promoter_topic_1_pct := rec.pct::VARCHAR;
@@ -222,16 +244,18 @@ BEGIN
     END FOR;
 
     -- Top 3 Opportunity topics
-    LET c_opp_topics CURSOR FOR
-        SELECT ai_category, ROUND(100.0 * COUNT(*) / NULLIF(:v_opportunity_count, 0), 2) AS pct
+    LET res_opp RESULTSET := (
+        SELECT ai_category,
+            ROUND(100.0 * COUNT(*) / NULLIF(SUM(COUNT(*)) OVER (), 0), 2) AS pct
         FROM TBRDP_DW_DEV.IM_RPT.V_OVERALL_FEEDBACK_ANALYSIS
         WHERE GAME_DATE::DATE = :v_target_game_date
           AND nps_segment IN ('Passive', 'Detractor')
           AND ai_category IS NOT NULL
         GROUP BY ai_category
         ORDER BY COUNT(*) DESC
-        LIMIT 3;
-
+        LIMIT 3
+    );
+    LET c_opp_topics CURSOR FOR res_opp;
     v_rank := 0;
     FOR rec IN c_opp_topics DO
         v_rank := v_rank + 1;
@@ -244,7 +268,7 @@ BEGIN
     -- =============================================
     -- GAP FINDER: Find largest Promoter vs Opp gap
     -- =============================================
-    LET c_gap CURSOR FOR
+    LET res_gap RESULTSET := (
         WITH base AS (
             SELECT *,
                 CASE WHEN OVERALL_NUMRAT >= 9 THEN 'Promoter' ELSE 'Opportunity' END AS nps_seg
@@ -265,12 +289,82 @@ BEGIN
                 ROUND(AVG(CASE WHEN nps_seg='Promoter' THEN PARKING_NUMRAT END), 2),
                 ROUND(AVG(CASE WHEN nps_seg='Opportunity' THEN PARKING_NUMRAT END), 2)
             FROM base WHERE PARKING_NUMRAT IS NOT NULL
+            UNION ALL
+            SELECT 'STAFF_OVERALL', 'Staff', 'numrat',
+                ROUND(100.0 * (p_avg - o_avg) / NULLIF(p_avg, 0), 2),
+                ROUND(p_avg, 2),
+                ROUND(o_avg, 2)
+            FROM (
+                SELECT
+                    AVG(CASE WHEN nps_seg='Promoter' THEN staff_norm END) AS p_avg,
+                    AVG(CASE WHEN nps_seg='Opportunity' THEN staff_norm END) AS o_avg
+                FROM (
+                    SELECT nps_seg,
+                        CASE WHEN SEASON >= 2026 THEN
+                            (COALESCE(CASE WHEN TB_ADDON_23_1 < 80 THEN TB_ADDON_23_1 END, 0)
+                             + COALESCE(CASE WHEN TB_ADDON_23_3 < 80 THEN TB_ADDON_23_3 END, 0)
+                             + COALESCE(CASE WHEN TB_ADDON_23_5 < 80 THEN TB_ADDON_23_5 END, 0)
+                             + COALESCE(CASE WHEN TB_ADDON_23_6 < 80 THEN TB_ADDON_23_6 END, 0)
+                             + COALESCE(CASE WHEN TB_ADDON_23_24 < 80 THEN TB_ADDON_23_24 END, 0)
+                             + COALESCE(CASE WHEN TB_ADDON_23_38 < 80 THEN TB_ADDON_23_38 END, 0)
+                             + COALESCE(CASE WHEN TB_ADDON_23_60 < 80 THEN TB_ADDON_23_60 END, 0)
+                             + COALESCE(CASE WHEN TB_ADDON_23_61 < 80 THEN TB_ADDON_23_61 END, 0)
+                             + COALESCE(CASE WHEN TB_ADDON_23_67 < 80 THEN TB_ADDON_23_67 END, 0))
+                            / NULLIF(
+                                IFF(TB_ADDON_23_1 IS NOT NULL AND TB_ADDON_23_1 < 80, 1, 0)
+                                + IFF(TB_ADDON_23_3 IS NOT NULL AND TB_ADDON_23_3 < 80, 1, 0)
+                                + IFF(TB_ADDON_23_5 IS NOT NULL AND TB_ADDON_23_5 < 80, 1, 0)
+                                + IFF(TB_ADDON_23_6 IS NOT NULL AND TB_ADDON_23_6 < 80, 1, 0)
+                                + IFF(TB_ADDON_23_24 IS NOT NULL AND TB_ADDON_23_24 < 80, 1, 0)
+                                + IFF(TB_ADDON_23_38 IS NOT NULL AND TB_ADDON_23_38 < 80, 1, 0)
+                                + IFF(TB_ADDON_23_60 IS NOT NULL AND TB_ADDON_23_60 < 80, 1, 0)
+                                + IFF(TB_ADDON_23_61 IS NOT NULL AND TB_ADDON_23_61 < 80, 1, 0)
+                                + IFF(TB_ADDON_23_67 IS NOT NULL AND TB_ADDON_23_67 < 80, 1, 0), 0)
+                        ELSE
+                            (COALESCE(CASE WHEN TB_ADDON_4_1 IS NOT NULL THEN (TB_ADDON_4_1 - 1) * 2.5 END, 0)
+                             + COALESCE(CASE WHEN TB_ADDON_4_3 IS NOT NULL THEN (TB_ADDON_4_3 - 1) * 2.5 END, 0)
+                             + COALESCE(CASE WHEN TB_ADDON_4_5 IS NOT NULL THEN (TB_ADDON_4_5 - 1) * 2.5 END, 0)
+                             + COALESCE(CASE WHEN TB_ADDON_4_6 IS NOT NULL THEN (TB_ADDON_4_6 - 1) * 2.5 END, 0)
+                             + COALESCE(CASE WHEN TB_ADDON_4_10 IS NOT NULL THEN (TB_ADDON_4_10 - 1) * 2.5 END, 0)
+                             + COALESCE(CASE WHEN TB_ADDON_4_11 IS NOT NULL THEN (TB_ADDON_4_11 - 1) * 2.5 END, 0)
+                             + COALESCE(CASE WHEN TB_ADDON_4_24 IS NOT NULL THEN (TB_ADDON_4_24 - 1) * 2.5 END, 0)
+                             + COALESCE(CASE WHEN TB_ADDON_4_38 IS NOT NULL THEN (TB_ADDON_4_38 - 1) * 2.5 END, 0)
+                             + COALESCE(CASE WHEN TB_ADDON_4_39 IS NOT NULL THEN (TB_ADDON_4_39 - 1) * 2.5 END, 0))
+                            / NULLIF(
+                                IFF(TB_ADDON_4_1 IS NOT NULL, 1, 0)
+                                + IFF(TB_ADDON_4_3 IS NOT NULL, 1, 0)
+                                + IFF(TB_ADDON_4_5 IS NOT NULL, 1, 0)
+                                + IFF(TB_ADDON_4_6 IS NOT NULL, 1, 0)
+                                + IFF(TB_ADDON_4_10 IS NOT NULL, 1, 0)
+                                + IFF(TB_ADDON_4_11 IS NOT NULL, 1, 0)
+                                + IFF(TB_ADDON_4_24 IS NOT NULL, 1, 0)
+                                + IFF(TB_ADDON_4_38 IS NOT NULL, 1, 0)
+                                + IFF(TB_ADDON_4_39 IS NOT NULL, 1, 0), 0)
+                        END AS staff_norm
+                    FROM base
+                    WHERE (SEASON >= 2026 AND (TB_ADDON_23_1 IS NOT NULL OR TB_ADDON_23_3 IS NOT NULL OR TB_ADDON_23_5 IS NOT NULL OR TB_ADDON_23_6 IS NOT NULL OR TB_ADDON_23_24 IS NOT NULL OR TB_ADDON_23_38 IS NOT NULL OR TB_ADDON_23_60 IS NOT NULL OR TB_ADDON_23_61 IS NOT NULL OR TB_ADDON_23_67 IS NOT NULL))
+                       OR (SEASON < 2026 AND (TB_ADDON_4_1 IS NOT NULL OR TB_ADDON_4_3 IS NOT NULL OR TB_ADDON_4_5 IS NOT NULL OR TB_ADDON_4_6 IS NOT NULL OR TB_ADDON_4_10 IS NOT NULL OR TB_ADDON_4_11 IS NOT NULL OR TB_ADDON_4_24 IS NOT NULL OR TB_ADDON_4_38 IS NOT NULL OR TB_ADDON_4_39 IS NOT NULL))
+                )
+            ) WHERE p_avg IS NOT NULL AND o_avg IS NOT NULL
+            UNION ALL
+            SELECT 'CONCESS_SPEED', 'Concessions', 'numrat',
+                ROUND(100.0 * (AVG(CASE WHEN nps_seg='Promoter' THEN CONCESS_GRID_SPEED END) - AVG(CASE WHEN nps_seg='Opportunity' THEN CONCESS_GRID_SPEED END))
+                    / NULLIF(AVG(CASE WHEN nps_seg='Promoter' THEN CONCESS_GRID_SPEED END), 0), 2),
+                ROUND(AVG(CASE WHEN nps_seg='Promoter' THEN CONCESS_GRID_SPEED END), 2),
+                ROUND(AVG(CASE WHEN nps_seg='Opportunity' THEN CONCESS_GRID_SPEED END), 2)
+            FROM base WHERE CONCESS_GRID_SPEED IS NOT NULL AND SEASON >= 2026
         ),
         grid_helper AS (
             SELECT nps_seg,
                 CONCESS_GRID_VALUE_DESC, CONCESS_GRID_CUSTSERV_DESC, CONCESS_GRID_SELECTION_DESC, CONCESS_GRID_CLEAN_DESC,
                 MERCH_GRID_PRICE_DESC, MERCH_GRID_SELECTION_DESC, MERCH_GRID_MERCHQUALITY_DESC, MERCH_GRID_CUSTSERV_DESC, MERCH_GRID_WAIT_DESC,
-                ENTERTAIN_GRID_MUSIC_DESC, ENTERTAIN_GRID_GAMES_DESC, ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC, ENTERTAIN_GRID_SCOREBOARD_DESC, ENTERTAIN_GRID_THEME_DESC
+                ENTERTAIN_GRID_MUSIC_DESC, ENTERTAIN_GRID_GAMES_DESC, ENTERTAIN_GRID_KIDS_ACTIVITIES_DESC, ENTERTAIN_GRID_SCOREBOARD_DESC, ENTERTAIN_GRID_THEME_DESC,
+                CONCESS_QUALITY_ALCOHOL_DESC, CONCESS_QUALITY_NONALCOHOL_DESC, CONCESS_QUALITY_HOTDOG_DESC,
+                CONCESS_QUALITY_CHICKEN_DESC, CONCESS_QUALITY_FRIES_DESC, CONCESS_QUALITY_NACHOS_DESC,
+                CONCESS_QUALITY_PIZZA_DESC, CONCESS_QUALITY_POPCORN_DESC, CONCESS_QUALITY_PRETZELS_DESC,
+                CONCESS_QUALITY_SAUSAGE_DESC, CONCESS_QUALITY_NUTS_DESC, CONCESS_QUALITY_ICECREAM_DESC,
+                CONCESS_QUALITY_SANDWICH_DESC, CONCESS_QUALITY_BURGERS_DESC, CONCESS_QUALITY_SALAD_DESC,
+                CONCESS_QUALITY_OTHER_ENTREE_DESC, CONCESS_QUALITY_OTHER_DESSERT_DESC
             FROM base
         ),
         grid_gaps AS (
@@ -363,6 +457,125 @@ BEGIN
                 -100.0*SUM(CASE WHEN nps_seg='Promoter' AND ENTERTAIN_GRID_THEME_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND ENTERTAIN_GRID_THEME_DESC IS NOT NULL AND ENTERTAIN_GRID_THEME_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
                 ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND ENTERTAIN_GRID_THEME_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND ENTERTAIN_GRID_THEME_DESC IS NOT NULL AND ENTERTAIN_GRID_THEME_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
                 ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND ENTERTAIN_GRID_THEME_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND ENTERTAIN_GRID_THEME_DESC IS NOT NULL AND ENTERTAIN_GRID_THEME_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+            FROM grid_helper
+            UNION ALL
+            SELECT 'FQ_ALCOHOL', 'Food Quality', 'grid',
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_ALCOHOL_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_ALCOHOL_DESC IS NOT NULL AND CONCESS_QUALITY_ALCOHOL_DESC!='N/A' THEN 1 ELSE 0 END),0)
+                -100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_ALCOHOL_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_ALCOHOL_DESC IS NOT NULL AND CONCESS_QUALITY_ALCOHOL_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_ALCOHOL_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_ALCOHOL_DESC IS NOT NULL AND CONCESS_QUALITY_ALCOHOL_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_ALCOHOL_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_ALCOHOL_DESC IS NOT NULL AND CONCESS_QUALITY_ALCOHOL_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+            FROM grid_helper
+            UNION ALL
+            SELECT 'FQ_NONALCOHOL', 'Food Quality', 'grid',
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_NONALCOHOL_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_NONALCOHOL_DESC IS NOT NULL AND CONCESS_QUALITY_NONALCOHOL_DESC!='N/A' THEN 1 ELSE 0 END),0)
+                -100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_NONALCOHOL_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_NONALCOHOL_DESC IS NOT NULL AND CONCESS_QUALITY_NONALCOHOL_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_NONALCOHOL_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_NONALCOHOL_DESC IS NOT NULL AND CONCESS_QUALITY_NONALCOHOL_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_NONALCOHOL_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_NONALCOHOL_DESC IS NOT NULL AND CONCESS_QUALITY_NONALCOHOL_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+            FROM grid_helper
+            UNION ALL
+            SELECT 'FQ_HOTDOG', 'Food Quality', 'grid',
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_HOTDOG_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_HOTDOG_DESC IS NOT NULL AND CONCESS_QUALITY_HOTDOG_DESC!='N/A' THEN 1 ELSE 0 END),0)
+                -100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_HOTDOG_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_HOTDOG_DESC IS NOT NULL AND CONCESS_QUALITY_HOTDOG_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_HOTDOG_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_HOTDOG_DESC IS NOT NULL AND CONCESS_QUALITY_HOTDOG_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_HOTDOG_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_HOTDOG_DESC IS NOT NULL AND CONCESS_QUALITY_HOTDOG_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+            FROM grid_helper
+            UNION ALL
+            SELECT 'FQ_CHICKEN', 'Food Quality', 'grid',
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_CHICKEN_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_CHICKEN_DESC IS NOT NULL AND CONCESS_QUALITY_CHICKEN_DESC!='N/A' THEN 1 ELSE 0 END),0)
+                -100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_CHICKEN_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_CHICKEN_DESC IS NOT NULL AND CONCESS_QUALITY_CHICKEN_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_CHICKEN_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_CHICKEN_DESC IS NOT NULL AND CONCESS_QUALITY_CHICKEN_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_CHICKEN_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_CHICKEN_DESC IS NOT NULL AND CONCESS_QUALITY_CHICKEN_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+            FROM grid_helper
+            UNION ALL
+            SELECT 'FQ_FRIES', 'Food Quality', 'grid',
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_FRIES_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_FRIES_DESC IS NOT NULL AND CONCESS_QUALITY_FRIES_DESC!='N/A' THEN 1 ELSE 0 END),0)
+                -100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_FRIES_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_FRIES_DESC IS NOT NULL AND CONCESS_QUALITY_FRIES_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_FRIES_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_FRIES_DESC IS NOT NULL AND CONCESS_QUALITY_FRIES_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_FRIES_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_FRIES_DESC IS NOT NULL AND CONCESS_QUALITY_FRIES_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+            FROM grid_helper
+            UNION ALL
+            SELECT 'FQ_NACHOS', 'Food Quality', 'grid',
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_NACHOS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_NACHOS_DESC IS NOT NULL AND CONCESS_QUALITY_NACHOS_DESC!='N/A' THEN 1 ELSE 0 END),0)
+                -100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_NACHOS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_NACHOS_DESC IS NOT NULL AND CONCESS_QUALITY_NACHOS_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_NACHOS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_NACHOS_DESC IS NOT NULL AND CONCESS_QUALITY_NACHOS_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_NACHOS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_NACHOS_DESC IS NOT NULL AND CONCESS_QUALITY_NACHOS_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+            FROM grid_helper
+            UNION ALL
+            SELECT 'FQ_PIZZA', 'Food Quality', 'grid',
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_PIZZA_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_PIZZA_DESC IS NOT NULL AND CONCESS_QUALITY_PIZZA_DESC!='N/A' THEN 1 ELSE 0 END),0)
+                -100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_PIZZA_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_PIZZA_DESC IS NOT NULL AND CONCESS_QUALITY_PIZZA_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_PIZZA_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_PIZZA_DESC IS NOT NULL AND CONCESS_QUALITY_PIZZA_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_PIZZA_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_PIZZA_DESC IS NOT NULL AND CONCESS_QUALITY_PIZZA_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+            FROM grid_helper
+            UNION ALL
+            SELECT 'FQ_POPCORN', 'Food Quality', 'grid',
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_POPCORN_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_POPCORN_DESC IS NOT NULL AND CONCESS_QUALITY_POPCORN_DESC!='N/A' THEN 1 ELSE 0 END),0)
+                -100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_POPCORN_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_POPCORN_DESC IS NOT NULL AND CONCESS_QUALITY_POPCORN_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_POPCORN_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_POPCORN_DESC IS NOT NULL AND CONCESS_QUALITY_POPCORN_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_POPCORN_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_POPCORN_DESC IS NOT NULL AND CONCESS_QUALITY_POPCORN_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+            FROM grid_helper
+            UNION ALL
+            SELECT 'FQ_PRETZELS', 'Food Quality', 'grid',
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_PRETZELS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_PRETZELS_DESC IS NOT NULL AND CONCESS_QUALITY_PRETZELS_DESC!='N/A' THEN 1 ELSE 0 END),0)
+                -100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_PRETZELS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_PRETZELS_DESC IS NOT NULL AND CONCESS_QUALITY_PRETZELS_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_PRETZELS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_PRETZELS_DESC IS NOT NULL AND CONCESS_QUALITY_PRETZELS_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_PRETZELS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_PRETZELS_DESC IS NOT NULL AND CONCESS_QUALITY_PRETZELS_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+            FROM grid_helper
+            UNION ALL
+            SELECT 'FQ_SAUSAGE', 'Food Quality', 'grid',
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_SAUSAGE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_SAUSAGE_DESC IS NOT NULL AND CONCESS_QUALITY_SAUSAGE_DESC!='N/A' THEN 1 ELSE 0 END),0)
+                -100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_SAUSAGE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_SAUSAGE_DESC IS NOT NULL AND CONCESS_QUALITY_SAUSAGE_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_SAUSAGE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_SAUSAGE_DESC IS NOT NULL AND CONCESS_QUALITY_SAUSAGE_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_SAUSAGE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_SAUSAGE_DESC IS NOT NULL AND CONCESS_QUALITY_SAUSAGE_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+            FROM grid_helper
+            UNION ALL
+            SELECT 'FQ_NUTS', 'Food Quality', 'grid',
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_NUTS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_NUTS_DESC IS NOT NULL AND CONCESS_QUALITY_NUTS_DESC!='N/A' THEN 1 ELSE 0 END),0)
+                -100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_NUTS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_NUTS_DESC IS NOT NULL AND CONCESS_QUALITY_NUTS_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_NUTS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_NUTS_DESC IS NOT NULL AND CONCESS_QUALITY_NUTS_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_NUTS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_NUTS_DESC IS NOT NULL AND CONCESS_QUALITY_NUTS_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+            FROM grid_helper
+            UNION ALL
+            SELECT 'FQ_ICECREAM', 'Food Quality', 'grid',
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_ICECREAM_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_ICECREAM_DESC IS NOT NULL AND CONCESS_QUALITY_ICECREAM_DESC!='N/A' THEN 1 ELSE 0 END),0)
+                -100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_ICECREAM_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_ICECREAM_DESC IS NOT NULL AND CONCESS_QUALITY_ICECREAM_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_ICECREAM_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_ICECREAM_DESC IS NOT NULL AND CONCESS_QUALITY_ICECREAM_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_ICECREAM_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_ICECREAM_DESC IS NOT NULL AND CONCESS_QUALITY_ICECREAM_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+            FROM grid_helper
+            UNION ALL
+            SELECT 'FQ_SANDWICH', 'Food Quality', 'grid',
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_SANDWICH_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_SANDWICH_DESC IS NOT NULL AND CONCESS_QUALITY_SANDWICH_DESC!='N/A' THEN 1 ELSE 0 END),0)
+                -100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_SANDWICH_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_SANDWICH_DESC IS NOT NULL AND CONCESS_QUALITY_SANDWICH_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_SANDWICH_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_SANDWICH_DESC IS NOT NULL AND CONCESS_QUALITY_SANDWICH_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_SANDWICH_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_SANDWICH_DESC IS NOT NULL AND CONCESS_QUALITY_SANDWICH_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+            FROM grid_helper
+            UNION ALL
+            SELECT 'FQ_BURGERS', 'Food Quality', 'grid',
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_BURGERS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_BURGERS_DESC IS NOT NULL AND CONCESS_QUALITY_BURGERS_DESC!='N/A' THEN 1 ELSE 0 END),0)
+                -100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_BURGERS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_BURGERS_DESC IS NOT NULL AND CONCESS_QUALITY_BURGERS_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_BURGERS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_BURGERS_DESC IS NOT NULL AND CONCESS_QUALITY_BURGERS_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_BURGERS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_BURGERS_DESC IS NOT NULL AND CONCESS_QUALITY_BURGERS_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+            FROM grid_helper
+            UNION ALL
+            SELECT 'FQ_SALAD', 'Food Quality', 'grid',
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_SALAD_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_SALAD_DESC IS NOT NULL AND CONCESS_QUALITY_SALAD_DESC!='N/A' THEN 1 ELSE 0 END),0)
+                -100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_SALAD_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_SALAD_DESC IS NOT NULL AND CONCESS_QUALITY_SALAD_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_SALAD_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_SALAD_DESC IS NOT NULL AND CONCESS_QUALITY_SALAD_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_SALAD_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_SALAD_DESC IS NOT NULL AND CONCESS_QUALITY_SALAD_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+            FROM grid_helper
+            UNION ALL
+            SELECT 'FQ_OTHER_ENTREE', 'Food Quality', 'grid',
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_OTHER_ENTREE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_OTHER_ENTREE_DESC IS NOT NULL AND CONCESS_QUALITY_OTHER_ENTREE_DESC!='N/A' THEN 1 ELSE 0 END),0)
+                -100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_OTHER_ENTREE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_OTHER_ENTREE_DESC IS NOT NULL AND CONCESS_QUALITY_OTHER_ENTREE_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_OTHER_ENTREE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_OTHER_ENTREE_DESC IS NOT NULL AND CONCESS_QUALITY_OTHER_ENTREE_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_OTHER_ENTREE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_OTHER_ENTREE_DESC IS NOT NULL AND CONCESS_QUALITY_OTHER_ENTREE_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+            FROM grid_helper
+            UNION ALL
+            SELECT 'FQ_OTHER_DESSERT', 'Food Quality', 'grid',
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_OTHER_DESSERT_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_OTHER_DESSERT_DESC IS NOT NULL AND CONCESS_QUALITY_OTHER_DESSERT_DESC!='N/A' THEN 1 ELSE 0 END),0)
+                -100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_OTHER_DESSERT_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_OTHER_DESSERT_DESC IS NOT NULL AND CONCESS_QUALITY_OTHER_DESSERT_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_OTHER_DESSERT_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Promoter' AND CONCESS_QUALITY_OTHER_DESSERT_DESC IS NOT NULL AND CONCESS_QUALITY_OTHER_DESSERT_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                ROUND(100.0*SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_OTHER_DESSERT_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN nps_seg='Opportunity' AND CONCESS_QUALITY_OTHER_DESSERT_DESC IS NOT NULL AND CONCESS_QUALITY_OTHER_DESSERT_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
             FROM grid_helper
         ),
         all_gaps AS (
@@ -487,6 +700,262 @@ BEGIN
         FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
         WHERE GAME_DATE::DATE = :v_target_game_date;
 
+    ELSEIF (v_gap_area = 'Staff') THEN
+        v_dd_title := 'STAFF SATISFACTION DEEP DIVE';
+        v_dd_icon := '&#129489;';
+        v_dd_has_numrat := TRUE;
+        v_dd_numrat_label := 'Avg Staff Rating (composite)';
+
+        -- Composite staff avg: average across all available TB_ADDON_23_* (2026) or normalized TB_ADDON_4_* (pre-2026)
+        SELECT
+            COALESCE(ROUND(AVG(CASE WHEN OVERALL_NUMRAT >= 9 THEN staff_norm END), 2)::VARCHAR, 'N/A'),
+            COALESCE(ROUND(AVG(CASE WHEN OVERALL_NUMRAT < 9 THEN staff_norm END), 2)::VARCHAR, 'N/A')
+        INTO :v_dd_promoter_numrat, :v_dd_opp_numrat
+        FROM (
+            SELECT OVERALL_NUMRAT,
+                CASE WHEN SEASON >= 2026 THEN
+                    (COALESCE(CASE WHEN TB_ADDON_23_1 < 80 THEN TB_ADDON_23_1 END, 0)
+                     + COALESCE(CASE WHEN TB_ADDON_23_3 < 80 THEN TB_ADDON_23_3 END, 0)
+                     + COALESCE(CASE WHEN TB_ADDON_23_5 < 80 THEN TB_ADDON_23_5 END, 0)
+                     + COALESCE(CASE WHEN TB_ADDON_23_6 < 80 THEN TB_ADDON_23_6 END, 0)
+                     + COALESCE(CASE WHEN TB_ADDON_23_24 < 80 THEN TB_ADDON_23_24 END, 0)
+                     + COALESCE(CASE WHEN TB_ADDON_23_38 < 80 THEN TB_ADDON_23_38 END, 0)
+                     + COALESCE(CASE WHEN TB_ADDON_23_60 < 80 THEN TB_ADDON_23_60 END, 0)
+                     + COALESCE(CASE WHEN TB_ADDON_23_61 < 80 THEN TB_ADDON_23_61 END, 0)
+                     + COALESCE(CASE WHEN TB_ADDON_23_67 < 80 THEN TB_ADDON_23_67 END, 0))
+                    / NULLIF(
+                        IFF(TB_ADDON_23_1 IS NOT NULL AND TB_ADDON_23_1 < 80, 1, 0)
+                        + IFF(TB_ADDON_23_3 IS NOT NULL AND TB_ADDON_23_3 < 80, 1, 0)
+                        + IFF(TB_ADDON_23_5 IS NOT NULL AND TB_ADDON_23_5 < 80, 1, 0)
+                        + IFF(TB_ADDON_23_6 IS NOT NULL AND TB_ADDON_23_6 < 80, 1, 0)
+                        + IFF(TB_ADDON_23_24 IS NOT NULL AND TB_ADDON_23_24 < 80, 1, 0)
+                        + IFF(TB_ADDON_23_38 IS NOT NULL AND TB_ADDON_23_38 < 80, 1, 0)
+                        + IFF(TB_ADDON_23_60 IS NOT NULL AND TB_ADDON_23_60 < 80, 1, 0)
+                        + IFF(TB_ADDON_23_61 IS NOT NULL AND TB_ADDON_23_61 < 80, 1, 0)
+                        + IFF(TB_ADDON_23_67 IS NOT NULL AND TB_ADDON_23_67 < 80, 1, 0), 0)
+                ELSE
+                    (COALESCE(CASE WHEN TB_ADDON_4_1 IS NOT NULL THEN (TB_ADDON_4_1 - 1) * 2.5 END, 0)
+                     + COALESCE(CASE WHEN TB_ADDON_4_3 IS NOT NULL THEN (TB_ADDON_4_3 - 1) * 2.5 END, 0)
+                     + COALESCE(CASE WHEN TB_ADDON_4_5 IS NOT NULL THEN (TB_ADDON_4_5 - 1) * 2.5 END, 0)
+                     + COALESCE(CASE WHEN TB_ADDON_4_6 IS NOT NULL THEN (TB_ADDON_4_6 - 1) * 2.5 END, 0)
+                     + COALESCE(CASE WHEN TB_ADDON_4_10 IS NOT NULL THEN (TB_ADDON_4_10 - 1) * 2.5 END, 0)
+                     + COALESCE(CASE WHEN TB_ADDON_4_11 IS NOT NULL THEN (TB_ADDON_4_11 - 1) * 2.5 END, 0)
+                     + COALESCE(CASE WHEN TB_ADDON_4_24 IS NOT NULL THEN (TB_ADDON_4_24 - 1) * 2.5 END, 0)
+                     + COALESCE(CASE WHEN TB_ADDON_4_38 IS NOT NULL THEN (TB_ADDON_4_38 - 1) * 2.5 END, 0)
+                     + COALESCE(CASE WHEN TB_ADDON_4_39 IS NOT NULL THEN (TB_ADDON_4_39 - 1) * 2.5 END, 0))
+                    / NULLIF(
+                        IFF(TB_ADDON_4_1 IS NOT NULL, 1, 0) + IFF(TB_ADDON_4_3 IS NOT NULL, 1, 0)
+                        + IFF(TB_ADDON_4_5 IS NOT NULL, 1, 0) + IFF(TB_ADDON_4_6 IS NOT NULL, 1, 0)
+                        + IFF(TB_ADDON_4_10 IS NOT NULL, 1, 0) + IFF(TB_ADDON_4_11 IS NOT NULL, 1, 0)
+                        + IFF(TB_ADDON_4_24 IS NOT NULL, 1, 0) + IFF(TB_ADDON_4_38 IS NOT NULL, 1, 0)
+                        + IFF(TB_ADDON_4_39 IS NOT NULL, 1, 0), 0)
+                END AS staff_norm
+            FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+            WHERE GAME_DATE::DATE = :v_target_game_date
+              AND ((SEASON >= 2026 AND (TB_ADDON_23_1 IS NOT NULL OR TB_ADDON_23_3 IS NOT NULL OR TB_ADDON_23_5 IS NOT NULL OR TB_ADDON_23_6 IS NOT NULL OR TB_ADDON_23_24 IS NOT NULL OR TB_ADDON_23_38 IS NOT NULL OR TB_ADDON_23_60 IS NOT NULL OR TB_ADDON_23_61 IS NOT NULL OR TB_ADDON_23_67 IS NOT NULL))
+                OR (SEASON < 2026 AND (TB_ADDON_4_1 IS NOT NULL OR TB_ADDON_4_3 IS NOT NULL OR TB_ADDON_4_5 IS NOT NULL OR TB_ADDON_4_6 IS NOT NULL OR TB_ADDON_4_10 IS NOT NULL OR TB_ADDON_4_11 IS NOT NULL OR TB_ADDON_4_24 IS NOT NULL OR TB_ADDON_4_38 IS NOT NULL OR TB_ADDON_4_39 IS NOT NULL)))
+        );
+
+        v_dd_numrat_gap := CASE WHEN v_dd_promoter_numrat != 'N/A' AND v_dd_opp_numrat != 'N/A'
+            THEN ROUND(100.0 * (v_dd_promoter_numrat::FLOAT - v_dd_opp_numrat::FLOAT) / NULLIF(v_dd_promoter_numrat::FLOAT, 0), 2)::VARCHAR ELSE 'N/A' END;
+
+        -- Dynamic top 3 staff categories by largest avg score gap (Promoter vs Opportunity)
+        -- Uses TB_ADDON_23_* (0-10 scale, 2026 only since that's where data exists)
+        LET c_staff_gaps CURSOR FOR
+            SELECT cat_label, p_avg, o_avg, ABS(p_avg - o_avg) AS gap_val
+            FROM (
+                SELECT 'Parking Staff' AS cat_label,
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT>=9 AND TB_ADDON_23_1 < 80 THEN TB_ADDON_23_1 END),2) AS p_avg,
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT<9 AND TB_ADDON_23_1 < 80 THEN TB_ADDON_23_1 END),2) AS o_avg
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+                WHERE GAME_DATE::DATE = :v_target_game_date AND SEASON >= 2026 AND TB_ADDON_23_1 IS NOT NULL AND TB_ADDON_23_1 < 80
+                UNION ALL
+                SELECT 'Fan Host/Usher',
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT>=9 AND TB_ADDON_23_3 < 80 THEN TB_ADDON_23_3 END),2),
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT<9 AND TB_ADDON_23_3 < 80 THEN TB_ADDON_23_3 END),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+                WHERE GAME_DATE::DATE = :v_target_game_date AND SEASON >= 2026 AND TB_ADDON_23_3 IS NOT NULL AND TB_ADDON_23_3 < 80
+                UNION ALL
+                SELECT 'Concessions Staff',
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT>=9 AND TB_ADDON_23_5 < 80 THEN TB_ADDON_23_5 END),2),
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT<9 AND TB_ADDON_23_5 < 80 THEN TB_ADDON_23_5 END),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+                WHERE GAME_DATE::DATE = :v_target_game_date AND SEASON >= 2026 AND TB_ADDON_23_5 IS NOT NULL AND TB_ADDON_23_5 < 80
+                UNION ALL
+                SELECT 'Retail/Team Store',
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT>=9 AND TB_ADDON_23_6 < 80 THEN TB_ADDON_23_6 END),2),
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT<9 AND TB_ADDON_23_6 < 80 THEN TB_ADDON_23_6 END),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+                WHERE GAME_DATE::DATE = :v_target_game_date AND SEASON >= 2026 AND TB_ADDON_23_6 IS NOT NULL AND TB_ADDON_23_6 < 80
+                UNION ALL
+                SELECT 'Wheelchair Team',
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT>=9 AND TB_ADDON_23_24 < 80 THEN TB_ADDON_23_24 END),2),
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT<9 AND TB_ADDON_23_24 < 80 THEN TB_ADDON_23_24 END),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+                WHERE GAME_DATE::DATE = :v_target_game_date AND SEASON >= 2026 AND TB_ADDON_23_24 IS NOT NULL AND TB_ADDON_23_24 < 80
+                UNION ALL
+                SELECT 'Tech Team',
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT>=9 AND TB_ADDON_23_38 < 80 THEN TB_ADDON_23_38 END),2),
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT<9 AND TB_ADDON_23_38 < 80 THEN TB_ADDON_23_38 END),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+                WHERE GAME_DATE::DATE = :v_target_game_date AND SEASON >= 2026 AND TB_ADDON_23_38 IS NOT NULL AND TB_ADDON_23_38 < 80
+                UNION ALL
+                SELECT 'Security',
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT>=9 AND TB_ADDON_23_60 < 80 THEN TB_ADDON_23_60 END),2),
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT<9 AND TB_ADDON_23_60 < 80 THEN TB_ADDON_23_60 END),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+                WHERE GAME_DATE::DATE = :v_target_game_date AND SEASON >= 2026 AND TB_ADDON_23_60 IS NOT NULL AND TB_ADDON_23_60 < 80
+                UNION ALL
+                SELECT 'Ticket Scanner',
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT>=9 AND TB_ADDON_23_61 < 80 THEN TB_ADDON_23_61 END),2),
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT<9 AND TB_ADDON_23_61 < 80 THEN TB_ADDON_23_61 END),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+                WHERE GAME_DATE::DATE = :v_target_game_date AND SEASON >= 2026 AND TB_ADDON_23_61 IS NOT NULL AND TB_ADDON_23_61 < 80
+                UNION ALL
+                SELECT 'Go-Ahead Entry',
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT>=9 AND TB_ADDON_23_67 < 80 THEN TB_ADDON_23_67 END),2),
+                    ROUND(AVG(CASE WHEN OVERALL_NUMRAT<9 AND TB_ADDON_23_67 < 80 THEN TB_ADDON_23_67 END),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+                WHERE GAME_DATE::DATE = :v_target_game_date AND SEASON >= 2026 AND TB_ADDON_23_67 IS NOT NULL AND TB_ADDON_23_67 < 80
+            )
+            WHERE p_avg IS NOT NULL AND o_avg IS NOT NULL
+            ORDER BY gap_val DESC
+            LIMIT 3;
+
+        v_staff_rank := 0;
+        FOR rec IN c_staff_gaps DO
+            v_staff_rank := v_staff_rank + 1;
+            IF (v_staff_rank = 1) THEN
+                v_dd_row1_label := '&#129489; ' || rec.cat_label;
+                v_dd_row1_p := rec.p_avg::VARCHAR;
+                v_dd_row1_o := rec.o_avg::VARCHAR;
+            ELSEIF (v_staff_rank = 2) THEN
+                v_dd_row2_label := '&#129489; ' || rec.cat_label;
+                v_dd_row2_p := rec.p_avg::VARCHAR;
+                v_dd_row2_o := rec.o_avg::VARCHAR;
+            ELSEIF (v_staff_rank = 3) THEN
+                v_dd_row3_label := '&#129489; ' || rec.cat_label;
+                v_dd_row3_p := rec.p_avg::VARCHAR;
+                v_dd_row3_o := rec.o_avg::VARCHAR;
+            END IF;
+        END FOR;
+
+    ELSEIF (v_gap_area = 'Food Quality') THEN
+        v_dd_title := 'FOOD QUALITY DEEP DIVE';
+        v_dd_icon := '&#127869;';
+        v_dd_has_numrat := FALSE;
+
+        -- Dynamic top 3 food quality items by largest % dissatisfied gap (Promoter vs Opportunity)
+        LET c_fq_gaps CURSOR FOR
+            SELECT cat_label, p_dissat, o_dissat, ABS(o_dissat - p_dissat) AS gap_val
+            FROM (
+                SELECT 'Alcoholic Beverages' AS cat_label,
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_ALCOHOL_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_ALCOHOL_DESC IS NOT NULL AND CONCESS_QUALITY_ALCOHOL_DESC!='N/A' THEN 1 ELSE 0 END),0),2) AS p_dissat,
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_ALCOHOL_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_ALCOHOL_DESC IS NOT NULL AND CONCESS_QUALITY_ALCOHOL_DESC!='N/A' THEN 1 ELSE 0 END),0),2) AS o_dissat
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE GAME_DATE::DATE = :v_target_game_date
+                UNION ALL
+                SELECT 'Non-Alcoholic Beverages',
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_NONALCOHOL_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_NONALCOHOL_DESC IS NOT NULL AND CONCESS_QUALITY_NONALCOHOL_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_NONALCOHOL_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_NONALCOHOL_DESC IS NOT NULL AND CONCESS_QUALITY_NONALCOHOL_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE GAME_DATE::DATE = :v_target_game_date
+                UNION ALL
+                SELECT 'Hot Dogs',
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_HOTDOG_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_HOTDOG_DESC IS NOT NULL AND CONCESS_QUALITY_HOTDOG_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_HOTDOG_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_HOTDOG_DESC IS NOT NULL AND CONCESS_QUALITY_HOTDOG_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE GAME_DATE::DATE = :v_target_game_date
+                UNION ALL
+                SELECT 'Chicken Tenders',
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_CHICKEN_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_CHICKEN_DESC IS NOT NULL AND CONCESS_QUALITY_CHICKEN_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_CHICKEN_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_CHICKEN_DESC IS NOT NULL AND CONCESS_QUALITY_CHICKEN_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE GAME_DATE::DATE = :v_target_game_date
+                UNION ALL
+                SELECT 'Fries',
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_FRIES_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_FRIES_DESC IS NOT NULL AND CONCESS_QUALITY_FRIES_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_FRIES_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_FRIES_DESC IS NOT NULL AND CONCESS_QUALITY_FRIES_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE GAME_DATE::DATE = :v_target_game_date
+                UNION ALL
+                SELECT 'Nachos',
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_NACHOS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_NACHOS_DESC IS NOT NULL AND CONCESS_QUALITY_NACHOS_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_NACHOS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_NACHOS_DESC IS NOT NULL AND CONCESS_QUALITY_NACHOS_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE GAME_DATE::DATE = :v_target_game_date
+                UNION ALL
+                SELECT 'Pizza',
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_PIZZA_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_PIZZA_DESC IS NOT NULL AND CONCESS_QUALITY_PIZZA_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_PIZZA_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_PIZZA_DESC IS NOT NULL AND CONCESS_QUALITY_PIZZA_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE GAME_DATE::DATE = :v_target_game_date
+                UNION ALL
+                SELECT 'Popcorn',
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_POPCORN_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_POPCORN_DESC IS NOT NULL AND CONCESS_QUALITY_POPCORN_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_POPCORN_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_POPCORN_DESC IS NOT NULL AND CONCESS_QUALITY_POPCORN_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE GAME_DATE::DATE = :v_target_game_date
+                UNION ALL
+                SELECT 'Pretzels',
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_PRETZELS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_PRETZELS_DESC IS NOT NULL AND CONCESS_QUALITY_PRETZELS_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_PRETZELS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_PRETZELS_DESC IS NOT NULL AND CONCESS_QUALITY_PRETZELS_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE GAME_DATE::DATE = :v_target_game_date
+                UNION ALL
+                SELECT 'Sausage',
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_SAUSAGE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_SAUSAGE_DESC IS NOT NULL AND CONCESS_QUALITY_SAUSAGE_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_SAUSAGE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_SAUSAGE_DESC IS NOT NULL AND CONCESS_QUALITY_SAUSAGE_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE GAME_DATE::DATE = :v_target_game_date
+                UNION ALL
+                SELECT 'Peanuts/Nuts',
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_NUTS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_NUTS_DESC IS NOT NULL AND CONCESS_QUALITY_NUTS_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_NUTS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_NUTS_DESC IS NOT NULL AND CONCESS_QUALITY_NUTS_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE GAME_DATE::DATE = :v_target_game_date
+                UNION ALL
+                SELECT 'Ice Cream',
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_ICECREAM_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_ICECREAM_DESC IS NOT NULL AND CONCESS_QUALITY_ICECREAM_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_ICECREAM_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_ICECREAM_DESC IS NOT NULL AND CONCESS_QUALITY_ICECREAM_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE GAME_DATE::DATE = :v_target_game_date
+                UNION ALL
+                SELECT 'Sandwiches',
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_SANDWICH_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_SANDWICH_DESC IS NOT NULL AND CONCESS_QUALITY_SANDWICH_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_SANDWICH_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_SANDWICH_DESC IS NOT NULL AND CONCESS_QUALITY_SANDWICH_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE GAME_DATE::DATE = :v_target_game_date
+                UNION ALL
+                SELECT 'Burgers',
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_BURGERS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_BURGERS_DESC IS NOT NULL AND CONCESS_QUALITY_BURGERS_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_BURGERS_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_BURGERS_DESC IS NOT NULL AND CONCESS_QUALITY_BURGERS_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE GAME_DATE::DATE = :v_target_game_date
+                UNION ALL
+                SELECT 'Salad',
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_SALAD_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_SALAD_DESC IS NOT NULL AND CONCESS_QUALITY_SALAD_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_SALAD_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_SALAD_DESC IS NOT NULL AND CONCESS_QUALITY_SALAD_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE GAME_DATE::DATE = :v_target_game_date
+                UNION ALL
+                SELECT 'Other Entrees',
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_OTHER_ENTREE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_OTHER_ENTREE_DESC IS NOT NULL AND CONCESS_QUALITY_OTHER_ENTREE_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_OTHER_ENTREE_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_OTHER_ENTREE_DESC IS NOT NULL AND CONCESS_QUALITY_OTHER_ENTREE_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE GAME_DATE::DATE = :v_target_game_date
+                UNION ALL
+                SELECT 'Other Desserts',
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_OTHER_DESSERT_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT>=9 AND CONCESS_QUALITY_OTHER_DESSERT_DESC IS NOT NULL AND CONCESS_QUALITY_OTHER_DESSERT_DESC!='N/A' THEN 1 ELSE 0 END),0),2),
+                    ROUND(100.0*SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_OTHER_DESSERT_DESC IN ('Somewhat dissatisfied','Highly dissatisfied') THEN 1 ELSE 0 END)/NULLIF(SUM(CASE WHEN OVERALL_NUMRAT<9 AND CONCESS_QUALITY_OTHER_DESSERT_DESC IS NOT NULL AND CONCESS_QUALITY_OTHER_DESSERT_DESC!='N/A' THEN 1 ELSE 0 END),0),2)
+                FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI WHERE GAME_DATE::DATE = :v_target_game_date
+            )
+            WHERE p_dissat IS NOT NULL AND o_dissat IS NOT NULL
+            ORDER BY gap_val DESC
+            LIMIT 3;
+
+        v_fq_rank := 0;
+        FOR rec IN c_fq_gaps DO
+            v_fq_rank := v_fq_rank + 1;
+            IF (v_fq_rank = 1) THEN
+                v_dd_row1_label := '&#127869; ' || rec.cat_label;
+                v_dd_row1_p := rec.p_dissat::VARCHAR;
+                v_dd_row1_o := rec.o_dissat::VARCHAR;
+            ELSEIF (v_fq_rank = 2) THEN
+                v_dd_row2_label := '&#127869; ' || rec.cat_label;
+                v_dd_row2_p := rec.p_dissat::VARCHAR;
+                v_dd_row2_o := rec.o_dissat::VARCHAR;
+            ELSEIF (v_fq_rank = 3) THEN
+                v_dd_row3_label := '&#127869; ' || rec.cat_label;
+                v_dd_row3_p := rec.p_dissat::VARCHAR;
+                v_dd_row3_o := rec.o_dissat::VARCHAR;
+            END IF;
+        END FOR;
+
     ELSE
         -- Fallback: use the gap metric info directly
         v_dd_title := UPPER(v_gap_area) || ' DEEP DIVE';
@@ -506,6 +975,34 @@ BEGIN
         THEN ROUND(ABS(v_dd_row3_o::FLOAT - v_dd_row3_p::FLOAT), 2)::VARCHAR ELSE 'N/A' END;
 
     -- =============================================
+    -- BUILD AI CONTEXT FOR STAFF + FOOD QUALITY
+    -- =============================================
+    IF (v_dd_promoter_numrat != 'N/A' AND v_gap_area = 'Staff') THEN
+        v_staff_context := '
+STAFF DATA: Composite avg rating — Promoters ' || v_dd_promoter_numrat || '/10 vs Opportunity ' || v_dd_opp_numrat || '/10 (gap: ' || v_dd_numrat_gap || '%)
+Top staff gap: ' || v_dd_row1_label || ' — Promoters ' || v_dd_row1_p || ' vs Opp ' || v_dd_row1_o;
+    ELSEIF (v_gap_area != 'Staff') THEN
+        -- Even if Staff didn't win the gap finder, provide context if data exists
+        SELECT
+            COALESCE(ROUND(AVG(CASE WHEN OVERALL_NUMRAT >= 9 AND TB_ADDON_23_1 < 80 THEN TB_ADDON_23_1 END), 2)::VARCHAR, 'N/A'),
+            COALESCE(ROUND(AVG(CASE WHEN OVERALL_NUMRAT < 9 AND TB_ADDON_23_1 < 80 THEN TB_ADDON_23_1 END), 2)::VARCHAR, 'N/A')
+        INTO :v_dd_promoter_numrat, :v_dd_opp_numrat
+        FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+        WHERE GAME_DATE::DATE = :v_target_game_date AND SEASON >= 2026 AND TB_ADDON_23_1 IS NOT NULL;
+        IF (v_dd_promoter_numrat != 'N/A') THEN
+            v_staff_context := '
+STAFF DATA (background): Sample staff rating (Parking Staff) — Promoters ' || v_dd_promoter_numrat || '/10 vs Opportunity ' || v_dd_opp_numrat || '/10';
+        END IF;
+    END IF;
+
+    IF (v_gap_area = 'Food Quality') THEN
+        v_food_quality_context := '
+FOOD QUALITY DATA: Top food quality gaps —
+- ' || v_dd_row1_label || ': Promoters ' || v_dd_row1_p || '% vs Opp ' || v_dd_row1_o || '% dissatisfied
+- ' || v_dd_row2_label || ': Promoters ' || v_dd_row2_p || '% vs Opp ' || v_dd_row2_o || '% dissatisfied';
+    END IF;
+
+    -- =============================================
     -- AI: KEY INSIGHT (claude-sonnet-4-6)
     -- =============================================
     LET v_insight_prompt VARCHAR;
@@ -516,7 +1013,8 @@ Gap to goal: ' || ABS(v_gap_pct)::VARCHAR || '% ' || CASE WHEN v_gap_pct >= 0 TH
 Biggest gap area: ' || v_gap_area || ' (' || v_gap_metric || ') — ' || v_gap_value::VARCHAR || '% gap between Promoters and Opportunity
 Promoter top topic: ' || v_promoter_topic_1 || ' (' || v_promoter_topic_1_pct || '%)
 Opportunity top topic: ' || v_opp_topic_1 || ' (' || v_opp_topic_1_pct || '%)
-Deep dive: ' || v_dd_row1_label || ' — Promoters ' || v_dd_row1_p || '% vs Opportunity ' || v_dd_row1_o || '%';
+Deep dive: ' || v_dd_row1_label || ' — Promoters ' || v_dd_row1_p || '% vs Opportunity ' || v_dd_row1_o || '%'
+    || v_staff_context || v_food_quality_context;
 
     SELECT AI_COMPLETE('claude-sonnet-4-6', :v_insight_prompt, {'temperature': 0.2, 'max_tokens': 200})
     INTO :v_key_insight;
@@ -548,7 +1046,8 @@ BIGGEST GAP: ' || v_gap_area || ' — ' || v_gap_metric || ' (' || v_gap_value::
 
 FORMAT: Return 1-3 numbered items. Each starts with a bold topic (use HTML <strong> tags). Be specific with numbers. Example:
 1. <strong>Concession Value</strong> — Introduce visible combo deals to address the X% dissatisfaction gap.
-2. <strong>Seating Comfort</strong> — Deploy seat cushion rentals at high-traffic sections, addressing Y% of Opportunity feedback.';
+2. <strong>Seating Comfort</strong> — Deploy seat cushion rentals at high-traffic sections, addressing Y% of Opportunity feedback.'
+    || v_staff_context || v_food_quality_context;
 
     SELECT AI_COMPLETE('claude-sonnet-4-6', :v_ai_prompt, {'temperature': 0.3, 'max_tokens': 600})
     INTO :v_action_items;
