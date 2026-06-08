@@ -5,22 +5,50 @@ custom_instructions: |
   SATISFACTION RATING SCALES - PAY ATTENTION TO EACH FIELD'S SCALE:
   Not all satisfaction ratings use the same scale. Always check the field description for the correct scale.
   
-  1-5 SCALE fields (where 1=worst, 5=best):
-  - TB_ADDON_4_1 (Parking staff)
-  - TB_ADDON_4_3 (Fan Host Usher)
-  - TB_ADDON_4_5 (Concessions staff)
-  - TB_ADDON_4_6 (Retail staff)
-  - All TB_ADDON_4_* staff rating fields
+  2026 STAFF RATING ROUTING (CRITICAL):
+  Starting in 2026, staff ratings use a NEW 0-10 scale (TB_ADDON_23_* fields).
+  The OLD 1-5 scale fields (TB_ADDON_4_*) have ZERO valid data in 2026 — do NOT use them for 2026+ queries.
   
-  1-10 SCALE fields:
+  For staff satisfaction queries in 2026:
+  - TB_ADDON_23_1: Parking staff (0-10 scale, 10=best). Filter WHERE TB_ADDON_23_1 < 80.
+  - TB_ADDON_23_3: Fan Host/Usher (0-10 scale, 10=best). Filter WHERE TB_ADDON_23_3 < 80.
+  - TB_ADDON_23_5: Concessions staff (0-10 scale, 10=best). Filter WHERE TB_ADDON_23_5 < 80.
+  - TB_ADDON_23_6: Retail staff (0-10 scale, 10=best). Filter WHERE TB_ADDON_23_6 < 80.
+  - TB_ADDON_23_24: Wheelchair Team (0-10 scale, 10=best). Filter WHERE TB_ADDON_23_24 < 80.
+  - TB_ADDON_23_38: Tech Team (0-10 scale, 10=best). Filter WHERE TB_ADDON_23_38 < 80.
+  - TB_ADDON_23_60: Security (0-10 scale, 10=best). Filter WHERE TB_ADDON_23_60 < 80.
+  - TB_ADDON_23_61: Ticket Scanner (0-10 scale, 10=best). Filter WHERE TB_ADDON_23_61 < 80.
+  - TB_ADDON_23_67: Go-Ahead Entry (0-10 scale, 10=best). Filter WHERE TB_ADDON_23_67 < 80.
+  
+  For staff satisfaction queries in 2025 and earlier:
+  - TB_ADDON_4_1: Parking staff (1-5 scale, 5=best)
+  - TB_ADDON_4_3: Fan Host/Usher (1-5 scale, 5=best)
+  - TB_ADDON_4_5: Concessions staff (1-5 scale, 5=best)
+  - TB_ADDON_4_6: Retail staff (1-5 scale, 5=best)
+  - TB_ADDON_4_24: Accessibility Support (1-5 scale, 5=best)
+  - TB_ADDON_4_36: Fan Host Ticket Taker (1-5 scale, 5=best)
+  - TB_ADDON_4_37: Security Staff (1-5 scale, 5=best)
+  - TB_ADDON_4_38: Tech Team (1-5 scale, 5=best)
+  - TB_ADDON_4_39: Premium Area Attendants (1-5 scale, 5=best)
+  
+  BAD DATA WARNINGS (2026):
+  These columns contain ONLY the value 83 in 2026 (a survey code, not real data).
+  The standard filter WHERE column < 80 correctly excludes them, resulting in 0 rows.
+  Do NOT use these for 2026 analysis — warn the user there is no valid data:
+  - STAFF_NUMRAT (constant 83 in 2026)
+  - SEATVIEW_NUMRAT (constant 83 in 2026)
+  - TB_ADDON_19 (constant 83 in 2026)
+  - TB_ADDON_23_4 / Guest Services (constant 83 in 2026)
+  
+  0-10 SCALE fields (10=best):
   - OVERALL_NUMRAT (Overall satisfaction)
-  - ENTERTAIN_NUMRAT (Entertainment Satisfaction)
+  - ENTERTAIN_NUMRAT (Entertainment satisfaction, 2024+)
   - CONCESS_NUMRAT (Concession satisfaction)
-  - SEATVIEW_NUMRAT (Seat view rating)
+  - PARKING_NUMRAT (Parking satisfaction)
+  - GE_NUMRAT (Gate Entry satisfaction, 2026+)
+  - MERCH_NUMRAT (Merchandise satisfaction, 2025+ — stored 0-100, divide by 10)
+  - TB_ADDON_23_* staff fields (2026+ — see routing above)
   
-  0-100 SCALE fields (normalize by dividing by 10):
-  - MERCH_NUMRAT (Merchandise - divide by 10 for 1-10 scale)
-  - STAFF_NUMRAT (Staff - divide by 10 for 1-10 scale)
   QUERY ROUTING RULES - FOLLOW THESE STRICTLY:
   
   QUALITATIVE FEEDBACK QUERIES:
@@ -39,7 +67,7 @@ custom_instructions: |
   - TB_ADDON_8_9: Open text about app issues
   - TB_ADDON_8_10: Open text about other fan behavior issues
   - TB_ADDON_8_11: Open text about other issues not mentioned
-  - TB_ADDON_5: Opent text about Tropicana Field staff members 
+  - TB_ADDON_5: Open text about Tropicana Field staff members 
   
   For qualitative queries, use AI_CLASSIFY or AI_SENTIMENT on these text fields.
   For topic-specific qualitative queries (e.g., "what are qualitative feedback about parking"), 
@@ -176,69 +204,52 @@ custom_instructions: |
   
   - WRONG: Converting 'Highly Satisfied' to 10, 'Somewhat Satisfied' to 7.5, etc.
 
-  NUMERIC RATING COLUMNS FOR SATISFACTION ANALYSIS:
-  When users ask about satisfaction scores, ratings, comparisons, trends, or "biggest jump/drop":
+  NUMERIC RATING COLUMNS THAT EXIST IN THE VIEW:
+  Only these numeric rating columns exist. All other grid/quality columns exist ONLY as _DESC (text) versions.
   
-  FOOD QUALITY (1-4 scale, 1=best): Use CONCESS_QUALITY_* columns (ALCOHOL, NONALCOHOL, BURGERS,
-  SANDWICH, HOTDOG, SAUSAGE, CHICKEN, PIZZA, SALAD, NACHOS, FRIES, ICECREAM, OTHER_DESSERT,
-  OTHER_ENTREE, NUTS, POPCORN, PRETZELS). Always filter WHERE column < 80 to exclude survey codes.
+  OVERALL RATINGS (0-10 scale, 10=best):
+  OVERALL_NUMRAT, CONCESS_NUMRAT, PARKING_NUMRAT, ENTERTAIN_NUMRAT (2024+),
+  GE_NUMRAT (2026+), MERCH_NUMRAT (2025+, stored 0-100 divide by 10).
+  Filter WHERE column < 80.
   
-  OVERALL RATINGS (0-10 scale, 10=best): OVERALL_NUMRAT, CONCESS_NUMRAT, SEATVIEW_NUMRAT,
-  PARKING_NUMRAT, PARKING_EXIT_NUMRAT (2024+), ENTERTAIN_NUMRAT (2024+), MERCH_NUMRAT (2025+),
-  STAFF_NUMRAT (2025+). Filter WHERE column < 80.
+  STAFF RATINGS BY TYPE (0-10 scale, 2026+): TB_ADDON_23_* (see routing above).
+  STAFF RATINGS BY TYPE (1-5 scale, pre-2026): TB_ADDON_4_* (see routing above).
   
-  CONCESSION SERVICE (1-4, 1=best): CONCESS_GRID_SELECTION, CONCESS_GRID_VALUE,
-  CONCESS_GRID_CUSTSERV, CONCESS_GRID_CLEAN. Filter WHERE column < 80.
+  LEAGUE-STANDARD GRID RATINGS (these exist as numeric in the view):
+  STAFF_GRID_SECURITY_SCANNER (pre-2025), STAFF_GRID_TICKET_SCANNER (2025+),
+  CONCESS_GRID_SPEED (2026+). Scale 1-4, 1=best. Filter WHERE column < 80.
   
-  ENTERTAINMENT (1-4, 1=best): ENTERTAIN_GRID_PREGAME_CONTENT, ENTERTAIN_GRID_SCOREBOARD,
-  ENTERTAIN_GRID_MUSIC, ENTERTAIN_GRID_PLAYER_CONTENT, ENTERTAIN_GRID_GAMES,
-  ENTERTAIN_GRID_KIDS_ACTIVITIES, ENTERTAIN_GRID_THEME. Filter WHERE column < 80.
-  
-  STAFF BY TYPE (1-4, 1=best): STAFF_GRID_PARKING, STAFF_GRID_SECURITY, STAFF_GRID_USHER,
-  STAFF_GRID_FAN_SERVICES, STAFF_GRID_CONCESSIONS, STAFF_GRID_MERCH,
-  STAFF_GRID_ACCESSIBILITY, STAFF_GRID_TICKET_SCANNER (2025+),
-  STAFF_GRID_SECURITY_SCANNER (pre-2025 combined). Filter WHERE column < 80.
-  
-  BRAND HEALTH (1-4, 1=strongly agree): BRANDHEALTH_GRID_EXCITING, BRANDHEALTH_GRID_FAMFRIENDLY,
-  BRANDHEALTH_GRID_CHAMPION, BRANDHEALTH_GRID_RIGHTDIRECTION, BRANDHEALTH_GRID_POSINFLUENCE,
-  BRANDHEALTH_GRID_WELCOME, BRANDHEALTH_GRID_EMOTIONAL, BRANDHEALTH_GRID_TRENDY,
-  BRANDHEALTH_GRID_DIVERSITY, BRANDHEALTH_GRID_SUSTAINABILITY, BRANDHEALTH_GRID_ACCESSIBLE,
-  BRANDHEALTH_GRID_SAFE. Filter WHERE column < 80.
-  
-  OTHER: GIVEAWAY_SAT (1-4, 1=best), SEATVIEW_VALUE (1-3: 1=good, 3=poor).
+  ALL OTHER GRID COLUMNS (staff, concession, entertainment, brand health) exist ONLY as
+  _DESC text fields (e.g., STAFF_GRID_PARKING_DESC, CONCESS_GRID_CLEAN_DESC, 
+  ENTERTAIN_GRID_MUSIC_DESC, BRANDHEALTH_GRID_EXCITING_DESC). 
+  Use percentage distribution analysis on these _DESC fields, NOT numeric averages.
   
   IMPORTANT: For year-over-year comparisons, GROUP BY SEASON and compute AVG() with WHERE column < 80.
   For "biggest jump in satisfaction", compare AVG across seasons for each item and rank the change.
-  For 1-4 scale columns, a DECREASE in average means IMPROVEMENT (lower = better satisfaction).
+  For _DESC fields, compare percentage distributions across seasons.
+  
   SPONSOR RECALL QUERIES:
-  #   When users ask about sponsors, sponsor recall, brand awareness, or which sponsors/brands fans remember:
-  #   
-  #   ALWAYS USE these fields (they automatically filter N/A codes):
-  #   - SPONSOR_RECALL_1: First/primary sponsor recalled
-  #   - SPONSOR_RECALL_2: Second sponsor recalled
-  #   - SPONSOR_RECALL_3: Third sponsor recalled
-  #   - SPONSOR_RECALL_4: Fourth sponsor recalled
-  #   - SPONSOR_RECALL_5: Fifth sponsor recalled
-  #   
-  #   NEVER USE these fields (contain N/A codes like 81, 89):
-  #   - TB_ADDON_10_1_RAW through TB_ADDON_10_5_RAW (DEPRECATED)
-  #   
-  #   CORRECT SQL PATTERN for "top sponsors recalled":
-  #   WITH sponsor_mentions AS (
-  #     SELECT SPONSOR_RECALL_1 AS sponsor FROM table WHERE SPONSOR_RECALL_1 IS NOT NULL
-  #     UNION ALL
-  #     SELECT SPONSOR_RECALL_2 AS sponsor FROM table WHERE SPONSOR_RECALL_2 IS NOT NULL
-  #     UNION ALL
-  #     SELECT SPONSOR_RECALL_3 AS sponsor FROM table WHERE SPONSOR_RECALL_3 IS NOT NULL
-  #     UNION ALL
-  #     SELECT SPONSOR_RECALL_4 AS sponsor FROM table WHERE SPONSOR_RECALL_4 IS NOT NULL
-  #     UNION ALL
-  #     SELECT SPONSOR_RECALL_5 AS sponsor FROM table WHERE SPONSOR_RECALL_5 IS NOT NULL
-  #   )
-  #   SELECT sponsor, COUNT(*) AS recall_count
-  #   FROM sponsor_mentions
-  #   GROUP BY sponsor
-  #   ORDER BY recall_count DESC;
+  When users ask about sponsors, sponsor recall, brand awareness, or which sponsors/brands fans remember:
+  Use the TB_ADDON_10_1 through TB_ADDON_10_5 columns with a CASE expression to filter numeric codes:
+  CASE WHEN REGEXP_LIKE(TB_ADDON_10_1::VARCHAR, '^[0-9]+$') THEN NULL ELSE TB_ADDON_10_1 END
+  These are defined in the YAML as SPONSOR_RECALL_1 through SPONSOR_RECALL_5 (virtual columns with the filter built in).
+  
+  CORRECT SQL PATTERN for "top sponsors recalled":
+  WITH sponsor_mentions AS (
+    SELECT SPONSOR_RECALL_1 AS sponsor FROM table WHERE SPONSOR_RECALL_1 IS NOT NULL
+    UNION ALL
+    SELECT SPONSOR_RECALL_2 AS sponsor FROM table WHERE SPONSOR_RECALL_2 IS NOT NULL
+    UNION ALL
+    SELECT SPONSOR_RECALL_3 AS sponsor FROM table WHERE SPONSOR_RECALL_3 IS NOT NULL
+    UNION ALL
+    SELECT SPONSOR_RECALL_4 AS sponsor FROM table WHERE SPONSOR_RECALL_4 IS NOT NULL
+    UNION ALL
+    SELECT SPONSOR_RECALL_5 AS sponsor FROM table WHERE SPONSOR_RECALL_5 IS NOT NULL
+  )
+  SELECT sponsor, COUNT(*) AS recall_count
+  FROM sponsor_mentions
+  GROUP BY sponsor
+  ORDER BY recall_count DESC;
 
 tables:
   - name: voc_survey_responses
@@ -256,7 +267,7 @@ tables:
         synonyms: ['attendance screener', 'attendance screener description', 'attendance screener desc', 'attendance screener text']
       
       - name: ATTEND_NUM_PLAN_DESC
-        description: "Survey question: \"How many [CLUB] games do you plan to attend this season?\" Values: Between 2 and 5 games / Between 6 and 10 games / Between 11 and 15 games / Between 16 and 20 games / Over 20 games."
+        description: "Survey question: \"How many Rays games do you plan to attend this season?\" Values: Between 2 and 3 games / Between 4 and 5 games / Between 6 and 10 games / Between 11 and 15 games / Between 11 and 15 games / Over 20 games."
         expr: ATTEND_NUM_PLAN_DESC
         data_type: varchar
         synonyms: ['attend num plan text', 'attend num plan description', 'attend num plan desc', 'attend num plan']
@@ -340,16 +351,27 @@ tables:
         is_enum: true 
 
       - name: CIH_ID_DESC
-        description: "Survey question: \"How many children (aged 17 or younger) live in your household?\" Values: None / 1 / 2 / 3 / 4 or more / I prefer not to say."
+        description: "Survey question: \"How many children (aged 17 or younger) live in your household?\" Response codes: 0 = None, 1 = 1, 2 = 2, 3 = 3, 4 = 4 or more, 5 = I prefer not to say. Display values: None / 1 / 2 / 3 / 4 
+            or more / I prefer not to say."
         expr: CIH_ID_DESC
         data_type: varchar
-        synonyms: ['cih id', 'cih id text', 'cih id desc', 'cih id description']
+        synonyms: ['cih id', 'cih id text', 'cih id desc', 'cih id description', 'children in household']
       
       - name: CLUB_PARKING_LOT_DESC
         description: "Yes or No, Indicates whether the fan parked in a stadium-affiliated parking lot (Yes/No/Not sure). For specific parking lot names in 2025 at GMS field, use parking_lot_name."
         expr: CLUB_PARKING_LOT_DESC
         data_type: varchar
         synonyms: ['did you park in a stadium affiliated parking lot', 'parked at the stadium in 202', 'club parking lot yes or no']
+
+      - name: RESPONSE_SOURCE
+        description: "Survey delivery channel. Values: 'App' (Ballpark App push notification) or 'Email'. Used to compare response patterns across delivery methods."
+        expr: RESPONSE_SOURCE
+        data_type: varchar
+        sample_values:
+          - App
+          - Email
+        is_enum: true
+        synonyms: ["response source", "survey channel", "survey delivery", "delivery method"]
       
       - name: TB_ADDON_8_1
         description: "QUALITATIVE FEEDBACK - TICKETS/SEATS: Open text feedback where fans describe issues with their tickets or seats in their own words. Use when users ask about 'qualitative feedback on tickets'. This is NOT a rating - it contains actual written fan responses."
@@ -430,13 +452,6 @@ tables:
         synonyms: ["which lot in 2025", "lot name in 2025", "parking location", "where parked in 2025", "parking lot in 2025"]
         sample_values: ["General Parking (Lots 1-4)", "Premium Parking"]
         
-      - name: COMMENTS_GMS_STAFF
-        description: "Open-ended text comments about staff member interactions and service"
-        expr: COMMENTS_GMS_STAFF
-        data_type: varchar
-        sample_values: ["Better food options", "Lower prices", "More entertainment", "Improved parking"]
-        synonyms: ['comments gms staff']
-      
       - name: COMMERCIAL_OPT_IN_DESC
         description: "Survey question: \"Would you like to receive commercial emails from MLB, the Rays, and their partners?\" Values: Yes / No."
         expr: COMMERCIAL_OPT_IN_DESC
@@ -485,13 +500,13 @@ tables:
         description: "Open-ended text: Other reason why patron was not interested in purchasing concessions. Free-text response from \"Other (please specify)\" option in concessions intent question."
         expr: CONCESS_INTENT_NO_OTHERSPECIFY
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'concess intent no otherspecify', 'feedback']
-      
+        synonyms: ['why not interested in concessions text', 'concessions intent other reason', 'concess intent no otherspecify']
+
       - name: CONCESS_INTENT_NO_OTHERSPECIFY_TOPICS
         description: "AI-generated topic classification of CONCESS_INTENT_NO_OTHERSPECIFY open-text responses. Contains categorized topics, not raw text."
         expr: CONCESS_INTENT_NO_OTHERSPECIFY_TOPICS
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'concess intent no otherspecify topics', 'feedback']
+        synonyms: ['why not interested in concessions topics', 'concessions intent no topics', 'concess intent no otherspecify topics']
       
       - name: CONCESS_NO_DESC
         description: "Survey question: \"Which of the following best describes why you did not purchase food and/or beverages?\" Values include: Ate/drank before arriving, Not hungry/thirsty, Too expensive, Lines too long, Poor food quality, Limited selection, Dietary restrictions, and others. Removed in 2024."
@@ -504,13 +519,13 @@ tables:
         description: "Open-ended text: Other reason why patron did not purchase concessions. Free-text response from \"Other (please specify)\" option in concessions non-purchase question."
         expr: CONCESS_NO_OTHERSPECIFY
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'concess no otherspecify', 'feedback']
-      
+        synonyms: ['why no concessions text', 'concessions non-purchase other reason', 'concess no otherspecify']
+
       - name: CONCESS_NO_OTHERSPECIFY_TOPICS
         description: "AI-generated topic classification of CONCESS_NO_OTHERSPECIFY open-text responses. Contains categorized topics, not raw text."
         expr: CONCESS_NO_OTHERSPECIFY_TOPICS
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'concess no otherspecify topics', 'suggestions', 'feedback']
+        synonyms: ['concessions non-purchase topics', 'why no concessions topics', 'concess no otherspecify topics']
       
       - name: CONCESS_PAYMENT_SELECT_DESC
         description: "Survey question: \"When you personally selected your items from a warmer, refrigerator, etc., how did you pay?\" Values: With a cashier / Self-checkout / Scanned card/phone before selecting items. Added in 2024."
@@ -582,13 +597,17 @@ tables:
         description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Other desserts and sweets. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_OTHER_DESSERT_DESC
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'concess quality other dessert desc', 'feedback']
-      
+        synonyms: ['other dessert quality rating', 'dessert satisfaction level', 'concess quality other dessert desc']
+        sample_values: ['Highly Satisfied', 'Somewhat Satisfied', 'Somewhat dissatisfied', 'Highly dissatisfied']
+        is_enum: true
+
       - name: CONCESS_QUALITY_OTHER_ENTREE_DESC
         description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Other entrees. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
         expr: CONCESS_QUALITY_OTHER_ENTREE_DESC
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'concess quality other entree desc', 'suggestions', 'feedback']
+        synonyms: ['other entree quality rating', 'entree satisfaction level', 'concess quality other entree desc']
+        sample_values: ['Highly Satisfied', 'Somewhat Satisfied', 'Somewhat dissatisfied', 'Highly dissatisfied']
+        is_enum: true
       
       - name: CONCESS_QUALITY_PIZZA_DESC
         description: "Survey question: \"How would you rate the quality (taste, temperature, etc.) of the following items you purchased?\" Sub-item: Pizza. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better)."
@@ -732,25 +751,25 @@ tables:
         description: "Open-ended text: What other desserts/sweets the patron purchased at concessions. Free-text response when patron selected \"Other desserts and sweets\" in concession type question."
         expr: CONCESS_TYPE_OTHER_DESSERT_SPECIFY
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'comments']
-      
+        synonyms: ['other desserts purchased text', 'what other desserts bought', 'concess type other dessert specify']
+
       - name: CONCESS_TYPE_OTHER_DESSERT_SPECIFY_TOPICS
         description: "AI-generated topic classification of CONCESS_TYPE_OTHER_DESSERT_SPECIFY open-text responses. Contains categorized topics, not raw text."
         expr: CONCESS_TYPE_OTHER_DESSERT_SPECIFY_TOPICS
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'concess type other dessert specify topics', 'feedback']
-      
+        synonyms: ['other desserts topics', 'dessert type topics', 'concess type other dessert specify topics']
+
       - name: CONCESS_TYPE_OTHER_ENTREE_SPECIFY
         description: "Open-ended text: What other entrees the patron purchased at concessions. Free-text response when patron selected \"Other entrees\" in concession type question."
         expr: CONCESS_TYPE_OTHER_ENTREE_SPECIFY
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'concess type other entree specify', 'feedback']
-      
+        synonyms: ['other entrees purchased text', 'what other entrees bought', 'concess type other entree specify']
+
       - name: CONCESS_TYPE_OTHER_ENTREE_SPECIFY_TOPICS
         description: "AI-generated topic classification of CONCESS_TYPE_OTHER_ENTREE_SPECIFY open-text responses. Contains categorized topics, not raw text."
         expr: CONCESS_TYPE_OTHER_ENTREE_SPECIFY_TOPICS
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'concess type other entree specify topics']
+        synonyms: ['other entrees topics', 'entree type topics', 'concess type other entree specify topics']
       
       - name: CONCESS_WAIT_DESC
         description: "Survey question: \"In total, about how much time did you spend waiting in line for food and/or beverages?\" Values: Less than 5 minutes / Between 5 and 15 minutes / Between 16 and 30 minutes / More than 30 minutes."
@@ -918,7 +937,7 @@ tables:
         description: "Open-ended text: Other reason why patron did not use Go Ahead Entry. Free-text response from TB-specific Go Ahead Entry question."
         expr: GO_AHEAD_WHY_NOT_OTHERSPECIFY
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'go ahead why not otherspecify', 'suggestions', 'feedback']
+        synonyms: ['why not use go ahead entry text', 'go ahead entry barrier reason', 'go ahead why not otherspecify']
       
       - name: GROUP_SIZE_DESC
         description: "Survey question: \"How many people did you attend this game with?\" Values: I attended by myself / 1 person / 2 people / 3 people / 4 people / 5 people / 6 or more people. Removed in 2025."
@@ -937,13 +956,13 @@ tables:
         description: "AI-generated parent-level topic classification of INCENTIVES_OT open-text responses. Contains broad categorized topics about what would influence ticket purchases."
         expr: INCENTIVES_OT_PARENT_TOPICS
         data_type: varchar
-        synonyms: ['open ended', 'incentives ot parent topics', 'improvements', 'suggestions', 'feedback']
-      
+        synonyms: ['ticket purchase incentive parent topics', 'what would influence ticket purchase parent category', 'incentives ot parent topics']
+
       - name: INCENTIVES_OT_TOPICS
         description: "AI-generated detailed topic classification of INCENTIVES_OT open-text responses. Contains specific categorized topics about what would influence ticket purchases."
         expr: INCENTIVES_OT_TOPICS
         data_type: varchar
-        synonyms: ['open ended', 'incentives ot topics', 'improvements', 'suggestions', 'feedback']
+        synonyms: ['ticket purchase incentive topics', 'what would influence ticket purchase topics', 'incentives ot topics']
       
       - name: INCENTIVES_RANK_1_DESC
         description: "Survey question: \"Please rank the top 2 factors that could influence you to buy tickets for more games.\" This is the #1 ranked factor. Values: Lower ticket prices / More promotions and giveaways / Better team performance / Improved food and beverage / Improved stadium experience / More theme nights / Better seat availability / Parking improvements / Enhanced entertainment / More premium experiences / Safety improvements / Other."
@@ -1025,25 +1044,25 @@ tables:
         description: "AI-generated parent-level topic classification of MERCH_NO_OTHERSPECIFY open-text responses. Contains broad categorized topics about why patrons did not purchase merchandise."
         expr: MERCH_NO_OTHERSPECIFY_PARENT_TOPICS
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'merch no otherspecify parent topics']
-      
+        synonyms: ['merch non-purchase parent topics', 'why no merchandise parent category', 'merch no otherspecify parent topics']
+
       - name: MERCH_NO_OTHERSPECIFY_TOPICS
         description: "AI-generated detailed topic classification of MERCH_NO_OTHERSPECIFY open-text responses. Contains specific categorized topics about why patrons did not purchase merchandise."
         expr: MERCH_NO_OTHERSPECIFY_TOPICS
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'merch no otherspecify topics', 'feedback']
-      
+        synonyms: ['merch non-purchase topics', 'why no merchandise topics', 'merch no otherspecify topics']
+
       - name: MERCH_OPTIONS_OT
         description: "Open-ended text: What merchandise options fans would like to see. Free-text survey response about desired merchandise."
         expr: MERCH_OPTIONS_OT
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'merch options ot']
-      
+        synonyms: ['desired merchandise text', 'what merchandise fans want', 'merchandise wishlist', 'merch options ot']
+
       - name: MERCH_OPTIONS_OT_TOPICS
         description: "AI-generated topic classification of MERCH_OPTIONS_OT open-text responses. Contains categorized topics about desired merchandise options."
         expr: MERCH_OPTIONS_OT_TOPICS
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'merch options ot topics']
+        synonyms: ['desired merchandise topics', 'merchandise options topics', 'merch options ot topics']
 
       - name: USED_MOBILE_ORDERING
         description: "CRITICAL: Use this field to identify fans who ACTUALLY PLACED a mobile order (not just considered it). Values: 'Yes' if patron placed a mobile order (CONCESS_ORDER_METHOD_MOBILE = 1), 'No' otherwise. This is the ONLY correct way to filter for mobile order users when analyzing mobile ordering satisfaction, repeat intent, or usage. DO NOT use MOBILE_ORDER_CONSID_DESC to identify actual users - that field only captures if they thought about it, not if they did it."
@@ -1167,16 +1186,17 @@ tables:
         synonyms: ["Qualitative feedback", "General qualiative feedback"]
       
       - name: OVERALL_NUMRAT_OT_PARENT_TOPICS
-        description: "Pre-classified sub-topic categories for overall feedback"
+        description: "AI-pre-classified parent department for each fan's OVERALL_NUMRAT_OT feedback. Contains one of 9 departments: CONCESSIONS, RETAIL, GAME ENTERTAINMENT, FAN EXPERIENCE, PARKING, STADIUM OPERATIONS, DIGITAL EXPERIENCE, TICKETING, MARKETING. GROUP BY this column for department-level feedback volume — faster than running AI_CLASSIFY on raw text. Pairs with OVERALL_NUMRAT_OT_TOPICS for drill-down analysis."
         expr: OVERALL_NUMRAT_OT_PARENT_TOPICS
         data_type: varchar
-        synonyms: ['categories of feedback'] 
-      
+        synonyms: ['feedback department', 'parent topic', 'feedback area', 'department feedback', 'feedback by department']
+        sample_values: ['CONCESSIONS', 'RETAIL', 'GAME ENTERTAINMENT', 'FAN EXPERIENCE', 'PARKING', 'STADIUM OPERATIONS', 'DIGITAL EXPERIENCE', 'TICKETING', 'MARKETING']
+
       - name: OVERALL_NUMRAT_OT_TOPICS
-        description: "Pre-classified sub-topic categories for overall feedback"
+        description: "AI-pre-classified detailed sub-topic category for each fan's OVERALL_NUMRAT_OT feedback. Contains one of 64 specific categories (e.g., 'Food Quality', 'Concession Wait Times', 'Parking Availability', 'Team Performance', 'Gate Entry Speed', 'Seating Comfort', 'Music', 'Mobile App'). GROUP BY this column to count feedback volume by topic — much faster than running AI_CLASSIFY on raw text. Pairs with OVERALL_NUMRAT_OT_PARENT_TOPICS for department rollups."
         expr: OVERALL_NUMRAT_OT_TOPICS
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'comments']
+        synonyms: ['feedback topic', 'feedback category', 'topic classification', 'detailed topic', 'feedback sub-category']
       
       - name: pa_promo_grid_1
         description: "Before arriving at the stadium for this game, which best describes how you felt about the following?* - [Field-giveaway_name] Fans awareness about a GIVEAWAY before attending a specific GIVEAWAY game."
@@ -1264,19 +1284,19 @@ tables:
         description: "Open-ended text: Other pre-game activity the patron did before the game. Free-text response from \"Other (please specify)\" option in pregame plans question."
         expr: PREGAME_PLANS_OTHERSPECIFY
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'pregame plans otherspecify', 'feedback']
-      
+        synonyms: ['pre-game activities text', 'other pregame activity', 'pregame plans otherspecify']
+
       - name: PREGAME_PLANS_OTHERSPECIFY_PARENT_TOPICS
         description: "AI-generated parent-level topic classification of PREGAME_PLANS_OTHERSPECIFY open-text responses. Contains broad categorized topics about pre-game activities."
         expr: PREGAME_PLANS_OTHERSPECIFY_PARENT_TOPICS
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'feedback', 'pregame plans otherspecify parent topics']
-      
+        synonyms: ['pregame activities parent topics', 'pre-game plans parent category', 'pregame plans otherspecify parent topics']
+
       - name: PREGAME_PLANS_OTHERSPECIFY_TOPICS
         description: "AI-generated detailed topic classification of PREGAME_PLANS_OTHERSPECIFY open-text responses. Contains specific categorized topics about pre-game activities."
         expr: PREGAME_PLANS_OTHERSPECIFY_TOPICS
         data_type: varchar
-        synonyms: ['open ended', 'improvements', 'suggestions', 'pregame plans otherspecify topics', 'feedback']
+        synonyms: ['pregame activities topics', 'pre-game plans detailed topics', 'pregame plans otherspecify topics']
       
       - name: PREVIOUS_PURCHASE_DESC
         description: "Survey question: \"Have you purchased any other tickets for future Rays games?\" Values: Yes / No."
@@ -1301,14 +1321,6 @@ tables:
         synonyms: ["How likely are you to purchase tickets for at least one Rays game NEXT season?"]
         sample_values: ["Highly likely", "Highly unlikely", "Somewhat likely", "Somewhat unlikely"]
         is_enum: true 
-
-      - name: SEATVIEW_VALUE
-        description: "How did your view of the game compare to the amount of money you spent on the ticket? Valuation of money spent on tickets vs view of the game"
-        expr: SEATVIEW_VALUE
-        data_type: varchar
-        synonyms: ["seatview value"]
-        sample_values: ["Fair value for the money I spent on the ticket", "Good value for the money I spent on the ticket", "Poor value for the money I spent on the ticket"]
-        is_enum: true
 
       - name: STAFF_GRID_ACCESSIBILITY_DESC
         description: "Survey question: \"Thinking of your interactions, please rate your satisfaction with the service provided by each staff member.\" Sub-item: Accessibility support staff. Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied (lower is better). Added in 2024."
@@ -1376,7 +1388,7 @@ tables:
         description: "Survey question: \"Which of the following best describes how you traveled to the stadium?\" Values: Drove and parked a personal/rental vehicle / Used a car service (Uber/Lyft/taxi) / Bus or public transit / Subway or train / Walked / Other."
         expr: TRAVELTO_METHOD_DESC
         data_type: varchar
-        synonyms: ['Bus', Car / personal vehicle', 'Cross Bay Ferry', 'Rideshare service (e.g. Uber, Lyft)', 'Walk / bike / scooter', 'Sunrunner']
+        synonyms: ['Bus', 'Car / personal vehicle', 'Rideshare service (e.g. Uber, Lyft)', 'Walk / bike / scooter', 'SunRunner'] 
       
       - name: TRAVELTO_TIME_DESC
         description: "Survey question: \"About how much time did it take for you to travel to the stadium?\" Values: Less than 10 minutes / Between 10 and 30 minutes / Between 31 and 60 minutes / More than 60 minutes."
@@ -1582,12 +1594,6 @@ tables:
         expr: GIVEAWAY_TYPE
         data_type: varchar
         synonyms: ['giveaway type']
-      
-      - name: GMS_SERVICE_RECOVERY_APP
-        description: "Text data for gms service recovery app"
-        expr: GMS_SERVICE_RECOVERY_APP
-        data_type: varchar
-        synonyms: ['gms service recovery app']
       
       - name: GMS_SERVICE_RECOVERY_CLEANLINESS
         description: "Text data for gms service recovery cleanliness"
@@ -1958,8 +1964,13 @@ tables:
         expr: _FIVETRAN_DELETED
         data_type: varchar
         synonyms: ["fivetran deleted"]
-      
-    
+
+      - name: SEASON
+        description: "Baseball season year (e.g., 2024, 2025, 2026). Use for year-over-year comparisons and filtering to a specific season. Always GROUP BY SEASON for multi-year trend analysis. Derived from YEAR(GAME_DATE)."
+        expr: SEASON
+        data_type: number
+        synonyms: ['year', 'season year', 'season', 'baseball season', 'which year', 'by year', 'annual']
+
     time_dimensions:
       - name: GAME_DATE
         description: "Ticket event date"
@@ -2108,8 +2119,7 @@ tables:
         data_type: number
         default_aggregation: avg
         synonyms: ["attend kids ages under 3"]
-    
-      
+
       - name: ATTEND_WITH_CATEGORY_ADULT_KIDS
         description: "Adult children (18 and older)"
         expr: ATTEND_WITH_CATEGORY_ADULT_KIDS
@@ -2214,6 +2224,13 @@ tables:
         data_type: number
         default_aggregation: avg
         synonyms: ["attend with sum young kids"]
+
+      - name: ATTEND_WITH_ALONE
+        description: "I attended by myself"
+        expr: ATTEND_WITH_ALONE
+        data_type: number
+        default_aggregation: avg
+        synonyms: ["I attended by myself"]
       
       - name: AVERAGE_TIX_PRICE
         description: "Average price of the tickets purchased in the order"
@@ -2235,34 +2252,6 @@ tables:
         data_type: number
         default_aggregation: avg
         synonyms: ["concessions comp"]
-      
-      - name: CONCESS_GRID_CLEAN
-        description: "Concession cleanliness rating. How clean and sanitary were the food and beverage areas. Use for cleanliness trend analysis."
-        expr: CONCESS_GRID_CLEAN
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["concession cleanliness", "food cleanliness", "fb cleanliness", "sanitary", "clean concessions", "hygiene rating"]
-      
-      - name: CONCESS_GRID_CUSTSERV
-        description: "Concession customer service rating 0-10 scale. Quality of service from F&B staff. Use for trend analysis and service quality tracking."
-        expr: CONCESS_GRID_CUSTSERV
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["customer service rating", "service score", "staff rating", "service quality score", "fb service rating", "concession service score"]
-      
-      - name: CONCESS_GRID_SELECTION
-        description: "Concession selection rating 0-10 scale. Variety and options for food and beverages. Use for menu variety trend analysis."
-        expr: CONCESS_GRID_SELECTION
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["selection rating", "menu rating", "variety score", "selection score", "menu variety rating", "food options rating"]
-      
-      - name: CONCESS_GRID_VALUE
-        description: "Concession value rating 0-10 scale. Perceived value and price fairness. Use for value perception trend analysis."
-        expr: CONCESS_GRID_VALUE
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["value rating", "value score", "price rating", "worth rating", "value for money score", "pricing rating"]
       
       - name: CONCESS_LOCATION_GRABANDGO
         description: "At a grab & go stand"
@@ -2627,69 +2616,6 @@ tables:
         default_aggregation: avg
         synonyms: ["excitement adjustment"]
       
-      - name: FB_SAT_PREMIUM_CLEANLINESS
-        description: "Premium concession cleanliness rating. Cleanliness of premium F&B areas. Use for premium cleanliness trend analysis."
-        expr: FB_SAT_PREMIUM_CLEANLINESS
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["premium cleanliness", "premium clean rating", "premium hygiene score", "premium sanitary rating"]
-      
-      - name: FB_SAT_PREMIUM_CUST_SERVICE
-        description: "Premium concession customer service rating. Service quality at premium F&B locations. Use for premium service trend analysis."
-        expr: FB_SAT_PREMIUM_CUST_SERVICE
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["premium customer service", "premium service rating", "premium staff score", "premium service score"]
-      
-      - name: FB_SAT_PREMIUM_FOOD_PRESENTATION
-        description: "Premium food presentation rating. Visual appeal and presentation of premium food items. Use for presentation trend analysis."
-        expr: FB_SAT_PREMIUM_FOOD_PRESENTATION
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["food presentation", "plating rating", "food appearance score", "visual appeal", "presentation score"]
-      
-      - name: FB_SAT_PREMIUM_FOOD_TEMP
-        description: "Premium food temperature rating. Proper hot/cold temperature of premium items. Use for temperature trend analysis."
-        expr: FB_SAT_PREMIUM_FOOD_TEMP
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["food temperature", "temperature rating", "temp score", "hot food rating", "cold drinks rating", "temperature score"]
-      
-      - name: FB_SAT_PREMIUM_FRESHNESS
-        description: "Premium food freshness rating. How fresh premium concession items were. Use for freshness trend analysis."
-        expr: FB_SAT_PREMIUM_FRESHNESS
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["premium freshness", "food freshness", "fresh food rating", "freshness score", "fresh rating"]
-      
-      - name: FB_SAT_PREMIUM_PORTION_SIZE
-        description: "Premium portion size rating. Satisfaction with portion sizes for premium items. Use for portion trend analysis."
-        expr: FB_SAT_PREMIUM_PORTION_SIZE
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["portion size", "portion rating", "food portion score", "serving size rating", "portion score"]
-      
-      - name: FB_SAT_PREMIUM_SELECTION
-        description: "Premium concession selection rating. Variety of premium food and beverage options. Use for premium menu trend analysis."
-        expr: FB_SAT_PREMIUM_SELECTION
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["premium selection", "premium menu rating", "premium options score", "premium variety", "premium menu score"]
-      
-      - name: FB_SAT_PREMIUM_TASTE
-        description: "Premium food taste rating. Quality and flavor of premium concession items. Use for taste/quality trend analysis."
-        expr: FB_SAT_PREMIUM_TASTE
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["premium taste", "food taste", "flavor rating", "food quality", "taste score", "premium food quality rating", "quality rating"]
-      
-      - name: FB_SAT_PREMIUM_VALUE
-        description: "Premium concession value rating. Value perception for premium food and beverage offerings. Use for premium value trend analysis."
-        expr: FB_SAT_PREMIUM_VALUE
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["premium value", "premium value rating", "premium pricing score", "premium worth", "premium value score"]
-      
       - name: FLASH_SALE
         description: "Flag for whether the ticket was sold as part of a flash sale"
         expr: FLASH_SALE
@@ -3010,11 +2936,11 @@ tables:
         synonyms: ["opt in"]
       
       - name: OVERALL_NUMRAT
-        description: "Non-game entertainment and in-venue experience rating on 0-10 scale. Survey question: \"On a scale from 0 to 10, how would you rate the non-game entertainment?\". Added in 2024 season. 0=worst, 10=best. Filter out values >= 80 (survey codes)."
+        description: "PRIMARY overall game day satisfaction rating on 0-10 scale. Survey question: \"On a scale from 0 to 10, how would you rate your overall experience at today's game?\" 0=worst, 10=best. Filter WHERE OVERALL_NUMRAT < 80 to exclude survey codes. This is the main satisfaction KPI — use it first for overall satisfaction questions, trends, and homestand benchmarks."
         expr: OVERALL_NUMRAT
         data_type: number
         default_aggregation: avg
-        synonyms: ["overall satisfaction", "overall rating", "overall experience", "satisfaction score", "overall numrat"]
+        synonyms: ["overall satisfaction", "overall rating", "overall experience", "satisfaction score", "overall numrat", "overall score", "game day satisfaction"]
       
       - name: ENTERTAIN_NUMRAT
         description: "Non-game entertainment and in-venue experience rating on 0-10 scale. Survey question: \"On a scale from 0 to 10, how would you rate the non-game entertainment?\". Added in 2024 season. 0=worst, 10=best. Filter out values >= 80 (survey codes)."
@@ -3305,6 +3231,7 @@ tables:
         expr: SAUSAGES_PREV_PURCH
         data_type: number
         default_aggregation: avg
+
         synonyms: ["sausages prev purch"]
       
       - name: SEASON
@@ -3322,11 +3249,11 @@ tables:
         synonyms: ["season perform adjustment"]
       
       - name: SEATVIEW_NUMRAT
-        description: "Seat view of the game. Numerical 1-10 scale."
+        description: "Seat view of the game rating. Numerical 1-10 scale. WARNING: BAD DATA IN 2026 — contains only constant value 83 (survey code). Do NOT use for 2026 analysis. Filter WHERE SEATVIEW_NUMRAT < 80 to exclude survey codes. Only reliable for pre-2026 seasons."
         expr: SEATVIEW_NUMRAT
         data_type: number
         default_aggregation: avg
-        synonyms: ["seatview numrat"]
+        synonyms: ["seat view rating", "seatview numrat", "view of game rating", "seat view score"]
 
       - name: SEAT_COMFORT
         description: "Numeric data for seat comfort"
@@ -3378,130 +3305,11 @@ tables:
         synonyms: ["ticket scanner satisfaction", "ticket scanner staff", "gate staff satisfaction"]
       
       - name: STAFF_SATISFACTION
-        description: "Staff satisfaction rating 1-10 scale (normalized from 1-100). Quality of service from stadium staff. Use for satisfaction trend analysis and comparison with other ratings."
+        description: "Staff satisfaction rating 1-10 scale (computed as STAFF_NUMRAT / 10.0). WARNING: BAD DATA IN 2026 — STAFF_NUMRAT contains only constant value 83 (survey code), making this metric unreliable for 2026. For 2026 staff ratings, use the TB_ADDON_23_* columns (0-10 scale) instead. Only reliable for pre-2026 seasons."
         expr: STAFF_NUMRAT / 10.0
         data_type: number
         default_aggregation: avg
         synonyms: ["staff satisfaction", "staff rating", "staff service rating", "staff experience", "staff numrat", "avg staff satisfaction"]
-      
-      - name: STAFF_RAT_2024_ACCESSIBILITY_SUPPORT
-        description: "Numeric data for staff rat 2024 accessibility support"
-        expr: STAFF_RAT_2024_ACCESSIBILITY_SUPPORT
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff rat 2024 accessibility support"]
-      
-      - name: STAFF_RAT_2024_FAN_HOST
-        description: "Numeric data for staff rat 2024 fan host"
-        expr: STAFF_RAT_2024_FAN_HOST
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff rat 2024 fan host"]
-      
-      - name: STAFF_RAT_2024_FAN_HOST_SCANNER
-        description: "Numeric data for staff rat 2024 fan host scanner"
-        expr: STAFF_RAT_2024_FAN_HOST_SCANNER
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff rat 2024 fan host scanner"]
-      
-      - name: STAFF_RAT_2024_FB_STAFF
-        description: "Numeric data for staff rat 2024 fb staff"
-        expr: STAFF_RAT_2024_FB_STAFF
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff rat 2024 fb staff"]
-      
-      - name: STAFF_RAT_2024_PARKING
-        description: "Numeric data for staff rat 2024 parking"
-        expr: STAFF_RAT_2024_PARKING
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff rat 2024 parking"]
-      
-      - name: STAFF_RAT_2024_PREMIUM_ATTENDANTS
-        description: "Numeric data for staff rat 2024 premium attendants"
-        expr: STAFF_RAT_2024_PREMIUM_ATTENDANTS
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff rat 2024 premium attendants"]
-      
-      - name: STAFF_RAT_2024_RETAIL_STAFF
-        description: "Numeric data for staff rat 2024 retail staff"
-        expr: STAFF_RAT_2024_RETAIL_STAFF
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff rat 2024 retail staff"]
-      
-      - name: STAFF_RAT_2024_SECURITY
-        description: "Numeric data for staff rat 2024 security"
-        expr: STAFF_RAT_2024_SECURITY
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff rat 2024 security"]
-      
-      - name: STAFF_RAT_2024_TECH_TEAM
-        description: "Numeric data for staff rat 2024 tech team"
-        expr: STAFF_RAT_2024_TECH_TEAM
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff rat 2024 tech team"]
-      
-      - name: STAFF_RAT_FAN_HOST
-        description: "Numeric data for staff rat fan host"
-        expr: STAFF_RAT_FAN_HOST
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff rat fan host"]
-      
-      - name: STAFF_RAT_FAN_HOST_SCANNER
-        description: "Numeric data for staff rat fan host scanner"
-        expr: STAFF_RAT_FAN_HOST_SCANNER
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff rat fan host scanner"]
-      
-      - name: STAFF_RAT_FB_STAFF
-        description: "Numeric data for staff rat fb staff"
-        expr: STAFF_RAT_FB_STAFF
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff rat fb staff"]
-      
-      - name: STAFF_RAT_GUEST_SERVICES
-        description: "Numeric data for staff rat guest services"
-        expr: STAFF_RAT_GUEST_SERVICES
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff rat guest services"]
-      
-      - name: STAFF_RAT_PARKING
-        description: "Numeric data for staff rat parking"
-        expr: STAFF_RAT_PARKING
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff rat parking"]
-      
-      - name: STAFF_RAT_RETAIL_STAFF
-        description: "Numeric data for staff rat retail staff"
-        expr: STAFF_RAT_RETAIL_STAFF
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff rat retail staff"]
-      
-      - name: STAFF_RAT_SECURITY
-        description: "Numeric data for staff rat security"
-        expr: STAFF_RAT_SECURITY
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff rat security"]
-      
-      - name: STAFF_RAT_TECH_TEAM
-        description: "Numeric data for staff rat tech team"
-        expr: STAFF_RAT_TECH_TEAM
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff rat tech team"]
       
       - name: STAFF_TYPE_CONCESSIONS
         description: "Concessions staff"
@@ -3665,11 +3473,11 @@ tables:
         synonyms: ["tb addon 15"]
       
       - name: TB_ADDON_19
-        description: "Satisfaction level with comfort of seat at the ballpark"
+        description: "Satisfaction level with comfort of seat at the ballpark. WARNING: BAD DATA IN 2026 — contains only constant value 83 (survey code). Do NOT use for 2026 analysis. Filter WHERE TB_ADDON_19 < 80 to exclude survey codes. Only reliable for pre-2026 seasons."
         expr: TB_ADDON_19
         data_type: number
         default_aggregation: avg
-        synonyms: ["tb addon 19"]
+        synonyms: ["seat comfort satisfaction", "seat comfort rating", "seat satisfaction", "tb addon 19"]
       
       - name: TB_ADDON_1_1
         description: "Alcoholic beverages"
@@ -3833,60 +3641,60 @@ tables:
         synonyms: ["tb addon 22"]
       
       - name: TB_ADDON_23_1
-        description: "Parking staff"
+        description: "Parking staff satisfaction rating (2026+ NEW 0-10 SCALE). Survey question: 'On a scale from 0 to 10, please rate your overall satisfaction with each of the following staff members - Parking Staff.' SCALE: 0-10 where 0=worst and 10=best. Filter WHERE TB_ADDON_23_1 < 80 to exclude survey codes. Replaces TB_ADDON_4_1 (1-5 scale) starting in 2026. 2026 avg ~9.15 with 1825 responses."
         expr: TB_ADDON_23_1
         data_type: number
         default_aggregation: avg
-        synonyms: ["tb addon 23 1"]
+        synonyms: ["parking staff rating", "parking staff satisfaction", "parking staff 2026", "parking attendant rating", "rate parking staff", "parking staff score"]
       
       - name: TB_ADDON_23_3
-        description: "Fan Host Usher"
+        description: "Fan Host / Usher staff satisfaction rating (2026+ NEW 0-10 SCALE). Survey question: 'On a scale from 0 to 10, please rate your overall satisfaction with each of the following staff members - Fan Host / Usher.' SCALE: 0-10 where 0=worst and 10=best. Filter WHERE TB_ADDON_23_3 < 80 to exclude survey codes. Replaces TB_ADDON_4_3 (1-5 scale) starting in 2026. 2026 avg ~9.38 with 1637 responses."
         expr: TB_ADDON_23_3
         data_type: number
         default_aggregation: avg
-        synonyms: ["tb addon 23 3"]
+        synonyms: ["usher rating", "fan host rating", "usher satisfaction", "fan host usher rating", "usher staff score", "fan host satisfaction", "usher 2026"]
       
       - name: TB_ADDON_23_38
-        description: "Tech Team"
+        description: "Tech Team staff satisfaction rating (2026+ NEW 0-10 SCALE). Survey question: 'On a scale from 0 to 10, please rate your overall satisfaction with each of the following staff members - Tech Team.' SCALE: 0-10 where 0=worst and 10=best. Filter WHERE TB_ADDON_23_38 < 80 to exclude survey codes. New in 2026 (no TB_ADDON_4 predecessor). 2026 avg ~8.81 with 293 responses."
         expr: TB_ADDON_23_38
         data_type: number
         default_aggregation: avg
-        synonyms: ["tb addon 23 38"]
+        synonyms: ["tech team rating", "tech team satisfaction", "tech staff rating", "technology team score", "tech team 2026"]
       
       - name: TB_ADDON_23_4
-        description: "Guest Services"
+        description: "Guest Services staff satisfaction rating (2026+ NEW 0-10 SCALE). WARNING: BAD DATA IN 2026 - contains only constant value 83 (survey code). Do NOT use for 2026 analysis. Survey question: 'On a scale from 0 to 10, please rate your overall satisfaction with each of the following staff members - Guest Services.' SCALE: 0-10 where 0=worst and 10=best. Filter WHERE TB_ADDON_23_4 < 80 to exclude survey codes. Replaces TB_ADDON_4_4 (1-5 scale) starting in 2026."
         expr: TB_ADDON_23_4
         data_type: number
         default_aggregation: avg
-        synonyms: ["tb addon 23 4"]
+        synonyms: ["guest services rating", "guest services satisfaction", "guest services staff", "fan services rating", "guest services 2026", "guest services score"]
       
       - name: TB_ADDON_23_5
-        description: "Concessions staff"
+        description: "Concessions staff satisfaction rating (2026+ NEW 0-10 SCALE). Survey question: 'On a scale from 0 to 10, please rate your overall satisfaction with each of the following staff members - Concessions Staff.' SCALE: 0-10 where 0=worst and 10=best. Filter WHERE TB_ADDON_23_5 < 80 to exclude survey codes. Replaces TB_ADDON_4_5 (1-5 scale) starting in 2026. 2026 avg ~8.86 with 2606 responses."
         expr: TB_ADDON_23_5
         data_type: number
         default_aggregation: avg
-        synonyms: ["tb addon 23 5"]
+        synonyms: ["concessions staff rating", "concessions staff satisfaction", "food staff rating", "fb staff rating", "concessions staff 2026", "concessions staff score"]
       
       - name: TB_ADDON_23_6
-        description: "Retail staff"
+        description: "Retail / Team Store staff satisfaction rating (2026+ NEW 0-10 SCALE). Survey question: 'On a scale from 0 to 10, please rate your overall satisfaction with each of the following staff members - Retail / Team Store Staff.' SCALE: 0-10 where 0=worst and 10=best. Filter WHERE TB_ADDON_23_6 < 80 to exclude survey codes. Replaces TB_ADDON_4_6 (1-5 scale) starting in 2026. 2026 avg ~9.35 with 461 responses."
         expr: TB_ADDON_23_6
         data_type: number
         default_aggregation: avg
-        synonyms: ["tb addon 23 6"]
+        synonyms: ["retail staff rating", "team store staff rating", "merchandise staff rating", "retail satisfaction", "team store satisfaction", "retail staff 2026"]
       
       - name: TB_ADDON_23_60
-        description: "Security"
+        description: "Security staff satisfaction rating (2026+ NEW 0-10 SCALE). Survey question: 'On a scale from 0 to 10, please rate your overall satisfaction with each of the following staff members - Security.' SCALE: 0-10 where 0=worst and 10=best. Filter WHERE TB_ADDON_23_60 < 80 to exclude survey codes. Replaces TB_ADDON_4_10 (1-5 scale) starting in 2026. 2026 avg ~9.06 with 1630 responses."
         expr: TB_ADDON_23_60
         data_type: number
         default_aggregation: avg
-        synonyms: ["tb addon 23 60"]
+        synonyms: ["security rating", "security staff rating", "security satisfaction", "security staff score", "security 2026"]
       
       - name: TB_ADDON_23_61
-        description: "Fan Host Ticket Scanner"
+        description: "Fan Host Ticket Scanner staff satisfaction rating (2026+ NEW 0-10 SCALE). Survey question: 'On a scale from 0 to 10, please rate your overall satisfaction with each of the following staff members - Fan Host Ticket Scanner.' SCALE: 0-10 where 0=worst and 10=best. Filter WHERE TB_ADDON_23_61 < 80 to exclude survey codes. New in 2026 (no TB_ADDON_4 predecessor). 2026 avg ~9.50 with 1872 responses."
         expr: TB_ADDON_23_61
         data_type: number
         default_aggregation: avg
-        synonyms: ["tb addon 23 61"]
+        synonyms: ["ticket scanner rating", "ticket scanner satisfaction", "fan host ticket scanner rating", "gate scanner rating", "ticket scanner 2026", "ticket scanner staff score"]
       
       - name: TB_ADDON_24
         description: "Patrons response on if weather conditions impacted experience"
@@ -3910,75 +3718,74 @@ tables:
         synonyms: ["tb addon 3"]
       
       - name: TB_ADDON_4_1
-        description: "Parking staff satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
+        description: "DEPRECATED (pre-2026 only). Parking staff satisfaction rating on 1-5 scale. NO DATA IN 2026 — use TB_ADDON_23_1 (0-10 scale) for 2026+. Only use this column when filtering to seasons before 2026. Filter WHERE TB_ADDON_4_1 < 80 to exclude survey codes."
         expr: TB_ADDON_4_1
         data_type: number
         default_aggregation: avg
-        synonyms: ['On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Parking staff', 'TB_ADDON_4_1']
+        synonyms: ["parking staff old scale", "parking staff pre-2026"]
       
       - name: TB_ADDON_4_36
-        description: "Fan Host satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
-        expr: TB_ADDON_4_10
+        description: "DEPRECATED (pre-2026 only). Fan Host Ticket Taker satisfaction rating on 1-5 scale. NO DATA IN 2026. Only use this column when filtering to seasons before 2026. Filter WHERE TB_ADDON_4_36 < 80 to exclude survey codes."
+        expr: TB_ADDON_4_36
         data_type: number
         default_aggregation: avg
-        synonyms: ["On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Fan Host Ticket Taker", "tb addon TB_ADDON_4_36"]
+        synonyms: ["fan host ticket taker old scale", "fan host pre-2026"]
 
       - name: TB_ADDON_4_37
-        description: "Security Staff satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
-        expr: TB_ADDON_4_10
+        description: "DEPRECATED (pre-2026 only). Security Staff satisfaction rating on 1-5 scale. NO DATA IN 2026 — use TB_ADDON_23_60 (0-10 scale) for 2026+. Only use this column when filtering to seasons before 2026. Filter WHERE TB_ADDON_4_37 < 80 to exclude survey codes."
+        expr: TB_ADDON_4_37
         data_type: number
         default_aggregation: avg
-        synonyms: ["On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Security Staff", "tb addon TB_ADDON_4_37"]
+        synonyms: ["security staff old scale", "security pre-2026"]
 
       - name: TB_ADDON_4_11
-        description: "Security staff"
+        description: "DEPRECATED (pre-2026 only). Security staff satisfaction rating on 1-5 scale. NO DATA IN 2026 — use TB_ADDON_23_60 (0-10 scale) for 2026+. Only use this column when filtering to seasons before 2026. Filter WHERE TB_ADDON_4_11 < 80 to exclude survey codes."
         expr: TB_ADDON_4_11
         data_type: number
         default_aggregation: avg
-        synonyms: ["tb addon 4 11"]
+        synonyms: ["security staff old scale 4 11"]
       
       - name: TB_ADDON_4_24
-        description: "Accessibility Support satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
-        expr: TB_ADDON_4_5
+        description: "DEPRECATED (pre-2026 only). Accessibility Support satisfaction rating on 1-5 scale. NO DATA IN 2026 — use TB_ADDON_23_24 (0-10 scale) for 2026+. Only use this column when filtering to seasons before 2026. Filter WHERE TB_ADDON_4_24 < 80 to exclude survey codes."
+        expr: TB_ADDON_4_24
         data_type: number
         default_aggregation: avg
-        synonyms: ["On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Accessibility Support", "tb addon TB_ADDON_4_24"]
+        synonyms: ["accessibility support old scale", "accessibility pre-2026"]
 
       - name: TB_ADDON_4_3
-        description: "Fan Hosts Usher satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
+        description: "DEPRECATED (pre-2026 only). Fan Host / Usher satisfaction rating on 1-5 scale. NO DATA IN 2026 — use TB_ADDON_23_3 (0-10 scale) for 2026+. Only use this column when filtering to seasons before 2026. Filter WHERE TB_ADDON_4_3 < 80 to exclude survey codes."
         expr: TB_ADDON_4_3
         data_type: number
         default_aggregation: avg
-        synonyms: ["On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Fan Host Usher", "tb addon TB_ADDON_4_3"]
+        synonyms: ["fan host usher old scale", "usher pre-2026"]
 
-      
       - name: TB_ADDON_4_38
-        description: "Tech Team satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
+        description: "DEPRECATED (pre-2026 only). Tech Team satisfaction rating on 1-5 scale. NO DATA IN 2026 — use TB_ADDON_23_38 (0-10 scale) for 2026+. Only use this column when filtering to seasons before 2026. Filter WHERE TB_ADDON_4_38 < 80 to exclude survey codes."
         expr: TB_ADDON_4_38
         data_type: number
         default_aggregation: avg
-        synonyms: ["On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Tech Team", "tb addon TB_ADDON_4_38"]
+        synonyms: ["tech team old scale", "tech team pre-2026"]
 
       - name: TB_ADDON_4_39
-        description: "Premium Area Attendants satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
+        description: "DEPRECATED (pre-2026 only). Premium Area Attendants satisfaction rating on 1-5 scale. NO DATA IN 2026. Only use this column when filtering to seasons before 2026. Filter WHERE TB_ADDON_4_39 < 80 to exclude survey codes."
         expr: TB_ADDON_4_39
         data_type: number
         default_aggregation: avg
-        synonyms: ["On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Premium Area Attendants", "Premium area Staff", "tb addon TB_ADDON_4_39"]
+        synonyms: ["premium area attendants old scale", "premium staff pre-2026"]
 
       - name: TB_ADDON_4_5
-        description: "Concessions staff satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
+        description: "DEPRECATED (pre-2026 only). Concessions staff satisfaction rating on 1-5 scale. NO DATA IN 2026 — use TB_ADDON_23_5 (0-10 scale) for 2026+. Only use this column when filtering to seasons before 2026. Filter WHERE TB_ADDON_4_5 < 80 to exclude survey codes."
         expr: TB_ADDON_4_5
         data_type: number
         default_aggregation: avg
-        synonyms: ["On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Concessions Staff", "tb addon TB_ADDON_4_5"]
+        synonyms: ["concessions staff old scale", "concessions pre-2026"]
 
       - name: TB_ADDON_4_6
-        description: "Retail staff satisfaction rating. SCALE: 1-5 where 1=worst and 5=best. When reporting results, always state this is on a 1-5 scale, NOT a 1-10 scale."        
+        description: "DEPRECATED (pre-2026 only). Retail / Team Store staff satisfaction rating on 1-5 scale. NO DATA IN 2026 — use TB_ADDON_23_6 (0-10 scale) for 2026+. Only use this column when filtering to seasons before 2026. Filter WHERE TB_ADDON_4_6 < 80 to exclude survey codes."
         expr: TB_ADDON_4_6
         data_type: number
         default_aggregation: avg
-        synonyms: ["On a scale from 1 to 5, please rate your overall satisfaction with each of the following staff members - Retail Staff", "tb addon TB_ADDON_4_6"]
+        synonyms: ["retail staff old scale", "retail pre-2026"]
       
       - name: TB_ADDON_6_DESC
         description: "Yes or No selection if patron experienced a problem that needed staff intervention at GMS field"
@@ -4079,338 +3886,75 @@ tables:
         default_aggregation: avg
         synonyms: ["true complete"]
 
-      # ================================================================
-      # MISSING NUMERIC RATING COLUMNS - Added from codebook analysis
-      # ================================================================
-
-      - name: CONCESS_QUALITY_ALCOHOL
-        description: "Food quality satisfaction rating for Alcoholic beverages. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Alcoholic beverages you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
-        expr: CONCESS_QUALITY_ALCOHOL
+      - name: GE_NUMRAT
+        description: "Gate entry / security experience rating on 0-10 scale. Survey question: \"On a scale from 0 to 10, how would you rate your experience passing through security and gate entry?\" Added in 2026. 0=worst, 10=best. Filter out values >= 80 (survey codes)."
+        expr: GE_NUMRAT
         data_type: number
         default_aggregation: avg
-        synonyms: ["alcoholic beverage quality", "beer quality, alcohol quality, drink quality"]
+        synonyms: ["gate entry rating", "security gate rating", "gate entrance experience", "security experience rating", "ge numrat"]
 
-      - name: CONCESS_QUALITY_NONALCOHOL
-        description: "Food quality satisfaction rating for Non-alcoholic beverages. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Non-alcoholic beverages you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
-        expr: CONCESS_QUALITY_NONALCOHOL
+      - name: PREPARED_SAT
+        description: "Pre-game information satisfaction (team website, email, app communications). Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied, 5=Didn't receive any information. LOWER values = HIGHER satisfaction. Added in 2026. Filter out values >= 80 (survey codes)."
+        expr: PREPARED_SAT
         data_type: number
         default_aggregation: avg
-        synonyms: ["non-alcoholic beverage quality", "soft drink quality, soda quality, water quality"]
+        synonyms: ["prepared satisfaction", "pre-game info satisfaction", "communications satisfaction", "information satisfaction", "prep sat"]
 
-      - name: CONCESS_QUALITY_BURGERS
-        description: "Food quality satisfaction rating for Burgers. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Burgers you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
-        expr: CONCESS_QUALITY_BURGERS
+      - name: TB_ADDON_23_24
+        description: "Rolling Rays Wheelchair Team staff satisfaction on 0-10 scale. Survey question: \"On a scale from 0 to 10, please rate your overall satisfaction with each of the following staff members.\" Added in 2026. 0=worst, 10=best. Filter out values >= 80 (survey codes). This is the 0-10 replacement for the 1-5 TB_ADDON_4 family that was deprecated in 2025."
+        expr: TB_ADDON_23_24
         data_type: number
         default_aggregation: avg
-        synonyms: ["burger quality satisfaction", "burger quality, hamburger quality, burger satisfaction"]
+        synonyms: ["wheelchair team rating", "rolling rays staff", "accessibility staff rating", "wheelchair staff satisfaction"]
 
-      - name: CONCESS_QUALITY_SANDWICH
-        description: "Food quality satisfaction rating for Sandwiches. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Sandwiches you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
-        expr: CONCESS_QUALITY_SANDWICH
+      - name: TB_ADDON_23_67
+        description: "Go-Ahead Entry Team staff satisfaction on 0-10 scale. Survey question: \"On a scale from 0 to 10, please rate your overall satisfaction with each of the following staff members.\" Added in 2026. 0=worst, 10=best. Filter out values >= 80 (survey codes)."
+        expr: TB_ADDON_23_67
         data_type: number
         default_aggregation: avg
-        synonyms: ["sandwich quality satisfaction", "sandwich quality, sandwich satisfaction"]
+        synonyms: ["go-ahead entry staff rating", "gate team satisfaction", "go-ahead entry team rating", "go ahead entry staff"]
 
-      - name: CONCESS_QUALITY_HOTDOG
-        description: "Food quality satisfaction rating for Hot dogs. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Hot dogs you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
-        expr: CONCESS_QUALITY_HOTDOG
+      - name: TB_ADDON_26
+        description: "Rays Wallet usage indicator. Survey question: \"Did you use the Rays Wallet during your visit to Tropicana Field?\" Codes: 1=Yes used it, 2=No but aware of it, 3=No and unaware. Added in 2026. Filter out values >= 80 (survey codes)."
+        expr: TB_ADDON_26
         data_type: number
         default_aggregation: avg
-        synonyms: ["hot dog quality satisfaction", "hot dog quality, hotdog quality, hot dog satisfaction"]
+        synonyms: ["rays wallet usage", "wallet used", "used rays wallet", "rays wallet adoption"]
 
-      - name: CONCESS_QUALITY_SAUSAGE
-        description: "Food quality satisfaction rating for Sausages. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Sausages you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
-        expr: CONCESS_QUALITY_SAUSAGE
+      - name: TB_ADDON_27
+        description: "Rays Wallet reuse intent. Survey question: \"Would you consider using the Rays Wallet again?\" Codes: 1=Yes, 2=No. Added in 2026. Only answered by fans who used the Rays Wallet (TB_ADDON_26=1). Filter out values >= 80 (survey codes)."
+        expr: TB_ADDON_27
         data_type: number
         default_aggregation: avg
-        synonyms: ["sausage quality satisfaction", "sausage quality, sausage satisfaction"]
+        synonyms: ["rays wallet reuse", "would use wallet again", "rays wallet intent"]
 
-      - name: CONCESS_QUALITY_CHICKEN
-        description: "Food quality satisfaction rating for Chicken tenders. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Chicken tenders you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
-        expr: CONCESS_QUALITY_CHICKEN
+      - name: CONCESS_GRID_SPEED
+        description: "Concession speed-of-service satisfaction on 1-5 scale. 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied, 5=N/A. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
+        expr: CONCESS_GRID_SPEED
         data_type: number
         default_aggregation: avg
-        synonyms: ["chicken tender quality satisfaction", "chicken quality, chicken tender quality, chicken satisfaction"]
+        synonyms: ["concession speed", "food service speed", "fb speed", "concession line speed", "speed of service"]
 
-      - name: CONCESS_QUALITY_PIZZA
-        description: "Food quality satisfaction rating for Pizza. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Pizza you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
-        expr: CONCESS_QUALITY_PIZZA
+      - name: FAN_HISTORY_ADJUSTMENT
+        description: "Modeled adjustment made to overall experience score based on the fan's previous attendance behavior. Used to normalize comparisons across fans with different historical contexts."
+        expr: FAN_HISTORY_ADJUSTMENT
         data_type: number
         default_aggregation: avg
-        synonyms: ["pizza quality satisfaction", "pizza quality, pizza satisfaction"]
+        synonyms: ["fan history adjustment", "history adjustment", "attendance adjustment"]
 
-      - name: CONCESS_QUALITY_SALAD
-        description: "Food quality satisfaction rating for Salad / grain bowl. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Salad / grain bowl you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
-        expr: CONCESS_QUALITY_SALAD
+      - name: ATTEND_WITH_CATEGORY_HS_KIDS
+        description: "High school aged children (14-17 years old) as an attendance category. Binary 0/1 indicator. Survey question: \"Who did you attend the game with?\" Added in 2026. NOTE: The older column ATTEND_WITH_HS_KIDS (no _CATEGORY_ infix) already exists in the YAML; this newer column may hold identical or overlapping data depending on the view definition."
+        expr: ATTEND_WITH_CATEGORY_HS_KIDS
         data_type: number
         default_aggregation: avg
-        synonyms: ["salad quality satisfaction", "salad quality, grain bowl quality"]
+        synonyms: ["attended with hs kids", "high school age kids attended", "attend with category hs kids"]
 
-      - name: CONCESS_QUALITY_NACHOS
-        description: "Food quality satisfaction rating for Nachos. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Nachos you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
-        expr: CONCESS_QUALITY_NACHOS
+      - name: ATTEND_WITH_CATEGORY_NON_HS_KIDS
+        description: "Younger children (under 14 years old) as an attendance category. Binary 0/1 indicator. Survey question: \"Who did you attend the game with?\" Added in 2026. NOTE: The older column ATTEND_WITH_NON_HS_KIDS (no _CATEGORY_ infix) already exists in the YAML; this newer column may hold identical or overlapping data depending on the view definition."
+        expr: ATTEND_WITH_CATEGORY_NON_HS_KIDS
         data_type: number
         default_aggregation: avg
-        synonyms: ["nacho quality satisfaction", "nacho quality, nachos satisfaction"]
-
-      - name: CONCESS_QUALITY_FRIES
-        description: "Food quality satisfaction rating for Fries / potatoes. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Fries / potatoes you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
-        expr: CONCESS_QUALITY_FRIES
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["fries quality satisfaction", "fries quality, french fry quality, potato quality, fries satisfaction"]
-
-      - name: CONCESS_QUALITY_ICECREAM
-        description: "Food quality satisfaction rating for Ice cream. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Ice cream you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
-        expr: CONCESS_QUALITY_ICECREAM
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["ice cream quality satisfaction", "ice cream quality, dessert quality, ice cream satisfaction"]
-
-      - name: CONCESS_QUALITY_OTHER_DESSERT
-        description: "Food quality satisfaction rating for Other desserts and sweets. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Other desserts and sweets you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
-        expr: CONCESS_QUALITY_OTHER_DESSERT
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["other dessert quality satisfaction", "dessert quality, sweets quality"]
-
-      - name: CONCESS_QUALITY_OTHER_ENTREE
-        description: "Food quality satisfaction rating for Other entrees. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Other entrees you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
-        expr: CONCESS_QUALITY_OTHER_ENTREE
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["other entree quality satisfaction", "entree quality"]
-
-      - name: CONCESS_QUALITY_NUTS
-        description: "Food quality satisfaction rating for Nuts / Cracker Jacks. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Nuts / Cracker Jacks you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
-        expr: CONCESS_QUALITY_NUTS
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["nuts quality satisfaction", "nuts quality, cracker jacks quality"]
-
-      - name: CONCESS_QUALITY_POPCORN
-        description: "Food quality satisfaction rating for Popcorn. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Popcorn you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
-        expr: CONCESS_QUALITY_POPCORN
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["popcorn quality satisfaction", "popcorn quality, popcorn satisfaction"]
-
-      - name: CONCESS_QUALITY_PRETZELS
-        description: "Food quality satisfaction rating for Pretzels. Survey question: \"How would you rate the quality (taste, temperature, etc.) of Pretzels you purchased?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes for skipped/not shown)."
-        expr: CONCESS_QUALITY_PRETZELS
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["pretzel quality satisfaction", "pretzel quality, pretzels satisfaction"]
-
-      - name: STAFF_NUMRAT
-        description: "Overall staff experience rating on 0-10 scale. Survey question: \"On a scale from 0 to 10, how would you rate your overall experience with staff members?\" Added in 2025 season. 0=worst, 10=best. Filter out values >= 80 (survey codes)."
-        expr: STAFF_NUMRAT
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["staff satisfaction", "staff rating", "staff score", "staff experience rating"]
-
-      - name: PARKING_EXIT_NUMRAT
-        description: "Parking exit experience rating on 0-10 scale. Survey question: \"On a scale from 0 to 10, how would you rate your experience exiting the parking lot after the game?\" Added in 2024 season. 0=worst, 10=best. Filter out values >= 80 (survey codes)."
-        expr: PARKING_EXIT_NUMRAT
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["parking exit rating", "leaving parking rating", "exit parking satisfaction", "parking departure rating"]
-
-      - name: BRANDHEALTH_GRID_EXCITING
-        description: "Brand health agreement rating for \"games are exciting\". Survey question: \"To what extent do you agree or disagree: [Rays] games are exciting?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
-        expr: BRANDHEALTH_GRID_EXCITING
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["exciting rating", "games exciting, exciting"]
-
-      - name: BRANDHEALTH_GRID_FAMFRIENDLY
-        description: "Brand health agreement rating for \"games are family-friendly\". Survey question: \"To what extent do you agree or disagree: [Rays] games are family-friendly?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
-        expr: BRANDHEALTH_GRID_FAMFRIENDLY
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["family friendly rating", "family friendly, family"]
-
-      - name: BRANDHEALTH_GRID_CHAMPION
-        description: "Brand health agreement rating for \"committed to winning championships\". Survey question: \"To what extent do you agree or disagree: [Rays] committed to winning championships?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
-        expr: BRANDHEALTH_GRID_CHAMPION
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["championship commitment rating", "winning, championships"]
-
-      - name: BRANDHEALTH_GRID_RIGHTDIRECTION
-        description: "Brand health agreement rating for \"headed in the right direction on the field\". Survey question: \"To what extent do you agree or disagree: [Rays] headed in the right direction on the field?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
-        expr: BRANDHEALTH_GRID_RIGHTDIRECTION
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["right direction rating", "right direction, on field direction"]
-
-      - name: BRANDHEALTH_GRID_POSINFLUENCE
-        description: "Brand health agreement rating for \"have a positive influence on the local community\". Survey question: \"To what extent do you agree or disagree: [Rays] have a positive influence on the local community?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
-        expr: BRANDHEALTH_GRID_POSINFLUENCE
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["community influence rating", "community, positive influence"]
-
-      - name: BRANDHEALTH_GRID_WELCOME
-        description: "Brand health agreement rating for \"I feel welcome at games\". Survey question: \"To what extent do you agree or disagree: [Rays] I feel welcome at games?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
-        expr: BRANDHEALTH_GRID_WELCOME
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["welcome feeling rating", "feel welcome, welcoming"]
-
-      - name: BRANDHEALTH_GRID_EMOTIONAL
-        description: "Brand health agreement rating for \"I have an emotional connection with the team\". Survey question: \"To what extent do you agree or disagree: [Rays] I have an emotional connection with the team?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
-        expr: BRANDHEALTH_GRID_EMOTIONAL
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["emotional connection rating", "emotional connection, emotional"]
-
-      - name: BRANDHEALTH_GRID_TRENDY
-        description: "Brand health agreement rating for \"games are a popular entertainment option in my community\". Survey question: \"To what extent do you agree or disagree: [Rays] games are a popular entertainment option in my community?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
-        expr: BRANDHEALTH_GRID_TRENDY
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["popularity rating", "popular, trendy, entertainment option"]
-
-      - name: BRANDHEALTH_GRID_DIVERSITY
-        description: "Brand health agreement rating for \"committed to diversity and inclusion\". Survey question: \"To what extent do you agree or disagree: [Rays] committed to diversity and inclusion?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
-        expr: BRANDHEALTH_GRID_DIVERSITY
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["diversity rating", "diversity, inclusion, DEI"]
-
-      - name: BRANDHEALTH_GRID_SUSTAINABILITY
-        description: "Brand health agreement rating for \"committed to environmental sustainability\". Survey question: \"To what extent do you agree or disagree: [Rays] committed to environmental sustainability?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
-        expr: BRANDHEALTH_GRID_SUSTAINABILITY
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["sustainability rating", "sustainability, environmental"]
-
-      - name: BRANDHEALTH_GRID_ACCESSIBLE
-        description: "Brand health agreement rating for \"offers appropriate accommodations to make stadium accessible\". Survey question: \"To what extent do you agree or disagree: [Rays] offers appropriate accommodations to make stadium accessible?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
-        expr: BRANDHEALTH_GRID_ACCESSIBLE
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["accessibility rating", "accessible, accommodations, ADA"]
-
-      - name: BRANDHEALTH_GRID_SAFE
-        description: "Brand health agreement rating for \"it is safe to attend games\". Survey question: \"To what extent do you agree or disagree: [Rays] it is safe to attend games?\" Scale: 1=Strongly agree, 2=Somewhat agree, 3=Somewhat disagree, 4=Strongly disagree. LOWER values = STRONGER agreement. Filter out values >= 80 (survey codes)."
-        expr: BRANDHEALTH_GRID_SAFE
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["safety rating", "safe, safety"]
-
-      - name: ENTERTAIN_GRID_PREGAME_CONTENT
-        description: "Entertainment satisfaction rating for Pregame content / lineups. Survey question: \"Please rate your satisfaction with: Pregame content / lineups.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
-        expr: ENTERTAIN_GRID_PREGAME_CONTENT
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["pregame content satisfaction", "pregame, lineups"]
-
-      - name: ENTERTAIN_GRID_SCOREBOARD
-        description: "Entertainment satisfaction rating for Scoreboard stats / information / replays. Survey question: \"Please rate your satisfaction with: Scoreboard stats / information / replays.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
-        expr: ENTERTAIN_GRID_SCOREBOARD
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["scoreboard satisfaction", "scoreboard, stats, replays"]
-
-      - name: ENTERTAIN_GRID_MUSIC
-        description: "Entertainment satisfaction rating for Music throughout the game. Survey question: \"Please rate your satisfaction with: Music throughout the game.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
-        expr: ENTERTAIN_GRID_MUSIC
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["music satisfaction", "music, DJ, walk-up songs"]
-
-      - name: ENTERTAIN_GRID_PLAYER_CONTENT
-        description: "Entertainment satisfaction rating for In-between inning player content. Survey question: \"Please rate your satisfaction with: In-between inning player content.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
-        expr: ENTERTAIN_GRID_PLAYER_CONTENT
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["player content satisfaction", "player content, between innings"]
-
-      - name: ENTERTAIN_GRID_GAMES
-        description: "Entertainment satisfaction rating for In-between inning games and entertainment. Survey question: \"Please rate your satisfaction with: In-between inning games and entertainment.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
-        expr: ENTERTAIN_GRID_GAMES
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["in-game entertainment satisfaction", "games, between inning entertainment, entertainment games"]
-
-      - name: ENTERTAIN_GRID_KIDS_ACTIVITIES
-        description: "Entertainment satisfaction rating for Kids entertainment / activities. Survey question: \"Please rate your satisfaction with: Kids entertainment / activities.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
-        expr: ENTERTAIN_GRID_KIDS_ACTIVITIES
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["kids activities satisfaction", "kids entertainment, kids activities, children activities"]
-
-      - name: ENTERTAIN_GRID_THEME
-        description: "Entertainment satisfaction rating for Theme night entertainment. Survey question: \"Please rate your satisfaction with: Theme night entertainment.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
-        expr: ENTERTAIN_GRID_THEME
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["theme entertainment satisfaction", "theme night, theme"]
-
-      - name: STAFF_GRID_PARKING
-        description: "Staff satisfaction rating for Parking Attendant. Survey question: \"Rate your satisfaction with the service provided by: Parking Attendant.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
-        expr: STAFF_GRID_PARKING
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["parking staff satisfaction", "parking attendant, parking staff"]
-
-      - name: STAFF_GRID_USHER
-        description: "Staff satisfaction rating for Usher. Survey question: \"Rate your satisfaction with the service provided by: Usher.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
-        expr: STAFF_GRID_USHER
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["usher satisfaction", "usher, usher service"]
-
-      - name: STAFF_GRID_FAN_SERVICES
-        description: "Staff satisfaction rating for Fan Services. Survey question: \"Rate your satisfaction with the service provided by: Fan Services.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
-        expr: STAFF_GRID_FAN_SERVICES
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["fan services satisfaction", "fan services, guest services"]
-
-      - name: STAFF_GRID_CONCESSIONS
-        description: "Staff satisfaction rating for Concessions staff. Survey question: \"Rate your satisfaction with the service provided by: Concessions staff.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
-        expr: STAFF_GRID_CONCESSIONS
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["concessions staff satisfaction", "concessions staff, food service staff"]
-
-      - name: STAFF_GRID_MERCH
-        description: "Staff satisfaction rating for Merchandise staff. Survey question: \"Rate your satisfaction with the service provided by: Merchandise staff.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
-        expr: STAFF_GRID_MERCH
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["merchandise staff satisfaction", "merchandise staff, retail staff"]
-
-      - name: STAFF_GRID_ACCESSIBILITY
-        description: "Staff satisfaction rating for Accessibility support. Survey question: \"Rate your satisfaction with the service provided by: Accessibility support.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
-        expr: STAFF_GRID_ACCESSIBILITY
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["accessibility support satisfaction", "accessibility staff, ADA support staff"]
-
-      - name: STAFF_GRID_SECURITY
-        description: "Staff satisfaction rating for Security. Survey question: \"Rate your satisfaction with the service provided by: Security.\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Filter out values >= 80 (survey codes)."
-        expr: STAFF_GRID_SECURITY
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["security staff satisfaction", "security, security guard"]
-
-      - name: GIVEAWAY_SAT
-        description: "Giveaway item satisfaction. Survey question: \"How satisfied were you with the giveaway item?\" Scale: 1=Highly satisfied, 2=Somewhat satisfied, 3=Somewhat dissatisfied, 4=Highly dissatisfied. LOWER values = HIGHER satisfaction. Replaced with PROMO_SAT_GRID in 2026. Filter out values >= 80 (survey codes)."
-        expr: GIVEAWAY_SAT
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["giveaway satisfaction", "giveaway rating", "promotional item satisfaction"]
-
-      - name: SEATVIEW_VALUE
-        description: "Seat view value for money. Survey question: \"How did your view of the game compare to the amount of money you spent on the ticket?\" Scale: 1=Good value, 2=Fair value, 3=Poor value. LOWER values = BETTER perceived value. Filter out values >= 80 (survey codes)."
-        expr: SEATVIEW_VALUE
-        data_type: number
-        default_aggregation: avg
-        synonyms: ["seat value", "ticket value", "view value for money", "seat view value"]
+        synonyms: ["attended with younger kids", "younger children attended", "attend with category non hs kids"]
 
   - name: overall_feedback_sentence_level
     description: "PRIMARY TABLE for analyzing fan feedback. Use this table by default for all feedback analysis questions. Each row represents one sentence from fan feedback, with individual sentiment and topic classification. Perfect for understanding mixed feedback (e.g., 'food was great but parking terrible'). Covers all seasons from 2023 forward."
@@ -4432,18 +3976,12 @@ tables:
         data_type: number
         synonyms: ['year', 'season year']
       
-      - name: game_date
-        description: "Date of the game"
-        expr: game_date
-        data_type: date
-        synonyms: ['event date', 'match date', 'game day']
-      
       - name: buyer_type
         description: "Type of ticket buyer"
         expr: buyer_type
         data_type: varchar
         synonyms: ['ticket type', 'customer type']
-      
+
       - name: sentence_number
         description: "Sequential number of the sentence within the original feedback (1, 2, 3, etc.)"
         expr: sentence_number
@@ -4564,8 +4102,8 @@ tables:
         description: "Date of the game"
         expr: game_date
         data_type: date
-        synonyms: ['event date', 'match date']
-    
+        synonyms: ['event date', 'match date', 'game day']
+
     filters:
       - name: positive_sentences_only
         description: "Filter to sentences with positive sentiment"
@@ -4602,14 +4140,7 @@ tables:
         expr: sentence_number = 1
         synonyms: ['first sentence', 'opening sentence']
 
-  - name: overall_feedback_response_level
-    description: "SECONDARY: Response-level analysis of fan feedback. Each row is one complete survey response with overall sentiment/topic. Use this for aggregate statistics and when you don't need sentence-level detail. For detailed analysis of mixed feedback, use overall_feedback_sentence_level instead."
-    base_table:
-      database: TBRDP_DW_DEV
-      schema: IM_RPT
-      table: V_OVERALL_FEEDBACK_ANALYSIS
-   
-  - name: overall_feedback_response 
+  - name: overall_feedback_response
     description: "AI-powered analysis of fan open-ended feedback with sentiment classification and topic categorization across all seasons (2023-present)"
     base_table:
       database: TBRDP_DW_DEV
