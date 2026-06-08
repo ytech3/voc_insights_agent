@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - patch19
+    paths:
+      - 'Dashboard/azure_deploy/webapp/**'
   workflow_dispatch:
 
 jobs:
@@ -14,12 +16,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Deploy to Azure Static Web Apps
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          action: upload
-          app_location: Dashboard/azure_deploy/webapp
-          output_location: ''
-          skip_app_build: true
+      - name: Static Web App — manual deploy required
+        run: |
+          echo "rays-voc-agent uses provider type SwaCli."
+          echo "GitHub Actions token auth does not work with this provider type."
+          echo ""
+          echo "To deploy frontend changes, use the SWA CLI locally:"
+          echo "  npx @azure/static-web-apps-cli deploy Dashboard/azure_deploy/webapp --deployment-token <token> --env production"
+          echo ""
+          echo "Deployment token is stored in 1Password."
+          echo "See Dashboard/DEPLOY.md for full instructions."
