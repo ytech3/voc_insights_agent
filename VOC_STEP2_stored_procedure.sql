@@ -1599,7 +1599,7 @@ BEGIN
     -- =============================================
     CALL SYSTEM$SEND_EMAIL(
         'VOC_REPORT_CARD_EMAIL',
-        'ytaketani@raysbaseball.com',
+        'ytaketani@raysbaseball.com,abuchner@raysbaseball.com',
         :v_email_subject,
         :v_html_body,
         'text/html'
