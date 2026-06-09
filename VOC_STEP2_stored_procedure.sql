@@ -1,14 +1,21 @@
 -- =====================================================
--- VOC REPORT CARD - STEP 2 OF 3
--- Create the Stored Procedure
+-- VOC REPORT CARD - TEST / LOCAL PREVIEW VARIANT
+-- Procedure: SP_VOC_DAILY_REPORT_CARD_TEST
+-- Same as Step 2, with two differences:
+--   1. Adds a pie chart (overall rating 9-10 vs 8-and-below)
+--      as a middle column between OVERALL and QUALITATIVE.
+--   2. RETURNS the HTML instead of emailing it, so a past
+--      game can be previewed locally without sending mail.
+-- Deploy + preview via: preview_report_card.py
+-- Production proc (SP_VOC_DAILY_REPORT_CARD) is untouched.
 -- =====================================================
 -- INSTRUCTIONS:
 --   1. Open this file in a NEW Snowsight SQL Worksheet
 --   2. Set Role to ACCOUNTADMIN (top-left dropdown)
 --   3. Set Warehouse to TBRDP_DW_CORTEX_XS_WH
 --   4. Set Database to TBRDP_DW_DEV, Schema to IM_RPT
---   5. Click "Run All" (Ctrl+Shift+Enter) to deploy both
---      the UDF and the stored procedure together.
+--   5. Select ALL text (Ctrl+A), then click "Run" (Ctrl+Enter)
+--      This is a SINGLE statement — do NOT use "Run All"
 -- =====================================================
 -- NOTE: The $$ delimiters tell Snowsight to treat everything
 --       between them as the procedure body. Internal semicolons
@@ -21,31 +28,6 @@
 --     Workaround: LET rs RESULTSET := (SELECT ...); LET c CURSOR FOR rs;
 -- =====================================================
 
--- =====================================================
--- PRE-REQUISITE UDF: Read stage files as base64 data URIs
--- Used to embed MLB team logos directly in the email HTML
--- so they render reliably in all email clients (Outlook,
--- Gmail, Apple Mail) without external URL dependencies.
--- =====================================================
-CREATE OR REPLACE FUNCTION TBRDP_DW_DEV.IM_RPT.READ_STAGE_FILE_BASE64(STAGE_PATH VARCHAR)
-RETURNS VARCHAR
-LANGUAGE PYTHON
-RUNTIME_VERSION = '3.11'
-PACKAGES = ('snowflake-snowpark-python')
-HANDLER = 'read_file'
-AS '
-import snowflake.snowpark.files as files
-import base64
-
-def read_file(stage_path):
-    with files.SnowflakeFile.open(stage_path, "rb") as f:
-        data = f.read()
-    return "data:image/png;base64," + base64.b64encode(data).decode("utf-8")
-';
-
--- =====================================================
--- STORED PROCEDURE: SP_VOC_DAILY_REPORT_CARD
--- =====================================================
 CREATE OR REPLACE PROCEDURE TBRDP_DW_DEV.IM_RPT.SP_VOC_DAILY_REPORT_CARD(P_GAME_DATE VARCHAR DEFAULT NULL)
 RETURNS VARCHAR
 LANGUAGE SQL
@@ -84,12 +66,12 @@ BEGIN
     LET v_neg_topic_3 VARCHAR DEFAULT 'N/A'; LET v_neg_topic_3_pct VARCHAR DEFAULT '0';
 
     -- Section 3: Metric comparison variables (game vs season, 3 best + 3 worst)
-    LET v_best1_label VARCHAR DEFAULT 'N/A'; LET v_best1_dept VARCHAR DEFAULT ''; LET v_best1_delta VARCHAR DEFAULT '0'; LET v_best1_unit VARCHAR DEFAULT ''; LET v_best1_n NUMBER DEFAULT 0;
-    LET v_best2_label VARCHAR DEFAULT 'N/A'; LET v_best2_dept VARCHAR DEFAULT ''; LET v_best2_delta VARCHAR DEFAULT '0'; LET v_best2_unit VARCHAR DEFAULT ''; LET v_best2_n NUMBER DEFAULT 0;
-    LET v_best3_label VARCHAR DEFAULT 'N/A'; LET v_best3_dept VARCHAR DEFAULT ''; LET v_best3_delta VARCHAR DEFAULT '0'; LET v_best3_unit VARCHAR DEFAULT ''; LET v_best3_n NUMBER DEFAULT 0;
-    LET v_worst1_label VARCHAR DEFAULT 'N/A'; LET v_worst1_dept VARCHAR DEFAULT ''; LET v_worst1_delta VARCHAR DEFAULT '0'; LET v_worst1_unit VARCHAR DEFAULT ''; LET v_worst1_n NUMBER DEFAULT 0;
-    LET v_worst2_label VARCHAR DEFAULT 'N/A'; LET v_worst2_dept VARCHAR DEFAULT ''; LET v_worst2_delta VARCHAR DEFAULT '0'; LET v_worst2_unit VARCHAR DEFAULT ''; LET v_worst2_n NUMBER DEFAULT 0;
-    LET v_worst3_label VARCHAR DEFAULT 'N/A'; LET v_worst3_dept VARCHAR DEFAULT ''; LET v_worst3_delta VARCHAR DEFAULT '0'; LET v_worst3_unit VARCHAR DEFAULT ''; LET v_worst3_n NUMBER DEFAULT 0;
+    LET v_best1_label VARCHAR DEFAULT 'N/A'; LET v_best1_dept VARCHAR DEFAULT ''; LET v_best1_delta VARCHAR DEFAULT '0'; LET v_best1_unit VARCHAR DEFAULT '';
+    LET v_best2_label VARCHAR DEFAULT 'N/A'; LET v_best2_dept VARCHAR DEFAULT ''; LET v_best2_delta VARCHAR DEFAULT '0'; LET v_best2_unit VARCHAR DEFAULT '';
+    LET v_best3_label VARCHAR DEFAULT 'N/A'; LET v_best3_dept VARCHAR DEFAULT ''; LET v_best3_delta VARCHAR DEFAULT '0'; LET v_best3_unit VARCHAR DEFAULT '';
+    LET v_worst1_label VARCHAR DEFAULT 'N/A'; LET v_worst1_dept VARCHAR DEFAULT ''; LET v_worst1_delta VARCHAR DEFAULT '0'; LET v_worst1_unit VARCHAR DEFAULT '';
+    LET v_worst2_label VARCHAR DEFAULT 'N/A'; LET v_worst2_dept VARCHAR DEFAULT ''; LET v_worst2_delta VARCHAR DEFAULT '0'; LET v_worst2_unit VARCHAR DEFAULT '';
+    LET v_worst3_label VARCHAR DEFAULT 'N/A'; LET v_worst3_dept VARCHAR DEFAULT ''; LET v_worst3_delta VARCHAR DEFAULT '0'; LET v_worst3_unit VARCHAR DEFAULT '';
 
     -- Natural language suffix: always "% higher" or "% lower"
     LET v_best1_suffix VARCHAR DEFAULT '% higher';
@@ -212,8 +194,8 @@ BEGIN
     -- =============================================
     -- HEADER: Game date, opponent, day of week, opponent logo (base64)
     -- =============================================
-    -- Logos embedded as base64 data URIs via READ_STAGE_FILE_BASE64 UDF for reliable
-    -- rendering in all email clients (Outlook, Gmail, Apple Mail).
+    -- The opponent logo base64 is generated inline to avoid passing a bind variable
+    -- through BUILD_SCOPED_FILE_URL, which can fail in procedure context.
     SELECT
         DECODE(DAYNAME(GAME_DATE::DATE),
             'Mon','Monday','Tue','Tuesday','Wed','Wednesday',
@@ -253,7 +235,7 @@ BEGIN
                     WHEN 'TEX' THEN 'Texas_Rangers.png'
                     WHEN 'TOR' THEN 'Toronto_BlueJays.png'
                     WHEN 'WSH' THEN 'Washington_Nationals.png'
-                    ELSE 'TampaBay_Rays.png'
+                    ELSE 'TB_Full_Color_WHITE_RGB (1).png'
                 END
             )
         )
@@ -265,7 +247,7 @@ BEGIN
 
     v_header_line := v_day_of_week || ', ' || v_game_date_display || ' vs ' || v_opponent;
 
-    -- Rays logo as base64 data URI (white version on header)
+    -- Embed Rays logo as base64 data URI
     SELECT TBRDP_DW_DEV.IM_RPT.READ_STAGE_FILE_BASE64(
         BUILD_SCOPED_FILE_URL(@TBRDP_DW_DEV.IM_RPT.MLB_LOGOS_STAGE, 'TB_White.png')
     )
@@ -396,7 +378,6 @@ BEGIN
                 SENTENCE_TEXT AS "Comment",
                 DETAILED_CATEGORY AS "Category",
                 SENTIMENT_CATEGORY AS "Sentiment",
-                SECTION_CODE AS "Seat Section",
                 BUYER_TYPE AS "Buyer Type",
                 SATISFACTION_RATING AS "Rating (1-10)"
             FROM TBRDP_DW_DEV.IM_RPT.T_OVERALL_FEEDBACK_SENTENCE_LEVEL
@@ -789,7 +770,7 @@ BEGIN
               AND game_val != 0 AND season_val != 0
               AND ROUND(game_val - season_val, 2) > 0
         )
-        SELECT metric_label, dept, unit, improvement, n
+        SELECT metric_label, dept, unit, improvement
         FROM scored ORDER BY improvement DESC LIMIT 3
     );
     LET c_best CURSOR FOR rs_best;
@@ -799,15 +780,15 @@ BEGIN
         IF (v_rank = 1) THEN
             v_best1_label := rec.metric_label; v_best1_dept := rec.dept;
             v_best1_delta := ABS(rec.improvement)::VARCHAR; v_best1_unit := rec.unit;
-            v_best1_suffix := '% higher'; v_best1_n := rec.n;
+            v_best1_suffix := '% higher';
         ELSEIF (v_rank = 2) THEN
             v_best2_label := rec.metric_label; v_best2_dept := rec.dept;
             v_best2_delta := ABS(rec.improvement)::VARCHAR; v_best2_unit := rec.unit;
-            v_best2_suffix := '% higher'; v_best2_n := rec.n;
+            v_best2_suffix := '% higher';
         ELSEIF (v_rank = 3) THEN
             v_best3_label := rec.metric_label; v_best3_dept := rec.dept;
             v_best3_delta := ABS(rec.improvement)::VARCHAR; v_best3_unit := rec.unit;
-            v_best3_suffix := '% higher'; v_best3_n := rec.n;
+            v_best3_suffix := '% higher';
         END IF;
     END FOR;
 
@@ -1174,7 +1155,7 @@ BEGIN
               AND game_val != 0 AND season_val != 0
               AND ROUND(game_val - season_val, 2) >= 1
         )
-        SELECT metric_label, dept, unit, regression, n
+        SELECT metric_label, dept, unit, regression
         FROM scored ORDER BY regression DESC LIMIT 3
     );
     LET c_worst CURSOR FOR rs_worst;
@@ -1184,15 +1165,15 @@ BEGIN
         IF (v_rank = 1) THEN
             v_worst1_label := rec.metric_label; v_worst1_dept := rec.dept;
             v_worst1_delta := ABS(rec.regression)::VARCHAR; v_worst1_unit := rec.unit;
-            v_worst1_suffix := '% higher'; v_worst1_n := rec.n;
+            v_worst1_suffix := '% higher';
         ELSEIF (v_rank = 2) THEN
             v_worst2_label := rec.metric_label; v_worst2_dept := rec.dept;
             v_worst2_delta := ABS(rec.regression)::VARCHAR; v_worst2_unit := rec.unit;
-            v_worst2_suffix := '% higher'; v_worst2_n := rec.n;
+            v_worst2_suffix := '% higher';
         ELSEIF (v_rank = 3) THEN
             v_worst3_label := rec.metric_label; v_worst3_dept := rec.dept;
             v_worst3_delta := ABS(rec.regression)::VARCHAR; v_worst3_unit := rec.unit;
-            v_worst3_suffix := '% higher'; v_worst3_n := rec.n;
+            v_worst3_suffix := '% higher';
         END IF;
     END FOR;
 
@@ -1449,7 +1430,6 @@ BEGIN
         ' - Do NOT recommend pricing adjustments to tickets, concessions, or retail — these are fixed and not adjustable.' ||
         ' - Do NOT assume the organization lacks existing programming, activations, or processes. The team already programs between-innings entertainment, has fan engagement elements, and runs operational procedures. Frame recommendations as trying different or additional approaches rather than introducing something new from scratch.' ||
         ' - Keep language constructive and professional — avoid harsh or judgmental words like "underdelivered", "failed", or "lacking". Use forward-looking language such as "trying different X could potentially lead to higher satisfaction" rather than implying current efforts are insufficient.' ||
-        ' - DISSATISFACTION LANGUAGE RULE: The "Worst" metrics in the QUANTITATIVE section measure % of fans who were HIGHLY DISSATISFIED — a higher number means MORE dissatisfaction. When referencing these metrics in Insight 2, you MUST state clearly that it represents higher dissatisfaction, e.g. "X had Y% higher dissatisfaction than the season average" or "dissatisfaction with X was Y percentage points above the season norm." Do NOT frame dissatisfaction metrics as satisfaction margins or imply they are positive. The delta represents how much WORSE the game performed versus the season average on that metric.' ||
         ' GAME: ' || v_day_of_week || ', ' || v_game_date_display || ' vs ' || v_opponent ||
         ' | ' || v_response_count::VARCHAR || ' responses | Overall: ' || v_game_avg_display || '/10 (Season avg: ' || v_season_avg_display || '/10)' ||
         ' | Game Tier: ' || v_game_tier::VARCHAR || ' (1=premium, 5=lower draw) — Tier benchmark: ' || v_tier_num_games::VARCHAR || ' games, ' || v_tier_total_responses::VARCHAR || ' responses, avg ' || v_tier_avg_overall::VARCHAR || '/10' ||
@@ -1506,6 +1486,9 @@ BEGIN
     SELECT AI_COMPLETE('claude-sonnet-4-6', :v_action_prompt, {'temperature': 0.3, 'max_tokens': 800})
     INTO :v_action_items;
 
+    -- Strip literal \n characters that the AI model sometimes outputs
+    v_action_items := REPLACE(v_action_items, '\\n', '');
+
     -- Log this game's action items for freshness dedup in future runs
     -- MERGE upsert: keeps exactly 1 row per GAME_DATE, replacing on re-runs
     MERGE INTO TBRDP_DW_DEV.IM_RPT.T_VOC_REPORT_CARD_LOG tgt
@@ -1513,6 +1496,82 @@ BEGIN
     ON tgt.GAME_DATE = src.GAME_DATE
     WHEN MATCHED THEN UPDATE SET ACTION_ITEMS = src.ACTION_ITEMS, SENT_AT = CURRENT_TIMESTAMP()
     WHEN NOT MATCHED THEN INSERT (GAME_DATE, ACTION_ITEMS) VALUES (src.GAME_DATE, src.ACTION_ITEMS);
+
+    -- =============================================
+    -- PIE CHART: Overall rating distribution
+    --   Green slice  = ratings 9 or 10 (top box)
+    --   Light-red    = ratings 8 and below (everyone else)
+    -- Rendered as inline SVG so it displays in a browser.
+    -- Valid ratings only: OVERALL_NUMRAT < 80 excludes sentinel/N-A codes.
+    -- =============================================
+    LET v_pie_top NUMBER DEFAULT 0;       -- count of 9-10 ratings
+    LET v_pie_total NUMBER DEFAULT 0;     -- count of all valid ratings
+    LET v_pie_bottom NUMBER DEFAULT 0;    -- count of 8-and-below ratings
+
+    SELECT
+        SUM(CASE WHEN OVERALL_NUMRAT >= 9 THEN 1 ELSE 0 END),
+        COUNT(*)
+    INTO :v_pie_top, :v_pie_total
+    FROM TBRDP_DW_DEV.IM_RPT.V_SBL_QUALTRICS_VOC_POST_ATTENDANCE_FULL_CORTEX_AI
+    WHERE GAME_DATE::DATE = :v_target_game_date
+      AND OVERALL_NUMRAT IS NOT NULL
+      AND OVERALL_NUMRAT < 80;
+
+    v_pie_bottom := v_pie_total - v_pie_top;
+
+    LET v_pie_top_pct NUMBER DEFAULT 0;
+    LET v_pie_bottom_pct NUMBER DEFAULT 0;
+    LET v_pie_frac FLOAT DEFAULT 0;
+    IF (v_pie_total > 0) THEN
+        v_pie_top_pct := ROUND(100.0 * v_pie_top / v_pie_total, 0);
+        v_pie_bottom_pct := 100 - v_pie_top_pct;
+        v_pie_frac := v_pie_top / v_pie_total;
+    END IF;
+
+    -- Pie geometry (cx=cy=75, r=60). Slice arc points + label points.
+    -- Start at top of circle (-90 deg), green sweeps clockwise by 360*frac.
+    LET v_gx1 NUMBER(8,2) DEFAULT 0; LET v_gy1 NUMBER(8,2) DEFAULT 0;
+    LET v_gx2 NUMBER(8,2) DEFAULT 0; LET v_gy2 NUMBER(8,2) DEFAULT 0;
+    LET v_g_large NUMBER DEFAULT 0;  LET v_r_large NUMBER DEFAULT 0;
+    LET v_glx NUMBER(8,2) DEFAULT 0; LET v_gly NUMBER(8,2) DEFAULT 0;
+    LET v_rlx NUMBER(8,2) DEFAULT 0; LET v_rly NUMBER(8,2) DEFAULT 0;
+
+    SELECT
+        ROUND(75 + 60*COS(RADIANS(-90)), 2),
+        ROUND(75 + 60*SIN(RADIANS(-90)), 2),
+        ROUND(75 + 60*COS(RADIANS(-90 + 360*:v_pie_frac)), 2),
+        ROUND(75 + 60*SIN(RADIANS(-90 + 360*:v_pie_frac)), 2),
+        IFF(360*:v_pie_frac > 180, 1, 0),
+        IFF(360*(1-:v_pie_frac) > 180, 1, 0),
+        ROUND(75 + 38*COS(RADIANS(-90 + 180*:v_pie_frac)), 2),
+        ROUND(75 + 38*SIN(RADIANS(-90 + 180*:v_pie_frac)), 2),
+        ROUND(75 + 38*COS(RADIANS(90 + 180*:v_pie_frac)), 2),
+        ROUND(75 + 38*SIN(RADIANS(90 + 180*:v_pie_frac)), 2)
+    INTO :v_gx1, :v_gy1, :v_gx2, :v_gy2, :v_g_large, :v_r_large, :v_glx, :v_gly, :v_rlx, :v_rly;
+
+    LET v_svg VARCHAR DEFAULT '';
+    IF (v_pie_total = 0) THEN
+        v_svg := '<div style="font-size:11px;color:#888;padding:40px 0;">No rating data</div>';
+    ELSEIF (v_pie_top = v_pie_total) THEN
+        -- 100% green
+        v_svg := '<svg width="150" height="150" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">'
+            || '<circle cx="75" cy="75" r="60" fill="#2ecc71" stroke="#ffffff" stroke-width="2"/>'
+            || '<text x="75" y="70" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" fill="#ffffff"><tspan x="75" font-size="13">' || v_pie_top_pct::VARCHAR || '%</tspan><tspan x="75" dy="14" font-size="11">(' || v_pie_top::VARCHAR || ')</tspan></text>'
+            || '</svg>';
+    ELSEIF (v_pie_top = 0) THEN
+        -- 100% red
+        v_svg := '<svg width="150" height="150" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">'
+            || '<circle cx="75" cy="75" r="60" fill="#f5b7b1" stroke="#ffffff" stroke-width="2"/>'
+            || '<text x="75" y="70" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" fill="#8e2b20"><tspan x="75" font-size="13">' || v_pie_bottom_pct::VARCHAR || '%</tspan><tspan x="75" dy="14" font-size="11">(' || v_pie_bottom::VARCHAR || ')</tspan></text>'
+            || '</svg>';
+    ELSE
+        v_svg := '<svg width="150" height="150" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">'
+            || '<path d="M75 75 L' || v_gx1::VARCHAR || ' ' || v_gy1::VARCHAR || ' A60 60 0 ' || v_g_large::VARCHAR || ' 1 ' || v_gx2::VARCHAR || ' ' || v_gy2::VARCHAR || ' Z" fill="#2ecc71" stroke="#ffffff" stroke-width="2"/>'
+            || '<path d="M75 75 L' || v_gx2::VARCHAR || ' ' || v_gy2::VARCHAR || ' A60 60 0 ' || v_r_large::VARCHAR || ' 1 ' || v_gx1::VARCHAR || ' ' || v_gy1::VARCHAR || ' Z" fill="#f5b7b1" stroke="#ffffff" stroke-width="2"/>'
+            || '<text x="' || v_glx::VARCHAR || '" y="' || (v_gly-3)::VARCHAR || '" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" fill="#ffffff"><tspan x="' || v_glx::VARCHAR || '" font-size="13">' || v_pie_top_pct::VARCHAR || '%</tspan><tspan x="' || v_glx::VARCHAR || '" dy="14" font-size="11">(' || v_pie_top::VARCHAR || ')</tspan></text>'
+            || '<text x="' || v_rlx::VARCHAR || '" y="' || (v_rly-3)::VARCHAR || '" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" fill="#8e2b20"><tspan x="' || v_rlx::VARCHAR || '" font-size="13">' || v_pie_bottom_pct::VARCHAR || '%</tspan><tspan x="' || v_rlx::VARCHAR || '" dy="14" font-size="11">(' || v_pie_bottom::VARCHAR || ')</tspan></text>'
+            || '</svg>';
+    END IF;
 
     -- =============================================
     -- BUILD EMAIL HTML — matches reference format
@@ -1529,22 +1588,28 @@ BEGIN
     -- HEADER with logos
     -- bgcolor="#092C5C" is the critical fallback — email clients (Outlook, Gmail) often strip
     -- CSS background/background-color from style attributes but always honor the bgcolor HTML attribute.
-    v_html_body := v_html_body || '<tr><td bgcolor="#8FBCE6" style="background-color:#8FBCE6;padding:24px 20px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="60" style="text-align:left;vertical-align:middle;"><img src="' || v_opponent_logo_url || '" alt="' || v_opponent || '" width="50" height="50" style="display:block;border:0;outline:none;" /></td><td style="text-align:center;vertical-align:middle;padding:0 10px;"><div style="font-size:13px;letter-spacing:3px;color:#092C5C;font-weight:600;margin-bottom:6px;">TAMPA BAY RAYS</div><div style="font-size:26px;font-weight:700;color:#092C5C;margin-bottom:4px;">GAME DAY REPORT CARD</div><div style="font-size:14px;color:#092C5C;margin-top:10px;">' || v_header_line || ' &nbsp;|&nbsp; ' || v_response_count::VARCHAR || ' Survey Responses</div></td><td width="60" style="text-align:right;vertical-align:middle;"><img src="' || v_rays_logo_url || '" alt="Rays" width="50" height="50" style="display:block;border:0;outline:none;margin-left:auto;" /></td></tr></table></td></tr>';
+    v_html_body := v_html_body || '<tr><td bgcolor="#092C5C" style="background-color:#092C5C;background:linear-gradient(135deg, #092C5C 0%, #1a4a8a 100%);padding:24px 20px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="60" style="text-align:left;vertical-align:middle;"><img src="' || v_opponent_logo_url || '" alt="' || v_opponent || '" width="50" height="50" style="display:block;border:0;outline:none;" /></td><td style="text-align:center;vertical-align:middle;padding:0 10px;"><div style="font-size:13px;letter-spacing:3px;color:#8FBCE6;font-weight:600;margin-bottom:6px;">TAMPA BAY RAYS</div><div style="font-size:26px;font-weight:700;color:#ffffff;margin-bottom:4px;">GAME DAY REPORT CARD</div><div style="font-size:14px;color:#8FBCE6;margin-top:10px;">' || v_header_line || ' &nbsp;|&nbsp; ' || v_response_count::VARCHAR || ' Survey Responses</div></td><td width="60" style="text-align:right;vertical-align:middle;"><img src="' || v_rays_logo_url || '" alt="Rays" width="50" height="50" style="display:block;border:0;outline:none;margin-left:auto;" /></td></tr></table></td></tr>';
 
-    -- SECTIONS 1 & 2 side by side with MSO conditional comments
-    v_html_body := v_html_body || '<tr><td style="padding:20px 24px 0 24px;"><!--[if mso]><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="220" valign="top"><![endif]--><div style="display:inline-block;vertical-align:top;width:100%;max-width:210px;margin-right:12px;">';
+    -- SECTIONS 1, PIE & 2 side by side with MSO conditional comments
+    v_html_body := v_html_body || '<tr><td style="padding:20px 24px 0 24px;"><!--[if mso]><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td width="172" valign="top"><![endif]--><div style="display:inline-block;vertical-align:top;width:100%;max-width:172px;margin-right:12px;">';
 
     -- SECTION 1: OVERALL score card
-    v_html_body := v_html_body || '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;"><tr><td style="padding:6px 0 4px 0;font-size:10px;letter-spacing:1.5px;color:#092C5C;font-weight:700;">&#128202; OVERALL</td></tr><tr><td style="background-color:#092C5C;border-radius:8px;padding:16px 18px;text-align:center;"><div style="font-size:36px;font-weight:800;color:#ffffff;line-height:1.1;">' || v_game_avg_display || '</div><div style="font-size:11px;color:#8FBCE6;margin-top:2px;">out of 10</div><div style="margin-top:8px;font-size:14px;font-weight:700;color:' || v_gap_color || ';">' || v_gap_icon || ' ' || ABS(v_gap_pct)::VARCHAR || '% vs 2026 avg</div></td></tr><tr><td style="padding:6px 0 0 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:4px 0;font-size:11px;color:#555;">Season Avg</td><td style="padding:4px 0;font-size:11px;color:#092C5C;font-weight:700;text-align:right;">' || v_season_avg_display || '/10</td></tr><tr><td style="padding:4px 0;font-size:11px;color:#555;border-top:1px solid #e8eaed;">Game Responses</td><td style="padding:4px 0;font-size:11px;color:#092C5C;font-weight:700;text-align:right;border-top:1px solid #e8eaed;">' || v_response_count::VARCHAR || '</td></tr><tr><td style="padding:4px 0;font-size:11px;color:#555;border-top:1px solid #e8eaed;">Season Responses</td><td style="padding:4px 0;font-size:11px;color:#092C5C;font-weight:700;text-align:right;border-top:1px solid #e8eaed;">' || v_season_responses::VARCHAR || '</td></tr></table></td></tr></table></div>';
+    v_html_body := v_html_body || '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;"><tr><td style="padding:6px 0 4px 0;font-size:10px;letter-spacing:1.5px;color:#092C5C;font-weight:700;text-align:center;">&#128202; OVERALL</td></tr><tr><td style="background-color:#092C5C;border-radius:8px;padding:16px 18px;text-align:center;"><div style="font-size:36px;font-weight:800;color:#ffffff;line-height:1.1;">' || v_game_avg_display || '</div><div style="font-size:11px;color:#8FBCE6;margin-top:2px;">out of 10</div><div style="margin-top:8px;font-size:14px;font-weight:700;color:' || v_gap_color || ';">' || v_gap_icon || ' ' || ABS(v_gap_pct)::VARCHAR || '% vs 2026 avg</div></td></tr><tr><td style="padding:14px 0 0 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:4px 0;font-size:11px;color:#555;">Season Avg</td><td style="padding:4px 0;font-size:11px;color:#092C5C;font-weight:700;text-align:right;">' || v_season_avg_display || '/10</td></tr><tr><td style="padding:4px 0;font-size:11px;color:#555;border-top:1px solid #e8eaed;">Game Responses</td><td style="padding:4px 0;font-size:11px;color:#092C5C;font-weight:700;text-align:right;border-top:1px solid #e8eaed;">' || v_response_count::VARCHAR || '</td></tr><tr><td style="padding:4px 0;font-size:11px;color:#555;border-top:1px solid #e8eaed;">Season Responses</td><td style="padding:4px 0;font-size:11px;color:#092C5C;font-weight:700;text-align:right;border-top:1px solid #e8eaed;">' || v_season_responses::VARCHAR || '</td></tr></table></td></tr></table></div>';
 
-    -- MSO separator for two-column layout
-    v_html_body := v_html_body || '<!--[if mso]></td><td width="380" valign="top"><![endif]--><div style="display:inline-block;vertical-align:top;width:100%;max-width:388px;">';
+    -- MSO separator + PIE CHART column (between Overall and Qualitative)
+    v_html_body := v_html_body || '<!--[if mso]></td><td width="152" valign="top"><![endif]--><div style="display:inline-block;vertical-align:top;width:100%;max-width:152px;margin-right:12px;text-align:center;">';
+    v_html_body := v_html_body || '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:6px 0 4px 0;font-size:10px;letter-spacing:1.5px;color:#092C5C;font-weight:700;text-align:center;">&#128202; OVERALL SPLIT</td></tr>';
+    v_html_body := v_html_body || '<tr><td style="text-align:center;padding:0;">' || v_svg || '</td></tr>';
+    v_html_body := v_html_body || '<tr><td style="padding:6px 0 0 0;"><table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr><td style="padding:2px 4px;"><span style="display:inline-block;width:11px;height:11px;background-color:#2ecc71;border-radius:2px;"></span></td><td style="padding:2px 4px;font-size:10px;color:#333;">9 &amp; above</td></tr><tr><td style="padding:2px 4px;"><span style="display:inline-block;width:11px;height:11px;background-color:#f5b7b1;border-radius:2px;"></span></td><td style="padding:2px 4px;font-size:10px;color:#333;">8 &amp; below</td></tr></table></td></tr></table></div>';
+
+    -- MSO separator for Qualitative column
+    v_html_body := v_html_body || '<!--[if mso]></td><td width="244" valign="top"><![endif]--><div style="display:inline-block;vertical-align:top;width:100%;max-width:244px;">';
 
     -- SECTION 2: QUALITATIVE SUMMARY (no departments shown)
-    v_html_body := v_html_body || '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:6px 0 4px 0;font-size:10px;letter-spacing:1.5px;color:#092C5C;font-weight:700;">&#128172; QUALITATIVE SUMMARY &mdash; <a href="' || v_csv_url || '" style="color:#1a73e8;text-decoration:underline;font-weight:700;">DEEP DIVE</a></td></tr></table>';
+    v_html_body := v_html_body || '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:6px 0 4px 0;font-size:10px;letter-spacing:1.5px;color:#092C5C;font-weight:700;text-align:center;">&#128172; QUALITATIVE &mdash; <a href="' || v_csv_url || '" style="color:#1a73e8;text-decoration:underline;font-weight:700;">DEEP DIVE</a></td></tr></table>';
 
     -- Positive topics (no department names)
-    v_html_body := v_html_body || '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:6px;"><tr><td style="padding:6px 10px;background-color:#f0fff4;border-left:3px solid #2ecc71;border-radius:0 6px 6px 0;"><div style="font-size:10px;font-weight:700;color:#1a7431;letter-spacing:0.5px;margin-bottom:4px;">&#9989; POSITIVE FEEDBACK &middot; ' || v_positive_total::VARCHAR || ' (' || v_positive_pct || '%)</div><div style="font-size:11px;color:#333;line-height:1.6;"><div><strong>' || v_pos_topic_1 || '</strong> <span style="color:#1a7431;font-weight:600;">' || v_pos_topic_1_pct || '%</span></div><div><strong>' || v_pos_topic_2 || '</strong> <span style="color:#1a7431;font-weight:600;">' || v_pos_topic_2_pct || '%</span></div><div><strong>' || v_pos_topic_3 || '</strong> <span style="color:#1a7431;font-weight:600;">' || v_pos_topic_3_pct || '%</span></div></div></td></tr></table>';
+    v_html_body := v_html_body || '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;"><tr><td style="padding:6px 10px;background-color:#f0fff4;border-left:3px solid #2ecc71;border-radius:0 6px 6px 0;"><div style="font-size:10px;font-weight:700;color:#1a7431;letter-spacing:0.5px;margin-bottom:4px;">&#9989; POSITIVE FEEDBACK &middot; ' || v_positive_total::VARCHAR || ' (' || v_positive_pct || '%)</div><div style="font-size:11px;color:#333;line-height:1.6;"><div><strong>' || v_pos_topic_1 || '</strong> <span style="color:#1a7431;font-weight:600;">' || v_pos_topic_1_pct || '%</span></div><div><strong>' || v_pos_topic_2 || '</strong> <span style="color:#1a7431;font-weight:600;">' || v_pos_topic_2_pct || '%</span></div><div><strong>' || v_pos_topic_3 || '</strong> <span style="color:#1a7431;font-weight:600;">' || v_pos_topic_3_pct || '%</span></div></div></td></tr></table>';
 
     -- Negative topics (no department names)
     v_html_body := v_html_body || '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:6px 10px;background-color:#fff5f5;border-left:3px solid #e74c3c;border-radius:0 6px 6px 0;"><div style="font-size:10px;font-weight:700;color:#c0392b;letter-spacing:0.5px;margin-bottom:4px;">&#9888;&#65039; NEGATIVE FEEDBACK &middot; ' || v_negative_total::VARCHAR || ' (' || v_negative_pct || '%)</div><div style="font-size:11px;color:#333;line-height:1.6;"><div><strong>' || v_neg_topic_1 || '</strong> <span style="color:#c0392b;font-weight:600;">' || v_neg_topic_1_pct || '%</span></div><div><strong>' || v_neg_topic_2 || '</strong> <span style="color:#c0392b;font-weight:600;">' || v_neg_topic_2_pct || '%</span></div><div><strong>' || v_neg_topic_3 || '</strong> <span style="color:#c0392b;font-weight:600;">' || v_neg_topic_3_pct || '%</span></div></div></td></tr></table></div><!--[if mso]></td></tr></table><![endif]--></td></tr>';
@@ -1560,12 +1625,12 @@ BEGIN
         -- Positive takeaways (only if at least one metric is above season avg)
         IF (v_best1_label != 'N/A') THEN
             v_html_body := v_html_body || '<div style="padding:10px 14px;background-color:#f0fff4;border-left:3px solid #2ecc71;border-radius:0 6px 6px 0;margin-bottom:8px;"><div style="font-size:10px;font-weight:700;color:#1a7431;letter-spacing:0.5px;margin-bottom:5px;">POSITIVE TAKEAWAYS</div><div style="font-size:12px;color:#333;line-height:1.8;">';
-            v_html_body := v_html_body || '<div>&#9650; Fans highly satisfied with <strong>' || v_best1_label || '</strong> (' || v_best1_n::VARCHAR || ') was <span style="color:#1a7431;font-weight:700;">' || v_best1_delta || v_best1_suffix || '</span> than the season average</div>';
+            v_html_body := v_html_body || '<div>&#9650; Fans highly satisfied with <strong>' || v_best1_label || '</strong> was <span style="color:#1a7431;font-weight:700;">' || v_best1_delta || v_best1_suffix || '</span> than the season average</div>';
             IF (v_best2_label != 'N/A') THEN
-                v_html_body := v_html_body || '<div>&#9650; Fans highly satisfied with <strong>' || v_best2_label || '</strong> (' || v_best2_n::VARCHAR || ') was <span style="color:#1a7431;font-weight:700;">' || v_best2_delta || v_best2_suffix || '</span> than the season average</div>';
+                v_html_body := v_html_body || '<div>&#9650; Fans highly satisfied with <strong>' || v_best2_label || '</strong> was <span style="color:#1a7431;font-weight:700;">' || v_best2_delta || v_best2_suffix || '</span> than the season average</div>';
             END IF;
             IF (v_best3_label != 'N/A') THEN
-                v_html_body := v_html_body || '<div>&#9650; Fans highly satisfied with <strong>' || v_best3_label || '</strong> (' || v_best3_n::VARCHAR || ') was <span style="color:#1a7431;font-weight:700;">' || v_best3_delta || v_best3_suffix || '</span> than the season average</div>';
+                v_html_body := v_html_body || '<div>&#9650; Fans highly satisfied with <strong>' || v_best3_label || '</strong> was <span style="color:#1a7431;font-weight:700;">' || v_best3_delta || v_best3_suffix || '</span> than the season average</div>';
             END IF;
             v_html_body := v_html_body || '</div></div>';
         END IF;
@@ -1573,12 +1638,12 @@ BEGIN
         -- Negative takeaways (only if at least one metric is below season avg)
         IF (v_worst1_label != 'N/A') THEN
             v_html_body := v_html_body || '<div style="padding:10px 14px;background-color:#fff5f5;border-left:3px solid #e74c3c;border-radius:0 6px 6px 0;margin-bottom:8px;"><div style="font-size:10px;font-weight:700;color:#c0392b;letter-spacing:0.5px;margin-bottom:5px;">NEGATIVE TAKEAWAYS</div><div style="font-size:12px;color:#333;line-height:1.8;">';
-            v_html_body := v_html_body || '<div>&#9660; Fans highly dissatisfied with <strong>' || v_worst1_label || '</strong> (' || v_worst1_n::VARCHAR || ') was <span style="color:#c0392b;font-weight:700;">' || v_worst1_delta || v_worst1_suffix || '</span> than the season average</div>';
+            v_html_body := v_html_body || '<div>&#9660; Fans highly dissatisfied with <strong>' || v_worst1_label || '</strong> was <span style="color:#c0392b;font-weight:700;">' || v_worst1_delta || v_worst1_suffix || '</span> than the season average</div>';
             IF (v_worst2_label != 'N/A') THEN
-                v_html_body := v_html_body || '<div>&#9660; Fans highly dissatisfied with <strong>' || v_worst2_label || '</strong> (' || v_worst2_n::VARCHAR || ') was <span style="color:#c0392b;font-weight:700;">' || v_worst2_delta || v_worst2_suffix || '</span> than the season average</div>';
+                v_html_body := v_html_body || '<div>&#9660; Fans highly dissatisfied with <strong>' || v_worst2_label || '</strong> was <span style="color:#c0392b;font-weight:700;">' || v_worst2_delta || v_worst2_suffix || '</span> than the season average</div>';
             END IF;
             IF (v_worst3_label != 'N/A') THEN
-                v_html_body := v_html_body || '<div>&#9660; Fans highly dissatisfied with <strong>' || v_worst3_label || '</strong> (' || v_worst3_n::VARCHAR || ') was <span style="color:#c0392b;font-weight:700;">' || v_worst3_delta || v_worst3_suffix || '</span> than the season average</div>';
+                v_html_body := v_html_body || '<div>&#9660; Fans highly dissatisfied with <strong>' || v_worst3_label || '</strong> was <span style="color:#c0392b;font-weight:700;">' || v_worst3_delta || v_worst3_suffix || '</span> than the season average</div>';
             END IF;
             v_html_body := v_html_body || '</div></div>';
         END IF;
@@ -1599,7 +1664,7 @@ BEGIN
     -- =============================================
     CALL SYSTEM$SEND_EMAIL(
         'VOC_REPORT_CARD_EMAIL',
-        'ytaketani@raysbaseball.com,abuchner@raysbaseball.com',
+        'abuchner@raysbaseball.com,ytaketani@raysbaseball.com',
         :v_email_subject,
         :v_html_body,
         'text/html'
