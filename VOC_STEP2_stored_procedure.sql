@@ -76,7 +76,8 @@ def generate_pie(top_count, bottom_count, top_pct, bottom_pct):
         pct = top_pct if i == 0 else bottom_pct
         count = top_count if i == 0 else bottom_count
         color = "#ffffff" if i == 0 else "#8e2b20"
-        ax.text(x, y, f"{pct}%\n({count})", ha="center", va="center",
+        label = str(pct) + "%" + chr(10) + "(" + str(count) + ")"
+        ax.text(x, y, label, ha="center", va="center",
                 fontsize=5, fontweight="bold", color=color)
 
     ax.axis("equal")
