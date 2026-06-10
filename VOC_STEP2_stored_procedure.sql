@@ -28,6 +28,71 @@
 --     Workaround: LET rs RESULTSET := (SELECT ...); LET c CURSOR FOR rs;
 -- =====================================================
 
+-- =====================================================
+-- UDF: Generate pie chart as base64-encoded PNG
+-- Uses matplotlib to render a 2-slice pie chart for email embedding.
+-- Email clients strip inline SVG but reliably render <img> with data URIs.
+-- =====================================================
+CREATE OR REPLACE FUNCTION TBRDP_DW_DEV.IM_RPT.GENERATE_PIE_CHART_BASE64(
+    TOP_COUNT NUMBER, BOTTOM_COUNT NUMBER, TOP_PCT NUMBER, BOTTOM_PCT NUMBER
+)
+RETURNS VARCHAR
+LANGUAGE PYTHON
+RUNTIME_VERSION = '3.11'
+PACKAGES = ('matplotlib', 'pillow')
+HANDLER = 'generate_pie'
+AS '
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import io
+import base64
+
+def generate_pie(top_count, bottom_count, top_pct, bottom_pct):
+    total = (top_count or 0) + (bottom_count or 0)
+    if total == 0:
+        return ""
+
+    fig, ax = plt.subplots(figsize=(1.5, 1.5), dpi=200)
+    fig.patch.set_alpha(0)
+    ax.set_facecolor("none")
+
+    sizes = [top_count, bottom_count]
+    colors = ["#2ecc71", "#f5b7b1"]
+    explode = (0, 0)
+
+    wedges, _ = ax.pie(
+        sizes, colors=colors, explode=explode,
+        startangle=90, counterclock=False,
+        wedgeprops={"edgecolor": "white", "linewidth": 2}
+    )
+
+    # Add labels in the center of each wedge
+    for i, wedge in enumerate(wedges):
+        angle = (wedge.theta2 + wedge.theta1) / 2
+        import math
+        x = 0.55 * math.cos(math.radians(angle))
+        y = 0.55 * math.sin(math.radians(angle))
+        pct = top_pct if i == 0 else bottom_pct
+        count = top_count if i == 0 else bottom_count
+        color = "#ffffff" if i == 0 else "#8e2b20"
+        ax.text(x, y, f"{pct}%\n({count})", ha="center", va="center",
+                fontsize=5, fontweight="bold", color=color)
+
+    ax.axis("equal")
+    plt.tight_layout(pad=0)
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", transparent=True, bbox_inches="tight", pad_inches=0.02)
+    plt.close(fig)
+    buf.seek(0)
+    b64 = base64.b64encode(buf.read()).decode("utf-8")
+    return "data:image/png;base64," + b64
+';
+
+-- =====================================================
+-- STORED PROCEDURE: SP_VOC_DAILY_REPORT_CARD
+-- =====================================================
 CREATE OR REPLACE PROCEDURE TBRDP_DW_DEV.IM_RPT.SP_VOC_DAILY_REPORT_CARD(P_GAME_DATE VARCHAR DEFAULT NULL)
 RETURNS VARCHAR
 LANGUAGE SQL
@@ -1501,7 +1566,7 @@ BEGIN
     -- PIE CHART: Overall rating distribution
     --   Green slice  = ratings 9 or 10 (top box)
     --   Light-red    = ratings 8 and below (everyone else)
-    -- Rendered as inline SVG so it displays in a browser.
+    -- Rendered as PNG via GENERATE_PIE_CHART_BASE64 UDF for email compatibility.
     -- Valid ratings only: OVERALL_NUMRAT < 80 excludes sentinel/N-A codes.
     -- =============================================
     LET v_pie_top NUMBER DEFAULT 0;       -- count of 9-10 ratings
@@ -1528,49 +1593,12 @@ BEGIN
         v_pie_frac := v_pie_top / v_pie_total;
     END IF;
 
-    -- Pie geometry (cx=cy=75, r=60). Slice arc points + label points.
-    -- Start at top of circle (-90 deg), green sweeps clockwise by 360*frac.
-    LET v_gx1 NUMBER(8,2) DEFAULT 0; LET v_gy1 NUMBER(8,2) DEFAULT 0;
-    LET v_gx2 NUMBER(8,2) DEFAULT 0; LET v_gy2 NUMBER(8,2) DEFAULT 0;
-    LET v_g_large NUMBER DEFAULT 0;  LET v_r_large NUMBER DEFAULT 0;
-    LET v_glx NUMBER(8,2) DEFAULT 0; LET v_gly NUMBER(8,2) DEFAULT 0;
-    LET v_rlx NUMBER(8,2) DEFAULT 0; LET v_rly NUMBER(8,2) DEFAULT 0;
-
-    SELECT
-        ROUND(75 + 60*COS(RADIANS(-90)), 2),
-        ROUND(75 + 60*SIN(RADIANS(-90)), 2),
-        ROUND(75 + 60*COS(RADIANS(-90 + 360*:v_pie_frac)), 2),
-        ROUND(75 + 60*SIN(RADIANS(-90 + 360*:v_pie_frac)), 2),
-        IFF(360*:v_pie_frac > 180, 1, 0),
-        IFF(360*(1-:v_pie_frac) > 180, 1, 0),
-        ROUND(75 + 38*COS(RADIANS(-90 + 180*:v_pie_frac)), 2),
-        ROUND(75 + 38*SIN(RADIANS(-90 + 180*:v_pie_frac)), 2),
-        ROUND(75 + 38*COS(RADIANS(90 + 180*:v_pie_frac)), 2),
-        ROUND(75 + 38*SIN(RADIANS(90 + 180*:v_pie_frac)), 2)
-    INTO :v_gx1, :v_gy1, :v_gx2, :v_gy2, :v_g_large, :v_r_large, :v_glx, :v_gly, :v_rlx, :v_rly;
-
-    LET v_svg VARCHAR DEFAULT '';
-    IF (v_pie_total = 0) THEN
-        v_svg := '<div style="font-size:11px;color:#888;padding:40px 0;">No rating data</div>';
-    ELSEIF (v_pie_top = v_pie_total) THEN
-        -- 100% green
-        v_svg := '<svg width="150" height="150" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">'
-            || '<circle cx="75" cy="75" r="60" fill="#2ecc71" stroke="#ffffff" stroke-width="2"/>'
-            || '<text x="75" y="70" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" fill="#ffffff"><tspan x="75" font-size="13">' || v_pie_top_pct::VARCHAR || '%</tspan><tspan x="75" dy="14" font-size="11">(' || v_pie_top::VARCHAR || ')</tspan></text>'
-            || '</svg>';
-    ELSEIF (v_pie_top = 0) THEN
-        -- 100% red
-        v_svg := '<svg width="150" height="150" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">'
-            || '<circle cx="75" cy="75" r="60" fill="#f5b7b1" stroke="#ffffff" stroke-width="2"/>'
-            || '<text x="75" y="70" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" fill="#8e2b20"><tspan x="75" font-size="13">' || v_pie_bottom_pct::VARCHAR || '%</tspan><tspan x="75" dy="14" font-size="11">(' || v_pie_bottom::VARCHAR || ')</tspan></text>'
-            || '</svg>';
-    ELSE
-        v_svg := '<svg width="150" height="150" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">'
-            || '<path d="M75 75 L' || v_gx1::VARCHAR || ' ' || v_gy1::VARCHAR || ' A60 60 0 ' || v_g_large::VARCHAR || ' 1 ' || v_gx2::VARCHAR || ' ' || v_gy2::VARCHAR || ' Z" fill="#2ecc71" stroke="#ffffff" stroke-width="2"/>'
-            || '<path d="M75 75 L' || v_gx2::VARCHAR || ' ' || v_gy2::VARCHAR || ' A60 60 0 ' || v_r_large::VARCHAR || ' 1 ' || v_gx1::VARCHAR || ' ' || v_gy1::VARCHAR || ' Z" fill="#f5b7b1" stroke="#ffffff" stroke-width="2"/>'
-            || '<text x="' || v_glx::VARCHAR || '" y="' || (v_gly-3)::VARCHAR || '" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" fill="#ffffff"><tspan x="' || v_glx::VARCHAR || '" font-size="13">' || v_pie_top_pct::VARCHAR || '%</tspan><tspan x="' || v_glx::VARCHAR || '" dy="14" font-size="11">(' || v_pie_top::VARCHAR || ')</tspan></text>'
-            || '<text x="' || v_rlx::VARCHAR || '" y="' || (v_rly-3)::VARCHAR || '" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" fill="#8e2b20"><tspan x="' || v_rlx::VARCHAR || '" font-size="13">' || v_pie_bottom_pct::VARCHAR || '%</tspan><tspan x="' || v_rlx::VARCHAR || '" dy="14" font-size="11">(' || v_pie_bottom::VARCHAR || ')</tspan></text>'
-            || '</svg>';
+    -- Generate pie chart as base64-encoded PNG via UDF (email-safe)
+    LET v_pie_img VARCHAR DEFAULT '';
+    IF (v_pie_total > 0) THEN
+        SELECT TBRDP_DW_DEV.IM_RPT.GENERATE_PIE_CHART_BASE64(
+            :v_pie_top, :v_pie_bottom, :v_pie_top_pct, :v_pie_bottom_pct
+        ) INTO :v_pie_img;
     END IF;
 
     -- =============================================
@@ -1599,7 +1627,7 @@ BEGIN
     -- MSO separator + PIE CHART column (between Overall and Qualitative)
     v_html_body := v_html_body || '<!--[if mso]></td><td width="152" valign="top"><![endif]--><div style="display:inline-block;vertical-align:top;width:100%;max-width:152px;margin-right:12px;text-align:center;">';
     v_html_body := v_html_body || '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:6px 0 4px 0;font-size:10px;letter-spacing:1.5px;color:#092C5C;font-weight:700;text-align:center;">&#128202; OVERALL SPLIT</td></tr>';
-    v_html_body := v_html_body || '<tr><td style="text-align:center;padding:0;">' || v_svg || '</td></tr>';
+    v_html_body := v_html_body || '<tr><td style="text-align:center;padding:0;">' || IFF(v_pie_img = '', '<div style="font-size:11px;color:#888;padding:40px 0;">No rating data</div>', '<img src="' || v_pie_img || '" width="150" height="150" style="display:block;margin:0 auto;border:0;outline:none;" />') || '</td></tr>';
     v_html_body := v_html_body || '<tr><td style="padding:6px 0 0 0;"><table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr><td style="padding:2px 4px;"><span style="display:inline-block;width:11px;height:11px;background-color:#2ecc71;border-radius:2px;"></span></td><td style="padding:2px 4px;font-size:10px;color:#333;">9 &amp; above</td></tr><tr><td style="padding:2px 4px;"><span style="display:inline-block;width:11px;height:11px;background-color:#f5b7b1;border-radius:2px;"></span></td><td style="padding:2px 4px;font-size:10px;color:#333;">8 &amp; below</td></tr></table></td></tr></table></div>';
 
     -- MSO separator for Qualitative column
