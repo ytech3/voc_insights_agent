@@ -18,8 +18,8 @@ custom_instructions: |
   - CONCESS_NUMRAT (Concession satisfaction)
   - SEATVIEW_NUMRAT (Seat view rating)
   
-  0-100 SCALE fields (normalize by dividing by 10):
-  - MERCH_NUMRAT (Merchandise - divide by 10 for 1-10 scale)
+  SPECIAL SCALE fields:
+  - MERCH_NUMRAT (Merchandise satisfaction, 2025+, 0-10 scale; use directly; filter values >= 80 as survey codes)
   - STAFF_NUMRAT (Staff - divide by 10 for 1-10 scale)
   QUERY ROUTING RULES - FOLLOW THESE STRICTLY:
   
@@ -184,7 +184,7 @@ custom_instructions: |
   OTHER_ENTREE, NUTS, POPCORN, PRETZELS). Always filter WHERE column < 80 to exclude survey codes.
   
   OVERALL RATINGS (0-10 scale, 10=best): OVERALL_NUMRAT, CONCESS_NUMRAT, SEATVIEW_NUMRAT,
-  PARKING_NUMRAT, PARKING_EXIT_NUMRAT (2024+), ENTERTAIN_NUMRAT (2024+), MERCH_NUMRAT (2025+),
+  PARKING_NUMRAT, PARKING_EXIT_NUMRAT (2024+), ENTERTAIN_NUMRAT (2024+), MERCH_NUMRAT (2025+, 0-10 scale; use directly),
   STAFF_NUMRAT (2025+). Filter WHERE column < 80.
   
   CONCESSION SERVICE (1-4, 1=best): CONCESS_GRID_SELECTION, CONCESS_GRID_VALUE,
@@ -2838,7 +2838,7 @@ tables:
         synonyms: ["merch no"]
       
       - name: MERCH_NUMRAT
-        description: "INTERNAL - Merchandise satisfaction on 1-100 scale. Use MERCHANDISE_SATISFACTION instead for 1-10 scale."
+        description: "INTERNAL - Merchandise satisfaction on 0-10 scale. Filter MERCH_NUMRAT < 80 to exclude survey codes. Use MERCHANDISE_SATISFACTION for user-facing merch rating questions."
         expr: MERCH_NUMRAT
         data_type: number
         default_aggregation: avg
@@ -2846,8 +2846,8 @@ tables:
         synonyms: ["merch numrat original"]
       
       - name: MERCHANDISE_SATISFACTION
-        description: "Merchandise satisfaction rating 1-10 scale (normalized from 1-100). Merchandise purchasing experience. Use for retail satisfaction analysis and comparison with other ratings."
-        expr: MERCH_NUMRAT / 10.0
+        description: "Merchandise satisfaction rating on a 0-10 scale. Use MERCH_NUMRAT directly; do not divide by 10. Filter MERCH_NUMRAT < 80 to exclude survey codes. Merchandise purchasing experience. Use for retail satisfaction analysis and comparison with other ratings."
+        expr: MERCH_NUMRAT
         data_type: number
         default_aggregation: avg
         synonyms: ["merchandise satisfaction", "merch satisfaction", "merch rating", "retail rating", "merch experience", "merch numrat", "avg merch satisfaction"]
