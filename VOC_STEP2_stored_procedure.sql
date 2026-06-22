@@ -445,6 +445,7 @@ BEGIN
                 DETAILED_CATEGORY AS "Category",
                 SENTIMENT_CATEGORY AS "Sentiment",
                 BUYER_TYPE AS "Buyer Type",
+                SECTION_CODE AS "Section",
                 SATISFACTION_RATING AS "Rating (1-10)"
             FROM TBRDP_DW_DEV.IM_RPT.T_OVERALL_FEEDBACK_SENTENCE_LEVEL
             WHERE GAME_DATE::DATE = ''' || :v_target_game_date::VARCHAR || '''
